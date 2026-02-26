@@ -95,7 +95,7 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   };
 }
 
-function renderWithProviders(
+async function renderWithProviders(
   store = createStore(),
   initialAlarms: Alarm[] = [],
 ) {
@@ -108,6 +108,8 @@ function renderWithProviders(
       </PaperProvider>
     </JotaiProvider>,
   );
+  // Flush pending effects (useFocusEffect, FAB.Group animations)
+  await act(async () => {});
   return { ...utils, store };
 }
 

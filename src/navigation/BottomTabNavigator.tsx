@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Appbar, BottomNavigation } from "react-native-paper";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -15,59 +16,88 @@ import type { BottomTabParamList, RootStackParamList } from "./types";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
+function ClockTabIcon({ color, size }: { color: string; size: number }) {
+  return <Icon name="clock-outline" size={size} color={color} />;
+}
+
+function AlarmTabIcon({ color, size }: { color: string; size: number }) {
+  return <Icon name="alarm" size={size} color={color} />;
+}
+
+function CalendarTabIcon({ color, size }: { color: string; size: number }) {
+  return <Icon name="calendar" size={size} color={color} />;
+}
+
+function SleepTabIcon({ color, size }: { color: string; size: number }) {
+  return <Icon name="power-sleep" size={size} color={color} />;
+}
+
+function TimerTabIcon({ color, size }: { color: string; size: number }) {
+  return <Icon name="timer-outline" size={size} color={color} />;
+}
+
+function TabBar({ navigation, state, descriptors, insets }: BottomTabBarProps) {
+  return (
+    <BottomNavigation.Bar
+      navigationState={state}
+      safeAreaInsets={insets}
+      onTabPress={({ route, preventDefault }) => {
+        const event = navigation.emit({
+          type: "tabPress",
+          target: route.key,
+          canPreventDefault: true,
+        });
+        if (event.defaultPrevented) {
+          preventDefault();
+        } else {
+          navigation.dispatch({
+            ...CommonActions.navigate(route.name, route.params),
+            target: state.key,
+          });
+        }
+      }}
+      renderIcon={({ route, focused, color }) => {
+        const { options } = descriptors[route.key];
+        if (options.tabBarIcon) {
+          return options.tabBarIcon({ focused, color, size: 24 });
+        }
+        return null;
+      }}
+      getLabelText={({ route }) => {
+        const { options } = descriptors[route.key];
+        return typeof options.tabBarLabel === "string"
+          ? options.tabBarLabel
+          : typeof options.title === "string"
+            ? options.title
+            : route.name;
+      }}
+    />
+  );
+}
+
 export function BottomTabNavigator() {
   const { t } = useTranslation();
   const rootNavigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  const renderHeader = useCallback(
+    ({ options }: { options: { title?: string } }) => (
+      <Appbar.Header elevated={false}>
+        <Appbar.Content title={options.title ?? ""} />
+        <Appbar.Action
+          icon="cog-outline"
+          onPress={() => rootNavigation.navigate("Settings")}
+        />
+      </Appbar.Header>
+    ),
+    [rootNavigation],
+  );
+
   return (
     <Tab.Navigator
-      tabBar={({ navigation, state, descriptors, insets }) => (
-        <BottomNavigation.Bar
-          navigationState={state}
-          safeAreaInsets={insets}
-          onTabPress={({ route, preventDefault }) => {
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (event.defaultPrevented) {
-              preventDefault();
-            } else {
-              navigation.dispatch({
-                ...CommonActions.navigate(route.name, route.params),
-                target: state.key,
-              });
-            }
-          }}
-          renderIcon={({ route, focused, color }) => {
-            const { options } = descriptors[route.key];
-            if (options.tabBarIcon) {
-              return options.tabBarIcon({ focused, color, size: 24 });
-            }
-            return null;
-          }}
-          getLabelText={({ route }) => {
-            const { options } = descriptors[route.key];
-            return typeof options.tabBarLabel === "string"
-              ? options.tabBarLabel
-              : typeof options.title === "string"
-                ? options.title
-                : route.name;
-          }}
-        />
-      )}
+      tabBar={TabBar}
       screenOptions={{
-        header: ({ options }) => (
-          <Appbar.Header elevated={false}>
-            <Appbar.Content title={options.title ?? ""} />
-            <Appbar.Action
-              icon="cog-outline"
-              onPress={() => rootNavigation.navigate("Settings")}
-            />
-          </Appbar.Header>
-        ),
+        header: renderHeader,
       }}
     >
       <Tab.Screen
@@ -75,9 +105,7 @@ export function BottomTabNavigator() {
         component={ClockScreen}
         options={{
           title: t("tabs.clock"),
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="clock-outline" size={size} color={color} />
-          ),
+          tabBarIcon: ClockTabIcon,
         }}
       />
       <Tab.Screen
@@ -85,9 +113,7 @@ export function BottomTabNavigator() {
         component={AlarmListScreen}
         options={{
           title: t("tabs.alarm"),
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="alarm" size={size} color={color} />
-          ),
+          tabBarIcon: AlarmTabIcon,
         }}
       />
       <Tab.Screen
@@ -95,9 +121,7 @@ export function BottomTabNavigator() {
         component={CalendarScreen}
         options={{
           title: t("tabs.calendar"),
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="calendar" size={size} color={color} />
-          ),
+          tabBarIcon: CalendarTabIcon,
         }}
       />
       <Tab.Screen
@@ -105,9 +129,7 @@ export function BottomTabNavigator() {
         component={SleepLogScreen}
         options={{
           title: t("tabs.sleep"),
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="power-sleep" size={size} color={color} />
-          ),
+          tabBarIcon: SleepTabIcon,
         }}
       />
       <Tab.Screen
@@ -115,9 +137,7 @@ export function BottomTabNavigator() {
         component={TimerScreen}
         options={{
           title: t("tabs.timer"),
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="timer-outline" size={size} color={color} />
-          ),
+          tabBarIcon: TimerTabIcon,
         }}
       />
     </Tab.Navigator>

@@ -32,6 +32,7 @@ jest.mock("react-i18next", () => ({
 }));
 
 jest.mock("react-native-svg", () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require("react");
   const createMockComponent = (name: string) =>
     React.forwardRef((props: Record<string, unknown>, ref: unknown) =>

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent, act, waitFor } from "@testing-library/react-native";
+import { render, waitFor } from "@testing-library/react-native";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
 import { AlarmEditScreen } from "../../../src/features/alarm/screens/AlarmEditScreen";

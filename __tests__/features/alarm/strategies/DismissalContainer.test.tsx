@@ -23,7 +23,7 @@ jest.mock("react-i18next", () => ({
 }));
 
 // Register test strategies
-const MockSimple = (props: { onDismiss: () => void }) => {
+const MockSimple = (_props: { onDismiss: () => void }) => {
   const { View, Text } = require("react-native");
   return (
     <View testID="mock-simple">

@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from "@testing-library/react-native";
+import { renderHook, act } from "@testing-library/react-native";
 import React, { Suspense } from "react";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { useCurrentTime } from "../../src/hooks/useCurrentTime";
