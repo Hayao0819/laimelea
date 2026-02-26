@@ -70,23 +70,27 @@ export function TimerCard({
             icon="pause"
             onPress={() => onPause(timer.id)}
             testID={`timer-pause-${timer.id}`}
+            accessibilityLabel="pause timer"
           />
         ) : timer.remainingMs > 0 ? (
           <IconButton
             icon="play"
             onPress={() => onResume(timer.id)}
             testID={`timer-resume-${timer.id}`}
+            accessibilityLabel="resume timer"
           />
         ) : null}
         <IconButton
           icon="restart"
           onPress={() => onReset(timer.id)}
           testID={`timer-reset-${timer.id}`}
+          accessibilityLabel="reset timer"
         />
         <IconButton
           icon="delete"
           onPress={() => onDelete(timer.id)}
           testID={`timer-delete-${timer.id}`}
+          accessibilityLabel="delete timer"
         />
       </Card.Actions>
     </Card>

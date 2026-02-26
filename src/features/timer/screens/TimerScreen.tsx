@@ -12,7 +12,7 @@ export function TimerScreen() {
   const [tab, setTab] = useState<TimerTab>("countdown");
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="timer-screen">
       <View style={styles.toggle}>
         <SegmentedButtons
           value={tab}

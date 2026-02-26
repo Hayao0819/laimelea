@@ -23,29 +23,54 @@ export function Stopwatch() {
 
   return (
     <View style={styles.container}>
-      <Text variant="displayLarge" style={styles.display}>
+      <Text variant="displayLarge" style={styles.display} testID="stopwatch-display">
         {formatStopwatchTime(elapsedMs)}
       </Text>
       <View style={styles.buttonRow}>
         {!hasStarted ? (
-          <Button mode="contained" onPress={start} style={styles.button}>
+          <Button
+            mode="contained"
+            onPress={start}
+            style={styles.button}
+            testID="stopwatch-start"
+          >
             {t("timer.start")}
           </Button>
         ) : isRunning ? (
           <>
-            <Button mode="contained" onPress={pause} style={styles.button}>
+            <Button
+              mode="contained"
+              onPress={pause}
+              style={styles.button}
+              testID="stopwatch-pause"
+            >
               {t("timer.pause")}
             </Button>
-            <Button mode="outlined" onPress={lap} style={styles.button}>
+            <Button
+              mode="outlined"
+              onPress={lap}
+              style={styles.button}
+              testID="stopwatch-lap"
+            >
               {t("timer.lap")}
             </Button>
           </>
         ) : (
           <>
-            <Button mode="contained" onPress={resume} style={styles.button}>
+            <Button
+              mode="contained"
+              onPress={resume}
+              style={styles.button}
+              testID="stopwatch-resume"
+            >
               {t("timer.resume")}
             </Button>
-            <Button mode="outlined" onPress={reset} style={styles.button}>
+            <Button
+              mode="outlined"
+              onPress={reset}
+              style={styles.button}
+              testID="stopwatch-reset"
+            >
               {t("timer.reset")}
             </Button>
           </>

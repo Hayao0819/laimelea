@@ -64,7 +64,9 @@ export function CountdownTimer() {
         />
       ) : (
         <View style={styles.empty}>
-          <Text variant="bodyLarge">{t("timer.noTimers")}</Text>
+          <Text variant="bodyLarge" testID="no-timers-text">
+            {t("timer.noTimers")}
+          </Text>
         </View>
       )}
       <NumpadInput onStart={handleStart} />
