@@ -1,4 +1,4 @@
-import { device, element, by, expect, waitFor } from "detox";
+import { element, by, expect, waitFor } from "detox";
 import {
   launchAppFresh,
   completeSetup,
