@@ -2,7 +2,7 @@
 name: implement
 description: Orchestrate parallel autonomous implementation using worker subagents in isolated worktrees. Reads the implementation plan from project docs/memory and dispatches workers.
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *)
+allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), Bash(pnpm eslint*), Bash(pnpm jest*)
 ---
 
 # 自動並列実装オーケストレーター
@@ -91,21 +91,62 @@ Task tool:
 
 **重要**: `isolation: "worktree"` はworkerエージェント定義に含まれているため、Task tool呼び出し時に指定する必要はありません。
 
-### Step 5: 結果収集と報告
+### Step 5: 結果収集
 
 全ワーカーの完了後:
 
 1. 各ワーカーの結果を収集（成功/失敗、変更内容、テスト結果）
 2. 失敗したタスクがあれば原因を分析し、リトライまたはユーザーに報告
-3. 全worktreeのブランチ一覧を `git worktree list` で表示
-4. マージ手順をユーザーに提示:
+3. **成功したタスクのみ** Step 6 のマージ対象とする
+
+### Step 6: 自動マージ
+
+成功した各ワーカーのブランチを順次マージする。
 
 ```bash
-# 各worktreeのブランチをマージ
-git merge <branch-name>
-# worktreeを削除
+# 1. worktree一覧からブランチとパスを取得
+git worktree list
+
+# 2. 成功した各ブランチを順次マージ（コミットメッセージ自動生成）
+git merge <branch-name> --no-edit
+
+# 3. マージ成功後、worktreeを削除
 git worktree remove <worktree-path>
 ```
+
+**マージ順序**: 依存関係がある場合は、基盤タスク（モデル、ユーティリティ等）を先にマージする。独立タスクの順序は任意。
+
+**コンフリクト発生時**:
+
+1. `git merge --abort` でマージを取り消す
+2. コンフリクトの内容をユーザーに報告する（どのファイルで、どのブランチ間で発生したか）
+3. ユーザーの指示を待つ（手動解決 or リトライ）
+4. **コンフリクトを自動解決しようとしないこと** — 意図しないコード消失のリスクがある
+
+### Step 7: マージ後検証
+
+全ブランチのマージが完了したら、統合状態で品質ゲートを実行:
+
+1. `treefmt` — フォーマット
+2. `pnpm eslint .` — リント
+3. `pnpm jest` — テスト
+
+問題があれば修正してコミットする。全ゲート通過後、最終結果をユーザーに報告:
+
+- マージされたブランチ一覧
+- 変更ファイル数・追加行数の概要
+- テスト結果（pass/fail/skip）
+- 残存する問題（あれば）
+
+### Step 8: テスト拡充（/test スキル連携）
+
+マージ後検証が完了したら、ユーザーに `/test` スキルの実行を提案する:
+
+> 実装が完了しました。`/test` スキルを実行して、新規実装のテストカバレッジを拡充しますか？
+
+ユーザーが承認した場合、`/test` スキルを呼び出す（Skill tool で `skill: "test"` を実行）。引数には今回の実装で変更されたディレクトリパスを渡す。
+
+これにより、実装→テスト作成→全テスト通過の一連のフローが完結する。
 
 ## 注意事項
 

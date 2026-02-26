@@ -97,6 +97,25 @@ Task tool → subagent_type: "emulator-operator"
 - **エージェント**: `.claude/agents/worker.md` — 実装ワーカー（Opus, worktree分離）
 - ワーカーはサブエージェントを呼べない（ネスト不可）ため、メインLLMがオーケストレーター役
 
+## テスト自動追加
+
+`/test` スキルでテストカバレッジのギャップを分析し、workerサブエージェントで並列にテストを作成する。
+
+- **スキル**: `.claude/skills/test/SKILL.md` — テストオーケストレーター
+- **フロー**: Explore分析 → タスク分解 → Worker並列作成 → マージ → 全テスト実行・修正
+- **引数**: パス、ファイル、キーワード、または空（全体分析）
+- `/implement` 完了後に自動提案される
+
+## Commit Messages
+
+Conventional Commits 形式を使用する。
+
+- **形式**: `type: 簡潔な説明` （英語、小文字始まり）
+- **type**: `feat`, `fix`, `test`, `docs`, `chore`, `ci`, `refactor`, `move` など
+- **Subject**: 1行で簡潔に。冗長な説明は避け、変更の要点だけを書く
+- **Body**（任意）: 空行を挟んで補足。大きな変更のみ。箇条書きではなく平文で
+- **Co-Authored-By 禁止**: Claude や他の AI を co-author として記載しない。`Co-Authored-By` 行を一切含めないこと
+
 ## Auto-Update Policy
 
 When discovering new Nix information through web searches or problem-solving, automatically update relevant documentation files without being asked.
