@@ -30,6 +30,33 @@
       treefmtEval = forAllSystems (
         system: treefmt-nix.lib.evalModule nixpkgs.legacyPackages.${system} ./treefmt.nix
       );
+
+      # Build Android SDK from android-nixpkgs source with a fix for the
+      # deprecated `hostPlatform` warning. Upstream default.nix uses
+      # `hostPlatform` (via `with pkgs;`) which nixpkgs renamed to
+      # `stdenv.hostPlatform`. We import default.nix from a patched copy.
+      androidSdkFor =
+        system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          patched = pkgs.applyPatches {
+            name = "android-nixpkgs-patched";
+            src = android-nixpkgs;
+            postPatch = ''
+              substituteInPlace default.nix \
+                --replace-fail "lib.meta.availableOn hostPlatform pkg" \
+                               "lib.meta.availableOn stdenv.hostPlatform pkg"
+            '';
+          };
+          sdkPkgs = import "${patched}/default.nix" {
+            inherit pkgs;
+            channel = builtins.readFile "${android-nixpkgs}/channel";
+          };
+        in
+        sdkPkgs.sdk;
     in
     {
       formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);
@@ -58,7 +85,7 @@
           # Linux + Android SDK: full Android development shell
           androidShell =
             let
-              androidSdk = android-nixpkgs.sdk.${system} (
+              androidSdk = androidSdkFor system (
                 sdkPkgs: with sdkPkgs; [
                   cmdline-tools-latest
                   platform-tools
