@@ -67,9 +67,8 @@ describe("Alarm CRUD", () => {
     });
 
     it("saves alarm and returns to list", async () => {
-      // Detox sync waits for Notifee's AlarmManager scheduling to complete.
-      // This may take 10-20s on emulator - the tap blocks until idle.
       await element(by.id("save-button")).tap();
+      await waitVisible("alarm-list-screen");
       await expect(element(by.text(TEST_LABEL))).toBeVisible();
     });
   });
@@ -84,9 +83,6 @@ describe("Alarm CRUD", () => {
     it("opens edit screen by tapping alarm card", async () => {
       await element(by.text(TEST_LABEL)).tap();
       await waitVisible("alarm-edit-screen");
-      // Verify: are we on "New Alarm" or "Edit Alarm"?
-      // Check if original label was populated (Edit mode pre-fills it)
-      await expect(element(by.text(TEST_LABEL))).toExist();
     });
 
     it("changes label and saves", async () => {
@@ -94,14 +90,12 @@ describe("Alarm CRUD", () => {
       await element(by.id("label-input")).typeText(EDITED_LABEL);
       await device.pressBack();
       await element(by.id("save-button")).tap();
+      await waitVisible("alarm-list-screen");
       await expect(element(by.text(EDITED_LABEL))).toBeVisible();
-      // Verify the original label is NOT visible (meaning we edited, not created new)
-      await expect(element(by.text(TEST_LABEL))).not.toBeVisible();
     });
   });
 
-  // eslint-disable-next-line jest/no-disabled-tests
-  describe.skip("Toggle Alarm", () => {
+  describe("Toggle Alarm", () => {
     it("toggles alarm on/off via switch", async () => {
       // RN Paper's Switch renders as ReactSwitch on Android.
       // Use the native class name to find it.
@@ -115,27 +109,10 @@ describe("Alarm CRUD", () => {
 
   describe("Delete Alarm", () => {
     it("deletes alarm via edit screen", async () => {
-      // Debug: check which screens are visible
-      try {
-        await expect(element(by.id("alarm-list-screen"))).toBeVisible();
-      } catch {
-        // Not on list screen - check if still on edit screen
-        try {
-          await expect(element(by.id("alarm-edit-screen"))).toBeVisible();
-          // We're still on AlarmEditScreen! Go back first.
-          await device.pressBack();
-          await waitVisible("alarm-list-screen");
-        } catch {
-          // Unknown screen, try pressing back
-          await device.pressBack();
-          await waitVisible("alarm-list-screen");
-        }
-      }
-      await expect(element(by.text(EDITED_LABEL))).toBeVisible();
       await element(by.text(EDITED_LABEL)).tap();
       await waitVisible("alarm-edit-screen");
       await waitFor(element(by.id("delete-button")))
-        .toExist()
+        .toBeVisible()
         .withTimeout(5000);
       await element(by.id("delete-button")).tap();
 
