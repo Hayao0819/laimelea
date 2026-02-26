@@ -93,3 +93,6 @@ result-*
 # LLM
 .claude/settings.local.json
 .claude/agent-memory
+
+# Git worktrees
+.worktree/
