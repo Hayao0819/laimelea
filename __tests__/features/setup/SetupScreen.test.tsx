@@ -5,6 +5,7 @@ import { PaperProvider } from "react-native-paper";
 
 import { SetupScreen } from "../../../src/features/setup/screens/SetupScreen";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
+import type { AppSettings } from "../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
@@ -80,7 +81,7 @@ describe("SetupScreen", () => {
       fireEvent.press(getByTestId("done-button"));
     });
 
-    const settings = store.get(settingsAtom);
+    const settings = store.get(settingsAtom) as AppSettings;
     expect(settings.setupComplete).toBe(true);
     expect(settings.cycleConfig.cycleLengthMinutes).toBe(1560); // 26h default
     expect(settings.cycleConfig.baseTimeMs).toBeGreaterThan(0);

@@ -88,10 +88,10 @@ devDependencies:
 | 1     | プロジェクトスキャフォールド   | **完了** | RN 0.84, pnpm, dir構造, theme, Providers, i18n, models, atoms         |
 | 2     | カスタム時間エンジン           | **完了** | conversions.ts + formatting.ts + 32テスト全パス                       |
 | -     | ライブラリバージョン監査       | **完了** | reanimated v4, slider v5, google-signin v16, eslint v9, prettier v3等 |
-| 3     | ストレージ・状態管理           | 未着手   |                                                                       |
-| 4     | ナビゲーションシェル           | 未着手   |                                                                       |
-| 5     | 時計機能                       | 未着手   |                                                                       |
-| 6     | アラーム基本機能               | 未着手   |                                                                       |
+| 3     | ストレージ・状態管理           | **完了** | Jotai永続化, SetupScreen, settingsAtom                                |
+| 4     | ナビゲーションシェル           | **完了** | Phase 1で実装済み（Bottom Tabs + Stack）                              |
+| 5     | 時計機能                       | **完了** | AnalogClock(SVG), DigitalClock, TimeToggle, useCurrentTime, 51テスト  |
+| 6     | アラーム基本機能               | **完了** | Notifeeスケジューラ, AlarmList/Edit/Firing画面, 73テスト              |
 | 7     | アラーム解除システム           | 未着手   |                                                                       |
 | 8     | 一括アラーム作成               | 未着手   |                                                                       |
 | 9     | タイマー機能                   | 未着手   |                                                                       |

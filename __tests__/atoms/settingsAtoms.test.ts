@@ -3,8 +3,10 @@ import {
   settingsAtom,
   cycleConfigAtom,
   setupCompleteAtom,
+  primaryTimeDisplayAtom,
 } from "../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
+import type { AppSettings } from "../../src/models/Settings";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../src/core/time/constants";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
@@ -65,5 +67,32 @@ describe("setupCompleteAtom", () => {
     store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: true });
     const complete = store.get(setupCompleteAtom);
     expect(complete).toBe(true);
+  });
+});
+
+describe("primaryTimeDisplayAtom", () => {
+  it("should return 'custom' by default", () => {
+    const store = createInitializedStore();
+    const display = store.get(primaryTimeDisplayAtom);
+    expect(display).toBe("custom");
+  });
+
+  it("should update settingsAtom.primaryTimeDisplay on write", () => {
+    const store = createInitializedStore();
+    store.set(primaryTimeDisplayAtom, "24h");
+    const display = store.get(primaryTimeDisplayAtom);
+    expect(display).toBe("24h");
+    const settings = store.get(settingsAtom) as AppSettings;
+    expect(settings.primaryTimeDisplay).toBe("24h");
+  });
+
+  it("should reflect settingsAtom updates", () => {
+    const store = createInitializedStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      primaryTimeDisplay: "24h",
+    });
+    const display = store.get(primaryTimeDisplayAtom);
+    expect(display).toBe("24h");
   });
 });

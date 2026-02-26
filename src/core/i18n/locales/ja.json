@@ -23,7 +23,16 @@
     "vibration": "バイブレーション",
     "sound": "サウンド",
     "linkedEvent": "カレンダー予定に連動",
-    "noAlarms": "アラームがありません"
+    "noAlarms": "アラームがありません",
+    "enabled": "有効",
+    "disabled": "無効",
+    "timeSystem": "時間系統",
+    "autoSilence": "自動消音",
+    "autoSilenceMin": "{{minutes}}分",
+    "snoozeSettings": "{{duration}}分 / {{max}}回",
+    "deleteConfirm": "このアラームを削除しますか？",
+    "scheduled": "アラームを設定しました",
+    "snoozed": "{{minutes}}分後にスヌーズ"
   },
   "dismissal": {
     "simple": "タップで解除",

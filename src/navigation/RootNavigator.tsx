@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 
 import { BottomTabNavigator } from "./BottomTabNavigator";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
+import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
+import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { setupCompleteAtom } from "../atoms/settingsAtoms";
 import type { RootStackParamList } from "./types";
 
@@ -35,6 +37,20 @@ export function RootNavigator() {
             name="Settings"
             component={SettingsScreen}
             options={{ title: t("settings.title") }}
+          />
+          <Stack.Screen
+            name="AlarmEdit"
+            component={AlarmEditScreen}
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="AlarmFiring"
+            component={AlarmFiringScreen}
+            options={{
+              headerShown: false,
+              presentation: "fullScreenModal",
+              gestureEnabled: false,
+            }}
           />
         </>
       )}

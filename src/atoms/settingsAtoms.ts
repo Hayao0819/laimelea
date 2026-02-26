@@ -13,10 +13,29 @@ export const settingsAtom = atomWithStorage<AppSettings>(
   { getOnInit: true },
 );
 
+// atomWithStorage + AsyncStorage always types as `T | Promise<T>`,
+// but `getOnInit: true` guarantees the value is resolved synchronously.
+
+// Derived atom that guarantees a complete AppSettings for use in components.
+// Merges with DEFAULT_SETTINGS to fill any fields missing from persisted data
+// (e.g. alarmDefaults may be absent if settings were saved before it existed).
+export const resolvedSettingsAtom = atom<AppSettings>((get) => {
+  const stored = get(settingsAtom) as AppSettings;
+  return { ...DEFAULT_SETTINGS, ...stored };
+});
+
 export const cycleConfigAtom = atom<CycleConfig>(
-  (get) => get(settingsAtom).cycleConfig,
+  (get) => get(resolvedSettingsAtom).cycleConfig,
 );
 
 export const setupCompleteAtom = atom<boolean>(
-  (get) => get(settingsAtom).setupComplete,
+  (get) => get(resolvedSettingsAtom).setupComplete,
+);
+
+export const primaryTimeDisplayAtom = atom(
+  (get) => get(resolvedSettingsAtom).primaryTimeDisplay,
+  (get, set, value: "custom" | "24h") => {
+    const current = get(resolvedSettingsAtom);
+    set(settingsAtom, { ...current, primaryTimeDisplay: value });
+  },
 );

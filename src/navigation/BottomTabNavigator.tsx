@@ -93,7 +93,7 @@ export function BottomTabNavigator() {
         options={{
           title: t("tabs.sleep"),
           tabBarIcon: ({ color, size }) => (
-            <Icon name="sleep" size={size} color={color} />
+            <Icon name="power-sleep" size={size} color={color} />
           ),
         }}
       />

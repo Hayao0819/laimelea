@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 
 import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { DEFAULT_SETTINGS } from "../../../models/Settings";
 import { realToCustom } from "../../../core/time/conversions";
 import {
   formatCustomDay,
@@ -42,7 +43,10 @@ export function SetupScreen() {
   const handleDone = useCallback(() => {
     if (!isValid) return;
     setSettings((prev) => ({
-      ...prev,
+      ...DEFAULT_SETTINGS,
+      ...(typeof prev === "object" && prev !== null && !("then" in prev)
+        ? prev
+        : {}),
       cycleConfig: {
         cycleLengthMinutes,
         baseTimeMs: baseTimeMs!,

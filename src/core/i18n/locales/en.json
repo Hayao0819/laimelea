@@ -23,7 +23,16 @@
     "vibration": "Vibration",
     "sound": "Sound",
     "linkedEvent": "Link to Calendar Event",
-    "noAlarms": "No alarms"
+    "noAlarms": "No alarms",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "timeSystem": "Time System",
+    "autoSilence": "Auto Silence",
+    "autoSilenceMin": "{{minutes}} min",
+    "snoozeSettings": "{{duration}} min / {{max}} times",
+    "deleteConfirm": "Delete this alarm?",
+    "scheduled": "Alarm set",
+    "snoozed": "Snoozed for {{minutes}} min"
   },
   "dismissal": {
     "simple": "Tap to Dismiss",
