@@ -120,7 +120,7 @@ export function generateBulkAlarms(
     notifeeTriggerId: null,
     skipNextOccurrence: false,
     linkedCalendarEventId: null,
-    linkedEventOffset: 0,
+    linkedEventOffsetMs: 0,
     lastFiredAt: null,
     createdAt: now,
     updatedAt: now,

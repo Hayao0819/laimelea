@@ -81,6 +81,7 @@ All timestamps are Unix milliseconds. Use unit suffixes consistently:
 | Notifee trigger reference | `notifeeTriggerId` | `string \| null` | Notifee internal ID |
 | Time system the alarm was set in | `setInTimeSystem` | `"custom" \| "24h"` | — |
 | Linked calendar event | `linkedCalendarEventId` | `string \| null` | — |
+| Linked event offset | `linkedEventOffsetMs` | `number` | Ms before/after event start |
 
 ### Alarm Repeat
 

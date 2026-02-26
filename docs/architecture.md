@@ -401,7 +401,7 @@ interface Alarm {
   skipNextOccurrence: boolean; // 繰り返しアラームの次回のみスキップ
   // カレンダー予定連動
   linkedCalendarEventId: string | null; // カレンダーevent IDに紐づけ
-  linkedEventOffset: number; // 予定開始N分前にアラーム（負=前、0=同時、正=後）
+  linkedEventOffsetMs: number; // 予定開始N分前にアラーム（負=前、0=同時、正=後）
   // 追跡
   lastFiredAt: number | null; // 最後に発火した時刻
   createdAt: number;
@@ -648,7 +648,7 @@ class DismissalStrategyRegistry {
 
 - カレンダーの予定に対して「この予定の N分前にアラームを鳴らす」と設定
 - Google Calendar同期時に予定の時刻変更を検出し、連動アラームの`targetTimestampMs`を自動更新
-- `Alarm.linkedCalendarEventId`と`Alarm.linkedEventOffset`で紐づけ
+- `Alarm.linkedCalendarEventId`と`Alarm.linkedEventOffsetMs`で紐づけ
 
 ### サービス: `calendarAlarmSync.ts`
 

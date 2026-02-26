@@ -119,7 +119,7 @@ export function AlarmEditScreen() {
       notifeeTriggerId: null,
       skipNextOccurrence: false,
       linkedCalendarEventId: existingAlarm?.linkedCalendarEventId ?? null,
-      linkedEventOffset: existingAlarm?.linkedEventOffset ?? 0,
+      linkedEventOffsetMs: existingAlarm?.linkedEventOffsetMs ?? 0,
       lastFiredAt: existingAlarm?.lastFiredAt ?? null,
       createdAt: existingAlarm?.createdAt ?? now,
       updatedAt: now,

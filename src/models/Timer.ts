@@ -5,7 +5,7 @@ export interface TimerState {
   remainingMs: number;
   isRunning: boolean;
   startedAt: number | null;
-  pausedElapsed: number;
+  pausedElapsedMs: number;
 }
 
 export interface StopwatchState {

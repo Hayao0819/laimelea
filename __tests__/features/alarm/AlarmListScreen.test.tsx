@@ -87,7 +87,7 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
     notifeeTriggerId: null,
     skipNextOccurrence: false,
     linkedCalendarEventId: null,
-    linkedEventOffset: 0,
+    linkedEventOffsetMs: 0,
     lastFiredAt: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),

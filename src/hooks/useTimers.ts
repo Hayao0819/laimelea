@@ -38,7 +38,7 @@ export function useTimers(): UseTimersReturn {
       let changed = false;
       const next = prev.map((t) => {
         if (!t.isRunning || t.startedAt === null) return t;
-        const elapsed = now - t.startedAt + t.pausedElapsed;
+        const elapsed = now - t.startedAt + t.pausedElapsedMs;
         const remaining = Math.max(0, t.durationMs - elapsed);
         changed = true;
         if (remaining <= 0) {
@@ -79,7 +79,7 @@ export function useTimers(): UseTimersReturn {
         remainingMs: durationMs,
         isRunning: true,
         startedAt: Date.now(),
-        pausedElapsed: 0,
+        pausedElapsedMs: 0,
       };
       setTimers((prev) => [...prev, timer]);
     },
@@ -101,7 +101,7 @@ export function useTimers(): UseTimersReturn {
           return {
             ...t,
             isRunning: false,
-            pausedElapsed: t.pausedElapsed + (Date.now() - t.startedAt),
+            pausedElapsedMs: t.pausedElapsedMs + (Date.now() - t.startedAt),
             startedAt: null,
           };
         }),
@@ -136,7 +136,7 @@ export function useTimers(): UseTimersReturn {
             remainingMs: t.durationMs,
             isRunning: false,
             startedAt: null,
-            pausedElapsed: 0,
+            pausedElapsedMs: 0,
           };
         }),
       );

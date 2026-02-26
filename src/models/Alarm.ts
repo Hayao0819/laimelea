@@ -25,7 +25,7 @@ export interface Alarm {
   notifeeTriggerId: string | null;
   skipNextOccurrence: boolean;
   linkedCalendarEventId: string | null;
-  linkedEventOffset: number;
+  linkedEventOffsetMs: number;
   lastFiredAt: number | null;
   createdAt: number;
   updatedAt: number;

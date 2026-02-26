@@ -236,6 +236,6 @@ describe("useTimers", () => {
 
     expect(result.current.timers[0].remainingMs).toBe(10000);
     expect(result.current.timers[0].isRunning).toBe(false);
-    expect(result.current.timers[0].pausedElapsed).toBe(0);
+    expect(result.current.timers[0].pausedElapsedMs).toBe(0);
   });
 });
