@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { Card, Text, Chip, useTheme } from "react-native-paper";
+import { Card, Text, Chip, IconButton, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
@@ -10,6 +10,7 @@ import type { CalendarEvent } from "../../../models/CalendarEvent";
 
 interface EventCardProps {
   event: CalendarEvent;
+  onCreateAlarm?: (event: CalendarEvent) => void;
 }
 
 function formatRealTime(ms: number): string {
@@ -17,7 +18,7 @@ function formatRealTime(ms: number): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-export function EventCard({ event }: EventCardProps) {
+export function EventCard({ event, onCreateAlarm }: EventCardProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const settings = useAtomValue(settingsAtom);
@@ -61,6 +62,15 @@ export function EventCard({ event }: EventCardProps) {
               </View>
             )}
           </View>
+          {!event.allDay && onCreateAlarm && (
+            <IconButton
+              icon="alarm-plus"
+              size={20}
+              onPress={() => onCreateAlarm(event)}
+              accessibilityLabel={t("calendar.createAlarm")}
+              testID={`event-create-alarm-${event.id}`}
+            />
+          )}
         </View>
       </Card.Content>
     </Card>

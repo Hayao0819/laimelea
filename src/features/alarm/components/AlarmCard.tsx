@@ -1,6 +1,6 @@
 import React from "react";
-import { StyleSheet } from "react-native";
-import { Card, Switch, Text, useTheme } from "react-native-paper";
+import { View, StyleSheet } from "react-native";
+import { Card, Icon, Switch, Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import type { Alarm } from "../../../models/Alarm";
@@ -60,16 +60,26 @@ export function AlarmCard({
         >
           {timeDisplay}
         </Text>
-        <Text
-          variant="bodyMedium"
-          style={
-            !alarm.enabled
-              ? { color: theme.colors.onSurfaceDisabled }
-              : undefined
-          }
-        >
-          {alarm.label || t("alarm.title")}
-        </Text>
+        <View style={styles.labelRow}>
+          <Text
+            variant="bodyMedium"
+            style={
+              !alarm.enabled
+                ? { color: theme.colors.onSurfaceDisabled }
+                : undefined
+            }
+          >
+            {alarm.label || t("alarm.title")}
+          </Text>
+          {alarm.linkedCalendarEventId != null && (
+            <Icon
+              source="calendar"
+              size={16}
+              color={theme.colors.primary}
+              testID={`alarm-calendar-badge-${alarm.id}`}
+            />
+          )}
+        </View>
         {repeatLabel && (
           <Text variant="bodySmall" style={styles.repeat}>
             {repeatLabel}
@@ -100,6 +110,11 @@ const styles = StyleSheet.create({
   },
   time: {
     fontVariant: ["tabular-nums"],
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   repeat: {
     marginTop: 2,

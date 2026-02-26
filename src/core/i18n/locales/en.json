@@ -41,7 +41,8 @@
     "deleteConfirm": "Delete this alarm?",
     "scheduled": "Alarm set",
     "snoozed": "Snoozed for {{minutes}} min",
-    "snoozeAction": "Snooze"
+    "snoozeAction": "Snooze",
+    "linkedToEvent": "Linked to calendar event"
   },
   "dismissal": {
     "simple": "Tap to Dismiss",
@@ -65,7 +66,9 @@
     "signInRequired": "Sign in to view calendar events",
     "signIn": "Sign In",
     "customTime": "Custom: {{time}}",
-    "realTime": "{{time}}"
+    "realTime": "{{time}}",
+    "alarmCreated": "Alarm set for {{title}}",
+    "createAlarm": "Create alarm"
   },
   "sleep": {
     "title": "Sleep",

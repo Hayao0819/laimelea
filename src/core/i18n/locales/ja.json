@@ -41,7 +41,8 @@
     "deleteConfirm": "このアラームを削除しますか？",
     "scheduled": "アラームを設定しました",
     "snoozed": "{{minutes}}分後にスヌーズ",
-    "snoozeAction": "スヌーズ"
+    "snoozeAction": "スヌーズ",
+    "linkedToEvent": "カレンダー予定に連動"
   },
   "dismissal": {
     "simple": "タップで解除",
@@ -65,7 +66,9 @@
     "signInRequired": "カレンダーを表示するにはサインインしてください",
     "signIn": "サインイン",
     "customTime": "カスタム: {{time}}",
-    "realTime": "{{time}}"
+    "realTime": "{{time}}",
+    "alarmCreated": "{{title}}のアラームを設定しました",
+    "createAlarm": "アラームを作成"
   },
   "sleep": {
     "title": "睡眠",

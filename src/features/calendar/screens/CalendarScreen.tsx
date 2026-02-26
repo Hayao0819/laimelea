@@ -1,15 +1,19 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { View, FlatList, RefreshControl, StyleSheet } from "react-native";
-import { Text, Card, Button, useTheme } from "react-native-paper";
+import { Text, Card, Button, Snackbar, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useFocusEffect } from "@react-navigation/native";
 import { calendarSelectedDateAtom } from "../../../atoms/calendarAtoms";
+import { alarmsAtom } from "../../../atoms/alarmAtoms";
+import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
+import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
 import { DaySelector } from "../components/DaySelector";
 import { EventCard } from "../components/EventCard";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import type { Alarm } from "../../../models/Alarm";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -28,7 +32,10 @@ export function CalendarScreen() {
   const theme = useTheme();
   const [selectedDate, setSelectedDate] = useAtom(calendarSelectedDateAtom);
   const services = useAtomValue(platformServicesAtom);
+  const settings = useAtomValue(resolvedSettingsAtom);
+  const setAlarms = useSetAtom(alarmsAtom);
   const { events, loading, error, sync, isStale } = useCalendarSync();
+  const [snackbar, setSnackbar] = useState<string | null>(null);
 
   // Auto-sync when tab is focused and cache is stale
   useFocusEffect(
@@ -59,6 +66,43 @@ export function CalendarScreen() {
       });
   }, [events, selectedDate]);
 
+  const handleCreateAlarm = useCallback(
+    async (event: CalendarEvent) => {
+      const now = Date.now();
+      const offsetMs = -settings.defaultEventReminderMin * 60 * 1000;
+      const { alarmDefaults } = settings;
+
+      const alarm: Alarm = {
+        id: `alarm-${now}`,
+        label: event.title,
+        enabled: true,
+        targetTimestampMs: event.startTimestampMs + offsetMs,
+        setInTimeSystem: "24h",
+        repeat: null,
+        dismissalMethod: alarmDefaults.dismissalMethod,
+        gradualVolumeDurationSec: alarmDefaults.gradualVolumeDurationSec,
+        snoozeDurationMin: alarmDefaults.snoozeDurationMin,
+        snoozeMaxCount: alarmDefaults.snoozeMaxCount,
+        snoozeCount: 0,
+        autoSilenceMin: 10,
+        soundUri: null,
+        vibrationEnabled: alarmDefaults.vibrationEnabled,
+        notifeeTriggerId: null,
+        skipNextOccurrence: false,
+        linkedCalendarEventId: event.id,
+        linkedEventOffsetMs: offsetMs,
+        lastFiredAt: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      setAlarms((prev) => [...prev, alarm]);
+      await scheduleAlarm(alarm);
+      setSnackbar(t("calendar.alarmCreated", { title: event.title }));
+    },
+    [settings, setAlarms, t],
+  );
+
   const handleRefresh = useCallback(() => {
     sync(true);
   }, [sync]);
@@ -73,8 +117,10 @@ export function CalendarScreen() {
   }, [services.auth, sync]);
 
   const renderItem = useCallback(
-    ({ item }: { item: CalendarEvent }) => <EventCard event={item} />,
-    [],
+    ({ item }: { item: CalendarEvent }) => (
+      <EventCard event={item} onCreateAlarm={handleCreateAlarm} />
+    ),
+    [handleCreateAlarm],
   );
 
   const keyExtractor = useCallback((item: CalendarEvent) => item.id, []);
@@ -156,6 +202,13 @@ export function CalendarScreen() {
         }
         testID="calendar-event-list"
       />
+      <Snackbar
+        visible={snackbar != null}
+        onDismiss={() => setSnackbar(null)}
+        duration={3000}
+      >
+        {snackbar ?? ""}
+      </Snackbar>
     </View>
   );
 }
