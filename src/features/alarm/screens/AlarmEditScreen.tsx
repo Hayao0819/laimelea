@@ -125,8 +125,16 @@ export function AlarmEditScreen() {
       updatedAt: now,
     };
 
-    const triggerId = await scheduleAlarm(alarm);
-    alarm.notifeeTriggerId = triggerId;
+    if (existingAlarm) {
+      await cancelAlarm(existingAlarm);
+    }
+
+    try {
+      const triggerId = await scheduleAlarm(alarm);
+      alarm.notifeeTriggerId = triggerId;
+    } catch {
+      // Scheduling may fail on some devices; save alarm data regardless
+    }
 
     if (existingAlarm) {
       setAlarms(alarms.map((a) => (a.id === alarm.id ? alarm : a)));
