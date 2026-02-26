@@ -86,6 +86,8 @@ android {
         versionCode 1
         versionName "1.0"
         manifestPlaceholders = [appAuthRedirectScheme: "com.hayao0819.laimelea"]
+        testBuildType System.getProperty('testBuildType', 'debug')
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     signingConfigs {
         debug {
@@ -118,4 +120,8 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Detox E2E testing
+    androidTestImplementation('com.wix:detox:+')
+    androidTestImplementation('junit:junit:4.13.2')
 }
