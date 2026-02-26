@@ -1,0 +1,66 @@
+name: iOS Build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build iOS (Simulator)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/determinate-nix-action@v3
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      # Loads Nix devShell (aarch64-darwin) into all subsequent steps.
+      # Provides: nodejs, pnpm, watchman, treefmt.
+      # Xcode and CocoaPods come from the runner's pre-installed tools.
+      - uses: nicknovitski/nix-develop@v1
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install CocoaPods
+        working-directory: ios
+        run: pod install
+
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild build \
+            -workspace ios/Laimelea.xcworkspace \
+            -scheme Laimelea \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+
+      - name: Archive simulator app
+        run: |
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Laimelea.app" -path "*/Build/Products/Debug-iphonesimulator/*" | head -1)
+          if [ -n "$APP_PATH" ]; then
+            cd "$(dirname "$APP_PATH")"
+            zip -r "$RUNNER_TEMP/Laimelea-simulator.zip" Laimelea.app
+          else
+            echo "::warning::Could not find .app bundle for archiving"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Laimelea-ios-simulator
+          path: ${{ runner.temp }}/Laimelea-simulator.zip
+          retention-days: 7
+          if-no-files-found: warn
