@@ -1,0 +1,33 @@
+name: Update Flake Inputs
+
+on:
+  schedule:
+    # Monday 09:00 JST (= Monday 00:00 UTC)
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      inputs:
+        description: "Space-separated list of inputs to update (leave empty for all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/determinate-nix-action@v3
+
+      - uses: DeterminateSystems/update-flake-lock@main
+        with:
+          inputs: ${{ github.event.inputs.inputs }}
+          pr-title: "chore: update flake inputs"
+          pr-labels: |
+            dependencies
+            automated
+          commit-msg: "chore: update flake.lock"
