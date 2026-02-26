@@ -1,7 +1,10 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import type { PlatformAuthService } from "../types";
+import { GMS_AUTH_CONFIG } from "./authConfig";
 
 export function createGmsAuthService(): PlatformAuthService {
+  GoogleSignin.configure(GMS_AUTH_CONFIG);
+
   return {
     async isAvailable() {
       try {

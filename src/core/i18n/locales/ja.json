@@ -59,7 +59,13 @@
   "calendar": {
     "title": "カレンダー",
     "noEvents": "予定はありません",
-    "allDay": "終日"
+    "allDay": "終日",
+    "today": "今日",
+    "syncError": "カレンダーの同期に失敗しました",
+    "signInRequired": "カレンダーを表示するにはサインインしてください",
+    "signIn": "サインイン",
+    "customTime": "カスタム: {{time}}",
+    "realTime": "{{time}}"
   },
   "sleep": {
     "title": "睡眠",

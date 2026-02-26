@@ -59,7 +59,13 @@
   "calendar": {
     "title": "Calendar",
     "noEvents": "No events",
-    "allDay": "All Day"
+    "allDay": "All Day",
+    "today": "Today",
+    "syncError": "Failed to sync calendar",
+    "signInRequired": "Sign in to view calendar events",
+    "signIn": "Sign In",
+    "customTime": "Custom: {{time}}",
+    "realTime": "{{time}}"
   },
   "sleep": {
     "title": "Sleep",

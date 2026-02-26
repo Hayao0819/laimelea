@@ -14,14 +14,16 @@ import type { PlatformServices, PlatformType } from "./types";
 
 export function createPlatformServices(type: PlatformType): PlatformServices {
   switch (type) {
-    case "gms":
+    case "gms": {
+      const auth = createGmsAuthService();
       return {
         type: "gms",
-        auth: createGmsAuthService(),
-        calendar: createGmsCalendarService(),
+        auth,
+        calendar: createGmsCalendarService(auth),
         backup: createGmsBackupService(),
         sleep: createGmsSleepService(),
       };
+    }
     case "hms":
       // HMS uses AOSP stubs until dedicated HMS services are implemented
       return {
