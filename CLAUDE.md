@@ -89,6 +89,14 @@ rm -rf android/app/build android/build android/.gradle
 Task tool → subagent_type: "emulator-operator"
 ```
 
+## 自動並列実装
+
+`/implement` スキルで実装計画を並列ワーカーに自動ディスパッチできる。詳細は [Auto-Implement Guide](docs/guides/auto-implement.md) を参照。
+
+- **スキル**: `.claude/skills/implement/SKILL.md` — オーケストレーター
+- **エージェント**: `.claude/agents/worker.md` — 実装ワーカー（Opus, worktree分離）
+- ワーカーはサブエージェントを呼べない（ネスト不可）ため、メインLLMがオーケストレーター役
+
 ## Auto-Update Policy
 
 When discovering new Nix information through web searches or problem-solving, automatically update relevant documentation files without being asked.
