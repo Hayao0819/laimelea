@@ -94,8 +94,9 @@ Explore の分析結果を元に、テスト作成タスクを分解する。
 まず、各タスク用の worktree を `.worktree/` 以下に作成する:
 
 ```bash
-# 各タスクに対して実行
-git worktree add ".worktree/<task-name>" -b "<branch-name>"
+# 各タスクに対して実行（ブランチ名には必ず claude/ プレフィックスを付ける）
+git worktree add ".worktree/<task-name>" -b "claude/<conventional-prefix>/<task-name>"
+# 例: git worktree add ".worktree/test-alarm-atoms" -b "claude/test/alarm-atoms"
 ```
 
 次に、**1つのメッセージ内で** 複数の Task tool 呼び出しを行い、ワーカーを並列起動する。
@@ -155,6 +156,9 @@ git rebase <branch-name>
 
 # 2. リベース成功後、worktreeを削除
 git worktree remove .worktree/<task-name>
+
+# 3. マージ済みブランチを削除（claude/ ブランチは作業完了後に必ず削除する）
+git branch -d <branch-name>
 ```
 
 **コンフリクト発生時**:
