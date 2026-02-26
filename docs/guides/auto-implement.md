@@ -79,6 +79,9 @@ git merge <branch-name>
 
 # マージ後に worktree を削除
 git worktree remove <worktree-path>
+
+# マージ済みブランチを削除（claude/ ブランチは作業完了後に必ず削除する）
+git branch -d <branch-name>
 ```
 
 複数ブランチを順番にマージする場合、コンフリクトが発生する可能性があります。その場合は通常の git merge conflict resolution で解決してください。

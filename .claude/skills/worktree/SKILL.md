@@ -24,17 +24,17 @@ disable-model-invocation: true
 ユーザーから指示された内容に基づき、適切なブランチ名を決定してください。
 
 ```bash
-# ブランチ名の例: feat/calendar-sync, fix/alarm-bug, refactor/timer
-BRANCH_NAME="<適切なブランチ名>"
+# ブランチ名の例: claude/feat/calendar-sync, claude/fix/alarm-bug, claude/refactor/timer
+BRANCH_NAME="claude/<conventional-prefix>/<feature-name>"
 WORKTREE_DIR=".worktree/${BRANCH_NAME##*/}"
 
 # worktree を作成（現在の HEAD から新しいブランチを切る）
 git worktree add "$WORKTREE_DIR" -b "$BRANCH_NAME"
 ```
 
-- `$ARGUMENTS` にブランチ名が指定されていればそれを使用する
+- `$ARGUMENTS` にブランチ名が指定されていればそれを使用する（`claude/` プレフィックスがなければ自動付与）
 - 指定がなければタスク内容から適切なブランチ名を自動決定する
-- ブランチ名は `feat/`, `fix/`, `refactor/`, `chore/` などの conventional prefix を使用する
+- ブランチ名は **必ず `claude/` プレフィックスを付け**、その後に `feat/`, `fix/`, `refactor/`, `chore/` などの conventional prefix を使用する
 
 ### 2. Worktree 内での作業
 
@@ -49,13 +49,18 @@ git worktree add "$WORKTREE_DIR" -b "$BRANCH_NAME"
 
 1. worktree 内で変更をコミットする
 2. ユーザーに作業結果を報告する（ブランチ名、変更内容の要約）
-3. **ユーザーの確認を得てから** worktree を削除する:
+3. **ユーザーの確認を得てから** worktree を削除し、マージ後にブランチも削除する:
 
 ```bash
+# worktree の削除
 git worktree remove "$WORKTREE_DIR"
+
+# マージ後にブランチを削除（マージが完了してから実行）
+git branch -d "$BRANCH_NAME"
 ```
 
 4. 必要に応じてブランチのマージもユーザーに提案する
+5. **マージ完了後は `claude/` ブランチを必ず削除する** — 作業完了済みのブランチを残さない
 
 ### 4. エラー時の対応
 
