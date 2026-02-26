@@ -18,6 +18,12 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
   },
 }));
 
+jest.mock("react-native-app-auth", () => ({
+  authorize: jest.fn(),
+  refresh: jest.fn(),
+  revoke: jest.fn(),
+}));
+
 describe("createPlatformServices", () => {
   it('should create AOSP services with type "aosp"', () => {
     const services = createPlatformServices("aosp");
@@ -50,8 +56,8 @@ describe("createPlatformServices", () => {
     const aosp = createPlatformServices("aosp");
     const gms = createPlatformServices("gms");
 
-    // AOSP auth is never available
-    await expect(aosp.auth.isAvailable()).resolves.toBe(false);
+    // AOSP auth is available (uses react-native-app-auth)
+    await expect(aosp.auth.isAvailable()).resolves.toBe(true);
 
     // GMS auth delegates to GoogleSignin.hasPlayServices (mocked above)
     // The fact they return different results proves they are different implementations

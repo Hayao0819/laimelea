@@ -2,6 +2,7 @@ import { createAospAuthService } from "../../../src/core/platform/aosp/authServi
 import { createAospCalendarService } from "../../../src/core/platform/aosp/calendarService";
 import { createAospBackupService } from "../../../src/core/platform/aosp/backupService";
 import { createAospSleepService } from "../../../src/core/platform/aosp/sleepService";
+import { STORAGE_KEYS } from "../../../src/core/storage/keys";
 
 const mockStore: Record<string, string> = {};
 
@@ -20,23 +21,170 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+const mockAuthorize = jest.fn();
+const mockRefresh = jest.fn();
+const mockRevoke = jest.fn();
+
+jest.mock("react-native-app-auth", () => ({
+  authorize: (...args: unknown[]) => mockAuthorize(...args),
+  refresh: (...args: unknown[]) => mockRefresh(...args),
+  revoke: (...args: unknown[]) => mockRevoke(...args),
+}));
+
+function encodeBase64Url(obj: Record<string, unknown>): string {
+  const json = JSON.stringify(obj);
+  return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/[=]+$/, "");
+}
+
+function makeIdToken(payload: Record<string, unknown>): string {
+  const header = encodeBase64Url({ alg: "RS256", typ: "JWT" });
+  const body = encodeBase64Url(payload);
+  return `${header}.${body}.fake-signature`;
+}
+
+function clearMockStore(): void {
+  for (const key of Object.keys(mockStore)) {
+    delete mockStore[key];
+  }
+}
+
 describe("AOSP AuthService", () => {
-  const auth = createAospAuthService();
-
-  it("isAvailable should return false", async () => {
-    expect(await auth.isAvailable()).toBe(false);
+  beforeEach(() => {
+    clearMockStore();
+    jest.clearAllMocks();
   });
 
-  it("signIn should throw", async () => {
-    await expect(auth.signIn()).rejects.toThrow();
+  it("isAvailable should return true", async () => {
+    const auth = createAospAuthService();
+    expect(await auth.isAvailable()).toBe(true);
   });
 
-  it("signOut should throw", async () => {
-    await expect(auth.signOut()).rejects.toThrow();
+  it("signIn should call authorize and return AuthResult", async () => {
+    const idToken = makeIdToken({ email: "user@gmail.com", sub: "123" });
+    mockAuthorize.mockResolvedValue({
+      accessToken: "access-token-123",
+      refreshToken: "refresh-token-456",
+      idToken,
+      accessTokenExpirationDate: "2099-01-01T00:00:00Z",
+    });
+
+    const auth = createAospAuthService();
+    const result = await auth.signIn();
+
+    expect(mockAuthorize).toHaveBeenCalledTimes(1);
+    expect(result.email).toBe("user@gmail.com");
+    expect(result.accessToken).toBe("access-token-123");
+    expect(result.idToken).toBe(idToken);
+
+    // Verify saved to AsyncStorage
+    const stored = JSON.parse(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]);
+    expect(stored.accessToken).toBe("access-token-123");
+    expect(stored.refreshToken).toBe("refresh-token-456");
+    expect(stored.email).toBe("user@gmail.com");
   });
 
-  it("getAccessToken should return null", async () => {
-    expect(await auth.getAccessToken()).toBeNull();
+  it("signIn should throw on user cancellation", async () => {
+    mockAuthorize.mockRejectedValue(new Error("User cancelled"));
+
+    const auth = createAospAuthService();
+    await expect(auth.signIn()).rejects.toThrow("User cancelled");
+  });
+
+  it("signOut should call revoke and clear storage", async () => {
+    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+      accessToken: "at",
+      refreshToken: "rt",
+      idToken: "it",
+      email: "user@gmail.com",
+      expirationDate: "2099-01-01T00:00:00Z",
+    });
+    mockRevoke.mockResolvedValue(undefined);
+
+    const auth = createAospAuthService();
+    await auth.signOut();
+
+    expect(mockRevoke).toHaveBeenCalledTimes(1);
+    expect(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]).toBeUndefined();
+  });
+
+  it("signOut should clear storage even if revoke fails", async () => {
+    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+      accessToken: "at",
+      refreshToken: "rt",
+      idToken: "it",
+      email: "user@gmail.com",
+      expirationDate: "2099-01-01T00:00:00Z",
+    });
+    mockRevoke.mockRejectedValue(new Error("Network error"));
+
+    const auth = createAospAuthService();
+    await auth.signOut();
+
+    expect(mockRevoke).toHaveBeenCalledTimes(1);
+    expect(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]).toBeUndefined();
+  });
+
+  it("getAccessToken should return valid token", async () => {
+    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+      accessToken: "valid-token",
+      refreshToken: "rt",
+      idToken: "it",
+      email: "user@gmail.com",
+      expirationDate: "2099-01-01T00:00:00Z",
+    });
+
+    const auth = createAospAuthService();
+    const token = await auth.getAccessToken();
+    expect(token).toBe("valid-token");
+    expect(mockRefresh).not.toHaveBeenCalled();
+  });
+
+  it("getAccessToken should refresh expired token", async () => {
+    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+      accessToken: "expired-token",
+      refreshToken: "rt",
+      idToken: "it",
+      email: "user@gmail.com",
+      expirationDate: "2000-01-01T00:00:00Z",
+    });
+    mockRefresh.mockResolvedValue({
+      accessToken: "new-token",
+      refreshToken: "new-rt",
+      idToken: "",
+      accessTokenExpirationDate: "2099-01-01T00:00:00Z",
+    });
+
+    const auth = createAospAuthService();
+    const token = await auth.getAccessToken();
+
+    expect(token).toBe("new-token");
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+
+    // Verify updated in storage
+    const stored = JSON.parse(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]);
+    expect(stored.accessToken).toBe("new-token");
+    expect(stored.refreshToken).toBe("new-rt");
+  });
+
+  it("getAccessToken should return null when refresh fails", async () => {
+    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+      accessToken: "expired-token",
+      refreshToken: "rt",
+      idToken: "it",
+      email: "user@gmail.com",
+      expirationDate: "2000-01-01T00:00:00Z",
+    });
+    mockRefresh.mockRejectedValue(new Error("Refresh failed"));
+
+    const auth = createAospAuthService();
+    const token = await auth.getAccessToken();
+    expect(token).toBeNull();
+  });
+
+  it("getAccessToken should return null when no token stored", async () => {
+    const auth = createAospAuthService();
+    const token = await auth.getAccessToken();
+    expect(token).toBeNull();
   });
 });
 
@@ -60,9 +208,7 @@ describe("AOSP BackupService", () => {
   const backup = createAospBackupService();
 
   beforeEach(() => {
-    for (const key of Object.keys(mockStore)) {
-      delete mockStore[key];
-    }
+    clearMockStore();
   });
 
   it("isAvailable should return true", async () => {
