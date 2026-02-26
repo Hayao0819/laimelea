@@ -21,7 +21,7 @@ require("../../../src/core/notifications/backgroundHandler");
 
 describe("backgroundHandler", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    (notifee.cancelNotification as jest.Mock).mockClear();
   });
 
   it("should register a background event handler", () => {
