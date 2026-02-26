@@ -6,12 +6,15 @@ import {
   DarkTheme as NavDarkTheme,
   NavigationContainer,
 } from "@react-navigation/native";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 
 import { lightTheme, darkTheme } from "./theme";
 import { settingsAtom } from "../atoms/settingsAtoms";
+import { platformTypeAtom } from "../atoms/platformAtoms";
+import { detectPlatform } from "../core/platform/detection";
 import {
   createAlarmChannel,
+  createTimerChannel,
   ensureNotificationPermissions,
 } from "../core/notifications/notifeeSetup";
 import "../core/i18n";
@@ -23,11 +26,14 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   const systemColorScheme = useColorScheme();
   const settings = useAtomValue(settingsAtom);
+  const setPlatformType = useSetAtom(platformTypeAtom);
 
   useEffect(() => {
     createAlarmChannel();
+    createTimerChannel();
     ensureNotificationPermissions();
-  }, []);
+    detectPlatform().then(setPlatformType);
+  }, [setPlatformType]);
 
   const isDark =
     settings.theme === "dark" ||
