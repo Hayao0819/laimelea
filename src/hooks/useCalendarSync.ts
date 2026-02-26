@@ -6,8 +6,10 @@ import {
   calendarLastSyncAtom,
   calendarSyncErrorAtom,
   calendarCacheStaleAtom,
+  calendarListAtom,
 } from "../atoms/calendarAtoms";
 import { platformServicesAtom } from "../atoms/platformAtoms";
+import { resolvedSettingsAtom } from "../atoms/settingsAtoms";
 import { syncCalendarEvents } from "../core/calendar/calendarSyncService";
 import type { CalendarEvent } from "../models/CalendarEvent";
 
@@ -24,8 +26,10 @@ export function useCalendarSync(): CalendarSyncResult {
   const [loading, setLoading] = useAtom(calendarLoadingAtom);
   const [error, setError] = useAtom(calendarSyncErrorAtom);
   const setLastSync = useSetAtom(calendarLastSyncAtom);
+  const setCalendarList = useSetAtom(calendarListAtom);
   const isStale = useAtomValue(calendarCacheStaleAtom);
   const services = useAtomValue(platformServicesAtom);
+  const settings = useAtomValue(resolvedSettingsAtom);
 
   const syncingRef = useRef(false);
 
@@ -39,9 +43,23 @@ export function useCalendarSync(): CalendarSyncResult {
       setError(null);
 
       try {
-        const result = await syncCalendarEvents(services.calendar);
+        const visibleIds =
+          settings.visibleCalendarIds.length > 0
+            ? settings.visibleCalendarIds
+            : undefined;
+        const result = await syncCalendarEvents(
+          services.calendar,
+          visibleIds,
+        );
         setEvents(result.events);
         setLastSync(result.syncTimestamp);
+
+        try {
+          const calendars = await services.calendar.getCalendarList();
+          setCalendarList(calendars);
+        } catch {
+          // ignore - calendar list is supplementary
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unknown error");
       } finally {
@@ -49,7 +67,16 @@ export function useCalendarSync(): CalendarSyncResult {
         syncingRef.current = false;
       }
     },
-    [isStale, services.calendar, setEvents, setLastSync, setLoading, setError],
+    [
+      isStale,
+      services.calendar,
+      settings.visibleCalendarIds,
+      setEvents,
+      setLastSync,
+      setCalendarList,
+      setLoading,
+      setError,
+    ],
   );
 
   return { events, loading, error, isStale, sync };
