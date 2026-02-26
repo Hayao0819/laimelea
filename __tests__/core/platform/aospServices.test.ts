@@ -357,11 +357,62 @@ describe("AOSP BackupService", () => {
 describe("AOSP SleepService", () => {
   const sleep = createAospSleepService();
 
-  it("isAvailable should return false", async () => {
-    expect(await sleep.isAvailable()).toBe(false);
+  beforeEach(() => {
+    for (const key of Object.keys(mockStore)) {
+      delete mockStore[key];
+    }
   });
 
-  it("fetchSleepSessions should return empty array", async () => {
+  it("isAvailable should return true (manual entry always available)", async () => {
+    expect(await sleep.isAvailable()).toBe(true);
+  });
+
+  it("fetchSleepSessions should return empty array when no data", async () => {
+    expect(await sleep.fetchSleepSessions(0, 1000)).toEqual([]);
+  });
+
+  it("fetchSleepSessions should return manual sessions within range", async () => {
+    const sessions = [
+      {
+        id: "s1",
+        source: "manual",
+        startTimestampMs: 500,
+        endTimestampMs: 600,
+        stages: [],
+        durationMs: 100,
+        createdAt: 500,
+        updatedAt: 500,
+      },
+      {
+        id: "s2",
+        source: "manual",
+        startTimestampMs: 1500,
+        endTimestampMs: 1600,
+        stages: [],
+        durationMs: 100,
+        createdAt: 1500,
+        updatedAt: 1500,
+      },
+      {
+        id: "s3",
+        source: "health_connect",
+        startTimestampMs: 500,
+        endTimestampMs: 600,
+        stages: [],
+        durationMs: 100,
+        createdAt: 500,
+        updatedAt: 500,
+      },
+    ];
+    mockStore[STORAGE_KEYS.SLEEP_SESSIONS] = JSON.stringify(sessions);
+
+    const result = await sleep.fetchSleepSessions(0, 1000);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("s1");
+  });
+
+  it("fetchSleepSessions should return empty array on parse error", async () => {
+    mockStore[STORAGE_KEYS.SLEEP_SESSIONS] = "invalid-json";
     expect(await sleep.fetchSleepSessions(0, 1000)).toEqual([]);
   });
 });

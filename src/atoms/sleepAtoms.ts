@@ -12,3 +12,15 @@ export const sleepSessionsAtom = atomWithStorage<SleepSession[]>(
 );
 
 export const cycleEstimationAtom = atom<CycleEstimation | null>(null);
+
+export const sleepLoadingAtom = atom(false);
+export const sleepErrorAtom = atom<string | null>(null);
+export const sleepLastSyncAtom = atom<number | null>(null);
+
+export const SLEEP_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export const sleepCacheStaleAtom = atom((get) => {
+  const lastSync = get(sleepLastSyncAtom);
+  if (lastSync == null) return true;
+  return Date.now() - lastSync > SLEEP_CACHE_TTL_MS;
+});

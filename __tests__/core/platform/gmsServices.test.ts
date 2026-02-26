@@ -20,6 +20,23 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
   },
 }));
 
+const mockInitialize = jest.fn();
+const mockReadRecords = jest.fn();
+
+jest.mock("react-native-health-connect", () => ({
+  initialize: (...args: unknown[]) => mockInitialize(...args),
+  readRecords: (...args: unknown[]) => mockReadRecords(...args),
+  SleepStageType: {
+    UNKNOWN: 0,
+    AWAKE: 1,
+    SLEEPING: 2,
+    OUT_OF_BED: 3,
+    LIGHT: 4,
+    DEEP: 5,
+    REM: 6,
+  },
+}));
+
 const mockStore: Record<string, string> = {};
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -251,11 +268,82 @@ describe("GMS BackupService", () => {
 describe("GMS SleepService", () => {
   const sleep = createGmsSleepService();
 
-  it("isAvailable should return false (stub)", async () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("isAvailable should return true when initialize succeeds", async () => {
+    mockInitialize.mockResolvedValue(true);
+    expect(await sleep.isAvailable()).toBe(true);
+  });
+
+  it("isAvailable should return false when initialize fails", async () => {
+    mockInitialize.mockRejectedValue(new Error("not installed"));
     expect(await sleep.isAvailable()).toBe(false);
   });
 
-  it("fetchSleepSessions should return empty array", async () => {
+  it("fetchSleepSessions should return mapped sessions", async () => {
+    const startTime = "2025-01-15T23:00:00.000Z";
+    const endTime = "2025-01-16T07:00:00.000Z";
+    mockReadRecords.mockResolvedValue({
+      records: [
+        {
+          startTime,
+          endTime,
+          stages: [
+            {
+              startTime,
+              endTime: "2025-01-16T01:00:00.000Z",
+              stage: 4,
+            },
+            {
+              startTime: "2025-01-16T01:00:00.000Z",
+              endTime: "2025-01-16T03:00:00.000Z",
+              stage: 5,
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await sleep.fetchSleepSessions(
+      new Date(startTime).getTime(),
+      new Date(endTime).getTime(),
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].source).toBe("health_connect");
+    expect(result[0].stages).toHaveLength(2);
+    expect(result[0].stages[0].stage).toBe("light");
+    expect(result[0].stages[1].stage).toBe("deep");
+    expect(result[0].durationMs).toBe(
+      new Date(endTime).getTime() - new Date(startTime).getTime(),
+    );
+  });
+
+  it("fetchSleepSessions should return empty array on error", async () => {
+    mockReadRecords.mockRejectedValue(new Error("permission denied"));
     expect(await sleep.fetchSleepSessions(0, 1000)).toEqual([]);
+  });
+
+  it("fetchSleepSessions should map unknown stage types to unknown", async () => {
+    mockReadRecords.mockResolvedValue({
+      records: [
+        {
+          startTime: "2025-01-15T23:00:00.000Z",
+          endTime: "2025-01-16T07:00:00.000Z",
+          stages: [
+            {
+              startTime: "2025-01-15T23:00:00.000Z",
+              endTime: "2025-01-16T01:00:00.000Z",
+              stage: 99,
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await sleep.fetchSleepSessions(0, Date.now());
+    expect(result[0].stages[0].stage).toBe("unknown");
   });
 });
