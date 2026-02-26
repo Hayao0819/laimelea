@@ -2,9 +2,7 @@
  * Decode the payload section of a JWT (id_token) without signature verification.
  * Signature verification is a server-side responsibility.
  */
-export function decodeIdTokenPayload(
-  idToken: string,
-): Record<string, unknown> {
+export function decodeIdTokenPayload(idToken: string): Record<string, unknown> {
   const parts = idToken.split(".");
   if (parts.length !== 3) {
     throw new Error("Invalid JWT format");

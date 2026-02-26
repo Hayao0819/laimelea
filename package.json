@@ -68,6 +68,14 @@
       "detox"
     ]
   },
+  "codegenConfig": {
+    "name": "LaimelaSpec",
+    "type": "modules",
+    "jsSrcsDir": "src/core/platform/native",
+    "android": {
+      "javaPackageName": "com.hayao0819.laimelea.calendar"
+    }
+  },
   "engines": {
     "node": ">= 22.11.0"
   }

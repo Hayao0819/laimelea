@@ -5,7 +5,10 @@ import {
 
 function encodeBase64Url(obj: Record<string, unknown>): string {
   const json = JSON.stringify(obj);
-  return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/[=]+$/, "");
+  return btoa(json)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/[=]+$/, "");
 }
 
 function makeJwt(payload: Record<string, unknown>): string {
