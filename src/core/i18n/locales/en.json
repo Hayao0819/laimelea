@@ -32,12 +32,21 @@
     "snoozeSettings": "{{duration}} min / {{max}} times",
     "deleteConfirm": "Delete this alarm?",
     "scheduled": "Alarm set",
-    "snoozed": "Snoozed for {{minutes}} min"
+    "snoozed": "Snoozed for {{minutes}} min",
+    "snoozeAction": "Snooze"
   },
   "dismissal": {
     "simple": "Tap to Dismiss",
+    "simpleDesc": "Tap the button to dismiss the alarm",
     "shake": "Shake to Dismiss",
-    "math": "Solve Math to Dismiss"
+    "shakeDesc": "Shake your phone to dismiss the alarm",
+    "shakeInstruction": "Shake your phone!",
+    "shakeCount": "{{current}} / {{total}} shakes",
+    "math": "Solve Math to Dismiss",
+    "mathDesc": "Solve a math problem to dismiss the alarm",
+    "mathInstruction": "Solve this problem to dismiss",
+    "mathWrong": "Wrong answer, try again!",
+    "mathSubmit": "Submit"
   },
   "calendar": {
     "title": "Calendar",

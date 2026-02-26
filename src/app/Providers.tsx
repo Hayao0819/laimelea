@@ -1,7 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useColorScheme } from "react-native";
 import { PaperProvider } from "react-native-paper";
-import { NavigationContainer } from "@react-navigation/native";
+import {
+  DefaultTheme as NavLightTheme,
+  DarkTheme as NavDarkTheme,
+  NavigationContainer,
+} from "@react-navigation/native";
 import { useAtomValue } from "jotai";
 
 import { lightTheme, darkTheme } from "./theme";
@@ -31,9 +35,23 @@ export function Providers({ children }: ProvidersProps) {
 
   const theme = isDark ? darkTheme : lightTheme;
 
+  const navigationTheme = useMemo(() => {
+    const base = isDark ? NavDarkTheme : NavLightTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: theme.colors.background,
+        card: theme.colors.surface,
+      },
+    };
+  }, [isDark, theme]);
+
   return (
     <PaperProvider theme={theme}>
-      <NavigationContainer>{children}</NavigationContainer>
+      <NavigationContainer theme={navigationTheme}>
+        {children}
+      </NavigationContainer>
     </PaperProvider>
   );
 }

@@ -81,6 +81,14 @@ rm -rf android/app/build android/build android/.gradle
 - Avoid lookup paths `<...>` → use flake inputs
 - Always quote URLs (RFC 45)
 
+## Emulator操作
+
+エミュレータの操作（スクリーンショット取得、UI要素のタップ、画面遷移の確認など）は**常にサブエージェント（`emulator-operator`）に委譲**すること。MCP toolの呼び出し（`mobile_take_screenshot`, `mobile_list_elements_on_screen` 等）は1回あたりのレスポンスが大きく、メインコンテキストを大量に消費するため、直接呼び出してはならない。
+
+```
+Task tool → subagent_type: "emulator-operator"
+```
+
 ## Auto-Update Policy
 
 When discovering new Nix information through web searches or problem-solving, automatically update relevant documentation files without being asked.

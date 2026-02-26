@@ -8,6 +8,13 @@ import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import type { Alarm } from "../../../src/models/Alarm";
 
+jest.mock("react-native-shake", () => ({
+  __esModule: true,
+  default: {
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+  },
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
   return {

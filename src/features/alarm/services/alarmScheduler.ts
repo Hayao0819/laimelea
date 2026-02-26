@@ -29,7 +29,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
         pressAction: { id: "default" },
         loopSound: true,
         sound: "default",
-        vibrationPattern: [0, 500, 200, 500],
+        vibrationPattern: [300, 500, 200, 500],
         autoCancel: false,
         ongoing: true,
       },

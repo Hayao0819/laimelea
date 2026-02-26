@@ -1,7 +1,8 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { BottomNavigation } from "react-native-paper";
-import { CommonActions } from "@react-navigation/native";
+import { Appbar, BottomNavigation } from "react-native-paper";
+import { CommonActions, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTranslation } from "react-i18next";
 
@@ -10,12 +11,14 @@ import { AlarmListScreen } from "../features/alarm/screens/AlarmListScreen";
 import { CalendarScreen } from "../features/calendar/screens/CalendarScreen";
 import { SleepLogScreen } from "../features/sleep/screens/SleepLogScreen";
 import { TimerScreen } from "../features/timer/screens/TimerScreen";
-import type { BottomTabParamList } from "./types";
+import type { BottomTabParamList, RootStackParamList } from "./types";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export function BottomTabNavigator() {
   const { t } = useTranslation();
+  const rootNavigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
     <Tab.Navigator
@@ -55,7 +58,17 @@ export function BottomTabNavigator() {
           }}
         />
       )}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        header: ({ options }) => (
+          <Appbar.Header elevated={false}>
+            <Appbar.Content title={options.title ?? ""} />
+            <Appbar.Action
+              icon="cog-outline"
+              onPress={() => rootNavigation.navigate("Settings")}
+            />
+          </Appbar.Header>
+        ),
+      }}
     >
       <Tab.Screen
         name="ClockTab"

@@ -9,6 +9,9 @@ import {
   Button,
   IconButton,
   Divider,
+  Portal,
+  Dialog,
+  RadioButton,
   useTheme,
 } from "react-native-paper";
 import { useAtom, useAtomValue } from "jotai";
@@ -21,7 +24,9 @@ import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { customToReal, realToCustom } from "../../../core/time/conversions";
 import { scheduleAlarm, cancelAlarm } from "../services/alarmScheduler";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
+import { getAllStrategies, getStrategy } from "../strategies";
 import type { Alarm } from "../../../models/Alarm";
+import type { DismissalMethod } from "../../../models/Settings";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmEdit">;
 
@@ -69,6 +74,10 @@ export function AlarmEditScreen() {
     existingAlarm?.snoozeMaxCount ?? defaults.snoozeMaxCount,
   );
   const [autoSilenceMin] = useState(existingAlarm?.autoSilenceMin ?? 15);
+  const [dismissalMethod, setDismissalMethod] = useState<DismissalMethod>(
+    existingAlarm?.dismissalMethod ?? defaults.dismissalMethod,
+  );
+  const [dismissalDialogVisible, setDismissalDialogVisible] = useState(false);
 
   const computeTargetTimestamp = useCallback(() => {
     if (timeSystem === "custom") {
@@ -97,8 +106,7 @@ export function AlarmEditScreen() {
       targetTimestampMs,
       setInTimeSystem: timeSystem,
       repeat: existingAlarm?.repeat ?? null,
-      dismissalMethod:
-        existingAlarm?.dismissalMethod ?? defaults.dismissalMethod,
+      dismissalMethod,
       gradualVolumeDurationSec:
         existingAlarm?.gradualVolumeDurationSec ??
         defaults.gradualVolumeDurationSec,
@@ -132,6 +140,7 @@ export function AlarmEditScreen() {
     existingAlarm,
     label,
     timeSystem,
+    dismissalMethod,
     defaults,
     snoozeDuration,
     snoozeMax,
@@ -170,11 +179,13 @@ export function AlarmEditScreen() {
     });
   }, [navigation, existingAlarm, t, SaveButton]);
 
+  const currentStrategy = getStrategy(dismissalMethod);
+
   const renderDismissalIcon = useCallback(
     (props: { color: string; style: object }) => (
-      <List.Icon {...props} icon="gesture-tap" />
+      <List.Icon {...props} icon={currentStrategy?.icon ?? "gesture-tap"} />
     ),
-    [],
+    [currentStrategy],
   );
 
   const renderSnoozeIcon = useCallback(
@@ -247,8 +258,14 @@ export function AlarmEditScreen() {
         <Surface style={styles.settingsCard} elevation={0}>
           <List.Item
             title={t("alarm.dismissal")}
-            description={t("dismissal.simple")}
+            description={
+              currentStrategy
+                ? t(currentStrategy.displayName)
+                : t("dismissal.simple")
+            }
             left={renderDismissalIcon}
+            onPress={() => setDismissalDialogVisible(true)}
+            testID="dismissal-method-item"
           />
           <Divider />
           <List.Item
@@ -285,6 +302,33 @@ export function AlarmEditScreen() {
           </Button>
         )}
       </ScrollView>
+      <Portal>
+        <Dialog
+          visible={dismissalDialogVisible}
+          onDismiss={() => setDismissalDialogVisible(false)}
+          testID="dismissal-dialog"
+        >
+          <Dialog.Title>{t("alarm.dismissal")}</Dialog.Title>
+          <Dialog.Content>
+            <RadioButton.Group
+              value={dismissalMethod}
+              onValueChange={(value) => {
+                setDismissalMethod(value as DismissalMethod);
+                setDismissalDialogVisible(false);
+              }}
+            >
+              {getAllStrategies().map((strategy) => (
+                <RadioButton.Item
+                  key={strategy.id}
+                  label={t(strategy.displayName)}
+                  value={strategy.id}
+                  testID={`dismissal-option-${strategy.id}`}
+                />
+              ))}
+            </RadioButton.Group>
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
     </View>
   );
 }

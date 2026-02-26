@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import { atomWithStorage } from "jotai/utils";
+import { atomWithStorage, unwrap } from "jotai/utils";
 import { createAsyncStorage } from "../core/storage/asyncStorageAdapter";
 import { STORAGE_KEYS } from "../core/storage/keys";
 import { DEFAULT_SETTINGS } from "../models/Settings";
@@ -13,14 +13,19 @@ export const settingsAtom = atomWithStorage<AppSettings>(
   { getOnInit: true },
 );
 
-// atomWithStorage + AsyncStorage always types as `T | Promise<T>`,
-// but `getOnInit: true` guarantees the value is resolved synchronously.
+// atomWithStorage + AsyncStorage keeps a Promise in the store until resolved.
+// `unwrap` provides a synchronous view: returns the fallback while the Promise
+// is pending, then switches to the resolved value once AsyncStorage responds.
+const syncSettingsAtom = unwrap(
+  settingsAtom,
+  (prev) => prev ?? DEFAULT_SETTINGS,
+);
 
 // Derived atom that guarantees a complete AppSettings for use in components.
 // Merges with DEFAULT_SETTINGS to fill any fields missing from persisted data
 // (e.g. alarmDefaults may be absent if settings were saved before it existed).
 export const resolvedSettingsAtom = atom<AppSettings>((get) => {
-  const stored = get(settingsAtom) as AppSettings;
+  const stored = get(syncSettingsAtom);
   return { ...DEFAULT_SETTINGS, ...stored };
 });
 

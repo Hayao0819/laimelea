@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { View, StyleSheet } from "react-native";
-import { Button, Text, useTheme } from "react-native-paper";
+import { Text, useTheme } from "react-native-paper";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -12,6 +12,9 @@ import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
 import { scheduleAlarm } from "../services/alarmScheduler";
+import { GradualVolumeManager } from "../services/gradualVolumeManager";
+import { DismissalContainer } from "../components/dismissal/DismissalContainer";
+import "../strategies"; // ensure strategies are registered
 import type { Alarm } from "../../../models/Alarm";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmFiring">;
@@ -29,6 +32,20 @@ export function AlarmFiringScreen() {
     [alarms, route.params.alarmId],
   );
 
+  const volumeManagerRef = useRef<GradualVolumeManager | null>(null);
+
+  useEffect(() => {
+    if (!alarm) return;
+    const manager = new GradualVolumeManager(alarm.gradualVolumeDurationSec);
+    volumeManagerRef.current = manager;
+    manager.start((_volume) => {
+      // Volume control callback - native AudioManager integration point
+    });
+    return () => {
+      manager.stop();
+    };
+  }, [alarm]);
+
   const timeDisplay = useMemo(() => {
     if (!alarm) return "";
     return formatCustomTimeShort(
@@ -38,6 +55,7 @@ export function AlarmFiringScreen() {
 
   const handleDismiss = useCallback(async () => {
     if (!alarm) return;
+    volumeManagerRef.current?.stop();
     await notifee.cancelNotification(alarm.id);
     const now = Date.now();
     setAlarms(
@@ -50,6 +68,7 @@ export function AlarmFiringScreen() {
 
   const handleSnooze = useCallback(async () => {
     if (!alarm) return;
+    volumeManagerRef.current?.stop();
     await notifee.cancelNotification(alarm.id);
 
     const snoozeMs = alarm.snoozeDurationMin * 60 * 1000;
@@ -91,26 +110,13 @@ export function AlarmFiringScreen() {
       <Text variant="displayLarge" style={styles.time}>
         {timeDisplay}
       </Text>
-      <View style={styles.buttons}>
-        {canSnooze && (
-          <Button
-            mode="outlined"
-            onPress={handleSnooze}
-            style={styles.button}
-            testID="snooze-button"
-          >
-            {t("alarm.snoozed", { minutes: alarm.snoozeDurationMin })}
-          </Button>
-        )}
-        <Button
-          mode="contained"
-          onPress={handleDismiss}
-          style={styles.button}
-          testID="dismiss-button"
-        >
-          {t("dismissal.simple")}
-        </Button>
-      </View>
+      <DismissalContainer
+        method={alarm.dismissalMethod}
+        difficulty={1}
+        onDismiss={handleDismiss}
+        onSnooze={handleSnooze}
+        canSnooze={canSnooze}
+      />
     </View>
   );
 }
@@ -132,12 +138,5 @@ const styles = StyleSheet.create({
   time: {
     fontVariant: ["tabular-nums"],
     marginBottom: 48,
-  },
-  buttons: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  button: {
-    minWidth: 120,
   },
 });

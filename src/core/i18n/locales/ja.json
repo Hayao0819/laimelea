@@ -32,12 +32,21 @@
     "snoozeSettings": "{{duration}}分 / {{max}}回",
     "deleteConfirm": "このアラームを削除しますか？",
     "scheduled": "アラームを設定しました",
-    "snoozed": "{{minutes}}分後にスヌーズ"
+    "snoozed": "{{minutes}}分後にスヌーズ",
+    "snoozeAction": "スヌーズ"
   },
   "dismissal": {
     "simple": "タップで解除",
+    "simpleDesc": "ボタンをタップしてアラームを解除",
     "shake": "シェイクで解除",
-    "math": "計算問題で解除"
+    "shakeDesc": "スマホを振ってアラームを解除",
+    "shakeInstruction": "スマホを振ってください！",
+    "shakeCount": "{{current}} / {{total}} 回",
+    "math": "計算問題で解除",
+    "mathDesc": "計算問題を解いてアラームを解除",
+    "mathInstruction": "問題を解いて解除してください",
+    "mathWrong": "不正解です。もう一度！",
+    "mathSubmit": "回答"
   },
   "calendar": {
     "title": "カレンダー",
