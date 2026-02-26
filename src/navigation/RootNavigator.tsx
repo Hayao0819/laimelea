@@ -8,6 +8,7 @@ import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
 import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";
+import { ManualSleepEntryScreen } from "../features/sleep/screens/ManualSleepEntryScreen";
 import { setupCompleteAtom } from "../atoms/settingsAtoms";
 import type { RootStackParamList } from "./types";
 
@@ -48,6 +49,14 @@ export function RootNavigator() {
             name="BulkAlarm"
             component={BulkAlarmScreen}
             options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="ManualSleepEntry"
+            component={ManualSleepEntryScreen}
+            options={{
+              title: t("sleep.manualEntry"),
+              presentation: "modal",
+            }}
           />
           <Stack.Screen
             name="AlarmFiring"

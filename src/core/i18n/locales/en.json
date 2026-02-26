@@ -80,7 +80,26 @@
       "low": "Confidence: Low",
       "medium": "Confidence: Medium",
       "high": "Confidence: High"
-    }
+    },
+    "noData": "No sleep data",
+    "notEnoughData": "Need at least 7 days of data",
+    "period": "Estimated Period",
+    "drift": "Drift per Day",
+    "dataPoints": "Data Points",
+    "sleepStart": "Sleep Start",
+    "sleepEnd": "Wake Up",
+    "duration": "Duration",
+    "source": "Source",
+    "sourceManual": "Manual",
+    "sourceHealthConnect": "Health Connect",
+    "deleteConfirm": "Delete this sleep entry?",
+    "saved": "Sleep entry saved",
+    "validationError": "Wake time must be after sleep time",
+    "date": "Date",
+    "time": "Time",
+    "hours": "h",
+    "minutes": "m",
+    "day": "d"
   },
   "timer": {
     "title": "Timer",

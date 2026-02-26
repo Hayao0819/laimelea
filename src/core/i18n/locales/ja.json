@@ -80,7 +80,26 @@
       "low": "信頼度: 低",
       "medium": "信頼度: 中",
       "high": "信頼度: 高"
-    }
+    },
+    "noData": "睡眠データがありません",
+    "notEnoughData": "7日分以上のデータが必要です",
+    "period": "推定周期",
+    "drift": "1日あたりのドリフト",
+    "dataPoints": "データ点数",
+    "sleepStart": "入眠時刻",
+    "sleepEnd": "起床時刻",
+    "duration": "睡眠時間",
+    "source": "ソース",
+    "sourceManual": "手動入力",
+    "sourceHealthConnect": "Health Connect",
+    "deleteConfirm": "この睡眠記録を削除しますか？",
+    "saved": "睡眠記録を保存しました",
+    "validationError": "起床時刻は入眠時刻の後である必要があります",
+    "date": "日付",
+    "time": "時刻",
+    "hours": "時間",
+    "minutes": "分",
+    "day": "日"
   },
   "timer": {
     "title": "タイマー",
