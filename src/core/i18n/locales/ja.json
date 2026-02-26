@@ -8,7 +8,7 @@
   },
   "clock": {
     "customTime": "カスタム時間",
-    "standardTime": "24時間",
+    "realTime": "24時間",
     "day": "日目"
   },
   "alarm": {

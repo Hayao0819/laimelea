@@ -8,7 +8,7 @@
   },
   "clock": {
     "customTime": "Custom Time",
-    "standardTime": "24h Time",
+    "realTime": "24h Time",
     "day": "Day"
   },
   "alarm": {

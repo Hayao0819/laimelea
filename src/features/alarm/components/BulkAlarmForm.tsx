@@ -116,7 +116,7 @@ export function BulkAlarmForm({
           onValueChange={(v) => onTimeSystemChange(v as "custom" | "24h")}
           buttons={[
             { value: "custom", label: t("clock.customTime") },
-            { value: "24h", label: t("clock.standardTime") },
+            { value: "24h", label: t("clock.realTime") },
           ]}
           style={styles.segment}
         />
