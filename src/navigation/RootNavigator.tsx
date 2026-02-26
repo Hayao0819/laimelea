@@ -5,22 +5,22 @@ import { useTranslation } from "react-i18next";
 
 import { BottomTabNavigator } from "./BottomTabNavigator";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
-import { settingsAtom } from "../atoms/settingsAtoms";
+import { setupCompleteAtom } from "../atoms/settingsAtoms";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const settings = useAtomValue(settingsAtom);
+  const setupComplete = useAtomValue(setupCompleteAtom);
   const { t } = useTranslation();
 
   return (
     <Stack.Navigator>
-      {!settings.setupComplete ? (
+      {!setupComplete ? (
         <Stack.Screen
           name="Setup"
           getComponent={() =>
-            require("../features/clock/screens/ClockScreen").ClockScreen
+            require("../features/setup/screens/SetupScreen").SetupScreen
           }
           options={{ headerShown: false }}
         />

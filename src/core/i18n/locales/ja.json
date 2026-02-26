@@ -94,7 +94,10 @@
     "hours": "時間",
     "minutes": "分",
     "next": "次へ",
-    "done": "完了"
+    "done": "完了",
+    "useNow": "現在時刻を使用",
+    "baseTimeDescription": "カスタムDay 0の00:00:00に対応する実時刻",
+    "preview": "現在のカスタム時間"
   },
   "common": {
     "save": "保存",

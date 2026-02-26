@@ -970,11 +970,13 @@ RootNavigator (NativeStack)
 - `src/models/CustomTime.ts`, `Settings.ts` - データモデル + デフォルト値
 - **32テスト全パス**（負のday、ラウンドトリップ変換、24h/26h/28h/26.5h各周期）
 
-### Phase 3: ストレージ・状態管理
+### Phase 3: ストレージ・状態管理 ✅ 完了
 
 - AsyncStorageアダプター + Jotai atomWithStorage
-- `settingsAtoms.ts` - 周期設定の永続化
-- 初回セットアップ画面（周期長 + 基準時刻設定）
+- `settingsAtoms.ts` - 周期設定の永続化 + 派生atom（`cycleConfigAtom`, `setupCompleteAtom`）
+- 初回セットアップ画面（`SetupScreen` — 周期長 + 基準時刻設定 + ライブプレビュー）
+- RootNavigatorが`setupCompleteAtom`で初回起動を判定
+- **41テスト全パス**（既存32 + 派生atom 4 + SetupScreen 5）
 
 ### Phase 4: ナビゲーションシェル
 

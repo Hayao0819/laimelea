@@ -94,7 +94,10 @@
     "hours": "Hours",
     "minutes": "Minutes",
     "next": "Next",
-    "done": "Done"
+    "done": "Done",
+    "useNow": "Use Current Time",
+    "baseTimeDescription": "Real-world time corresponding to Custom Day 0, 00:00:00",
+    "preview": "Current custom time"
   },
   "common": {
     "save": "Save",
