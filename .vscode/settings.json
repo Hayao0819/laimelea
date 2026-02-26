@@ -1,0 +1,16 @@
+{
+  "editor.formatOnSave": true,
+  "eslint.useFlatConfig": true,
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "nil",
+  "nix.serverSettings": {
+    "nil": {
+      "formatting": {
+        "command": ["treefmt", "--stdin", "{file}"]
+      }
+    }
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}

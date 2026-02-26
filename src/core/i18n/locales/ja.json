@@ -1,0 +1,108 @@
+{
+  "tabs": {
+    "clock": "時計",
+    "alarm": "アラーム",
+    "calendar": "カレンダー",
+    "sleep": "睡眠",
+    "timer": "タイマー"
+  },
+  "clock": {
+    "customTime": "カスタム時間",
+    "standardTime": "24時間",
+    "day": "日目"
+  },
+  "alarm": {
+    "title": "アラーム",
+    "newAlarm": "新しいアラーム",
+    "editAlarm": "アラーム編集",
+    "bulkCreate": "一括作成",
+    "label": "ラベル",
+    "repeat": "繰り返し",
+    "dismissal": "解除方法",
+    "snooze": "スヌーズ",
+    "vibration": "バイブレーション",
+    "sound": "サウンド",
+    "linkedEvent": "カレンダー予定に連動",
+    "noAlarms": "アラームがありません"
+  },
+  "dismissal": {
+    "simple": "タップで解除",
+    "shake": "シェイクで解除",
+    "math": "計算問題で解除"
+  },
+  "calendar": {
+    "title": "カレンダー",
+    "noEvents": "予定はありません",
+    "allDay": "終日"
+  },
+  "sleep": {
+    "title": "睡眠",
+    "log": "睡眠ログ",
+    "manualEntry": "手動入力",
+    "cycleEstimate": "周期推定",
+    "applyCycle": "この周期を適用",
+    "confidence": {
+      "low": "信頼度: 低",
+      "medium": "信頼度: 中",
+      "high": "信頼度: 高"
+    }
+  },
+  "timer": {
+    "title": "タイマー",
+    "countdown": "カウントダウン",
+    "stopwatch": "ストップウォッチ",
+    "start": "開始",
+    "pause": "一時停止",
+    "reset": "リセット",
+    "lap": "ラップ"
+  },
+  "settings": {
+    "title": "設定",
+    "cycleConfig": "カスタム周期",
+    "cycleLength": "周期長",
+    "baseTime": "基準時刻",
+    "primaryDisplay": "メイン表示",
+    "general": "一般",
+    "language": "言語",
+    "theme": "テーマ",
+    "timeFormat": "時間形式",
+    "timezone": "タイムゾーン",
+    "timezoneLabel": "タイムゾーン",
+    "dst": "サマータイム",
+    "dstAuto": "自動",
+    "dstIgnore": "無視",
+    "secondaryTz": "セカンダリTZ",
+    "alarmDefaults": "アラームデフォルト",
+    "calendarSection": "カレンダー",
+    "account": "アカウント連携",
+    "firstDayOfWeek": "週の開始日",
+    "defaultReminder": "デフォルトリマインダー",
+    "visibleCalendars": "表示カレンダー",
+    "backup": "バックアップ",
+    "backupNow": "バックアップ",
+    "restore": "復元",
+    "lastBackup": "最終バックアップ",
+    "themeLight": "ライト",
+    "themeDark": "ダーク",
+    "themeSystem": "自動"
+  },
+  "setup": {
+    "welcome": "Laimeleaへようこそ",
+    "description": "あなたの生活リズムに合わせた時計アプリです。",
+    "setCycleLength": "周期長を設定してください（例: 26時間）",
+    "setBaseTime": "基準時刻を設定してください",
+    "hours": "時間",
+    "minutes": "分",
+    "next": "次へ",
+    "done": "完了"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "ok": "OK",
+    "on": "オン",
+    "off": "オフ",
+    "notSet": "未設定"
+  }
+}

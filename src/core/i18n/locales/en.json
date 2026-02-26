@@ -1,0 +1,108 @@
+{
+  "tabs": {
+    "clock": "Clock",
+    "alarm": "Alarm",
+    "calendar": "Calendar",
+    "sleep": "Sleep",
+    "timer": "Timer"
+  },
+  "clock": {
+    "customTime": "Custom Time",
+    "standardTime": "24h Time",
+    "day": "Day"
+  },
+  "alarm": {
+    "title": "Alarms",
+    "newAlarm": "New Alarm",
+    "editAlarm": "Edit Alarm",
+    "bulkCreate": "Bulk Create",
+    "label": "Label",
+    "repeat": "Repeat",
+    "dismissal": "Dismissal Method",
+    "snooze": "Snooze",
+    "vibration": "Vibration",
+    "sound": "Sound",
+    "linkedEvent": "Link to Calendar Event",
+    "noAlarms": "No alarms"
+  },
+  "dismissal": {
+    "simple": "Tap to Dismiss",
+    "shake": "Shake to Dismiss",
+    "math": "Solve Math to Dismiss"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "noEvents": "No events",
+    "allDay": "All Day"
+  },
+  "sleep": {
+    "title": "Sleep",
+    "log": "Sleep Log",
+    "manualEntry": "Manual Entry",
+    "cycleEstimate": "Cycle Estimate",
+    "applyCycle": "Apply This Cycle",
+    "confidence": {
+      "low": "Confidence: Low",
+      "medium": "Confidence: Medium",
+      "high": "Confidence: High"
+    }
+  },
+  "timer": {
+    "title": "Timer",
+    "countdown": "Countdown",
+    "stopwatch": "Stopwatch",
+    "start": "Start",
+    "pause": "Pause",
+    "reset": "Reset",
+    "lap": "Lap"
+  },
+  "settings": {
+    "title": "Settings",
+    "cycleConfig": "Custom Cycle",
+    "cycleLength": "Cycle Length",
+    "baseTime": "Base Time",
+    "primaryDisplay": "Primary Display",
+    "general": "General",
+    "language": "Language",
+    "theme": "Theme",
+    "timeFormat": "Time Format",
+    "timezone": "Timezone",
+    "timezoneLabel": "Timezone",
+    "dst": "Daylight Saving Time",
+    "dstAuto": "Auto",
+    "dstIgnore": "Ignore",
+    "secondaryTz": "Secondary Timezone",
+    "alarmDefaults": "Alarm Defaults",
+    "calendarSection": "Calendar",
+    "account": "Account",
+    "firstDayOfWeek": "First Day of Week",
+    "defaultReminder": "Default Reminder",
+    "visibleCalendars": "Visible Calendars",
+    "backup": "Backup",
+    "backupNow": "Backup Now",
+    "restore": "Restore",
+    "lastBackup": "Last Backup",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
+  },
+  "setup": {
+    "welcome": "Welcome to Laimelea",
+    "description": "A clock app tailored to your life rhythm.",
+    "setCycleLength": "Set your cycle length (e.g., 26 hours)",
+    "setBaseTime": "Set your base time",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "next": "Next",
+    "done": "Done"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "ok": "OK",
+    "on": "On",
+    "off": "Off",
+    "notSet": "Not set"
+  }
+}
