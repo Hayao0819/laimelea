@@ -1,6 +1,6 @@
 import React, { useCallback } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
-import { FAB, Text, Snackbar } from "react-native-paper";
+import { FAB, Text, Snackbar, useTheme } from "react-native-paper";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -21,6 +21,8 @@ export function AlarmListScreen() {
   const [alarms, setAlarms] = useAtom(alarmsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const [snackMessage, setSnackMessage] = React.useState("");
+  const [fabOpen, setFabOpen] = React.useState(false);
+  const theme = useTheme();
 
   useFocusEffect(
     useCallback(() => {
@@ -100,11 +102,27 @@ export function AlarmListScreen() {
           testID="alarm-list"
         />
       )}
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => navigation.navigate("AlarmEdit", {})}
-        testID="add-alarm-fab"
+      <FAB.Group
+        open={fabOpen}
+        visible
+        icon={fabOpen ? "close" : "plus"}
+        actions={[
+          {
+            icon: "alarm-plus",
+            label: t("alarm.newAlarm"),
+            onPress: () => navigation.navigate("AlarmEdit", {}),
+            testID: "add-alarm-fab",
+          },
+          {
+            icon: "playlist-plus",
+            label: t("alarm.bulkCreate"),
+            onPress: () => navigation.navigate("BulkAlarm"),
+            testID: "bulk-create-fab",
+          },
+        ]}
+        onStateChange={({ open }) => setFabOpen(open)}
+        fabStyle={{ backgroundColor: theme.colors.primaryContainer }}
+        testID="alarm-fab-group"
       />
       <Snackbar
         visible={!!snackMessage}
@@ -128,10 +146,5 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingVertical: 8,
-  },
-  fab: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
   },
 });

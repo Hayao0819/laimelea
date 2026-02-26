@@ -7,6 +7,7 @@ import { BottomTabNavigator } from "./BottomTabNavigator";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
 import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
+import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";
 import { setupCompleteAtom } from "../atoms/settingsAtoms";
 import type { RootStackParamList } from "./types";
 
@@ -41,6 +42,11 @@ export function RootNavigator() {
           <Stack.Screen
             name="AlarmEdit"
             component={AlarmEditScreen}
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="BulkAlarm"
+            component={BulkAlarmScreen}
             options={{ presentation: "modal" }}
           />
           <Stack.Screen

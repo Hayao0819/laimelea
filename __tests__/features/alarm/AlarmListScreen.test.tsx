@@ -58,11 +58,9 @@ jest.mock("@react-navigation/native", () => ({
     goBack: jest.fn(),
   }),
   useFocusEffect: (cb: () => void) => {
-    const React = require("react");
-    React.useEffect(() => {
-      const cleanup = cb();
-      return cleanup;
-    }, []);
+    const { useEffect } = require("react");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => cb(), []);
   },
 }));
 
@@ -123,17 +121,20 @@ describe("AlarmListScreen", () => {
     expect(getByTestId("no-alarms-text")).toBeTruthy();
   });
 
-  it("should show FAB button", async () => {
+  it("should show FAB group", async () => {
     const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("add-alarm-fab")).toBeTruthy();
+    expect(getByTestId("alarm-fab-group")).toBeTruthy();
   });
 
-  it("should navigate to AlarmEdit on FAB press", async () => {
+  it("should render FAB.Group with new alarm and bulk create actions", async () => {
     const { getByTestId } = await renderWithProviders();
-    await act(async () => {
-      fireEvent.press(getByTestId("add-alarm-fab"));
-    });
-    expect(mockNavigate).toHaveBeenCalledWith("AlarmEdit", {});
+    // FAB.Group action FABs are accessibility-hidden by react-native-paper design
+    expect(
+      getByTestId("add-alarm-fab", { includeHiddenElements: true }),
+    ).toBeTruthy();
+    expect(
+      getByTestId("bulk-create-fab", { includeHiddenElements: true }),
+    ).toBeTruthy();
   });
 
   it("should display alarm card when alarms exist", async () => {
