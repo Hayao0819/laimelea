@@ -80,7 +80,19 @@
     "start": "開始",
     "pause": "一時停止",
     "reset": "リセット",
-    "lap": "ラップ"
+    "lap": "ラップ",
+    "resume": "再開",
+    "complete": "タイマー終了！",
+    "setDuration": "時間を設定",
+    "hours": "時間",
+    "minutes": "分",
+    "seconds": "秒",
+    "lapNumber": "ラップ {{number}}",
+    "noLaps": "ラップなし",
+    "addTimer": "タイマー追加",
+    "noTimers": "タイマーなし",
+    "delete": "削除",
+    "presetMin": "{{min}}分"
   },
   "settings": {
     "title": "設定",

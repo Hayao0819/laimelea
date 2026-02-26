@@ -80,7 +80,19 @@
     "start": "Start",
     "pause": "Pause",
     "reset": "Reset",
-    "lap": "Lap"
+    "lap": "Lap",
+    "resume": "Resume",
+    "complete": "Timer complete!",
+    "setDuration": "Set Duration",
+    "hours": "h",
+    "minutes": "m",
+    "seconds": "s",
+    "lapNumber": "Lap {{number}}",
+    "noLaps": "No laps yet",
+    "addTimer": "Add Timer",
+    "noTimers": "No timers",
+    "delete": "Delete",
+    "presetMin": "{{min}} min"
   },
   "settings": {
     "title": "Settings",
