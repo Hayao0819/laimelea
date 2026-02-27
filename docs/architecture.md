@@ -102,6 +102,8 @@ devDependencies:
 | 14    | 睡眠ログ・周期自動検出         | 未着手   |                                                                       |
 | 15    | ホーム画面ウィジェット         | 未着手   |                                                                       |
 | 16    | テスト・仕上げ                 | 未着手   |                                                                       |
+| 17    | カレンダーデザイン改善         | 未着手   | M3 Expressive対応、複数ビュー、タイムライン、アニメーション           |
+| 18    | Terraform GCPプロジェクト管理  | 未着手   | API有効化、OAuth設定、Nix統合、CI対応                                 |
 
 ### Phase 1で作成済みのファイル
 
@@ -1075,6 +1077,290 @@ RootNavigator (NativeStack)
 - Android 12-15対応確認
 - アプリアイコン・スプラッシュ画面
 - アクセシビリティ対応（accessibilityLabel、大きいタッチターゲット48dp以上）
+
+### Phase 17: カレンダーデザイン改善
+
+現状のCalendarScreenは単一のリストビュー（DaySelector + FlatList）のみで、Chipベースの日付選択と基本的なEventCardで構成されている。2025-2026年のカレンダーUI/UXトレンドを反映し、モダンなデザインに刷新する。
+
+#### 17a: 複数ビューの導入
+
+現在は日付選択 + イベントリストのみ。以下の3ビューを追加し、SegmentedButtonで切り替え可能にする。
+
+- **月ビュー（MonthView）**: 7列グリッドレイアウト。日付セルは角丸の個別カードとして分離（Google Calendar M3 Expressive風）。イベントはドットインジケーターで表示し、タップでアジェンダに展開。現在日はprimaryカラーの塗りつぶし円。テーマのDynamic Colorを背景に適用
+- **週ビュー（WeekView）**: 7列 × 時間軸の縦スクロールグリッド。イベントを時間ブロック（高さ＝所要時間に比例した色付き矩形）で表示。重なりはブロック幅を縮小して並列配置。現在時刻を赤/アクセント色の横線（nowインジケーター）で表示。終日イベントは上部ストリップに表示
+- **アジェンダビュー（AgendaView）**: 日別グループヘッダー付きの時系列イベントリスト。無限スクロール対応。リッチなEventCardで時間・タイトル・場所・カレンダー色を表示。現在の「CalendarScreen + DaySelector」の改良版
+
+ビュー切り替えはreact-native-paperの`SegmentedButtons`を使用。選択状態はJotai atomで永続化。
+
+#### 17b: EventCard デザイン刷新
+
+現在のEventCardはoutlined Cardに小さなcolorDot（12×12px）のみ。以下の改善を行う。
+
+- **色付き左ボーダーストライプ**: 12pxドットを4px幅の左端ボーダーに変更（Google Calendar/Fantastical標準パターン）。Card背景はカレンダー色の薄いtint（opacity 0.08）に
+- **時間表示の改善**: 開始〜終了時間を表示（例: `10:30 - 11:30`）。カスタム時間はサブテキストとして。所要時間バッジ追加（Chip: `1h`, `30m`等）
+- **場所表示**: `event.location`がある場合、mapピンアイコン付きで表示
+- **視覚的優先度**: 直近のイベント（1時間以内）は微妙なelevation/shadowで強調
+- **終日イベント**: 背景を薄いカレンダー色で塗りつぶしたフルワイドChipに変更
+
+#### 17c: DaySelector → ミニカレンダーヘッダー
+
+現在のChipベースの横スクロールを改善。
+
+- **月ビュー時**: 月グリッドがメインコンテンツなのでDaySelectorを非表示にし、月/年タイトルと前後ナビゲーション矢印のみ表示
+- **週/アジェンダビュー時**: コンパクトな週カレンダーストリップ。各日セルに曜日（短縮）+ 日付番号。選択日はprimaryカラー円。イベントありの日はドットインジケーター表示。スワイプで週送り対応
+- **「今日」ボタン**: FABスタイルの小型ボタンに変更、右下に固定配置
+
+#### 17d: タイムラインビュー（CustomDayTimeline）
+
+設計ドキュメントにあるCustomDayTimelineを本実装する。
+
+- **カスタム時間軸**: 24h時間軸ではなくカスタム周期（例: 26h）に基づくタイムライン。`realToCustom()`で変換した時間軸上にイベントブロックを配置
+- **実時間/カスタム時間のデュアル表示**: 左側に実時間ラベル、右側にカスタム時間ラベル
+- **nowインジケーター**: 現在時刻を赤い横線で表示、1分ごとに自動更新
+- **スクロール**: 現在時刻付近に自動スクロール。上下スワイプで時間軸移動
+
+#### 17e: アニメーション・マイクロインタラクション
+
+react-native-reanimated v4を活用したスムーズなトランジション。
+
+- **ビュー切り替え**: crossFade（200-300ms）でビュー間のシームレスな切り替え
+- **日付選択**: 月ビューで日付タップ時、選択円のスプリングアニメーション
+- **イベントカード**: タップ時のプレス効果（scale 0.98 + opacity変化）。展開時のlayout animation
+- **スワイプナビゲーション**: 月/週の左右スワイプに物理ベースのデセラレーションカーブ適用
+- **Pull-to-refresh**: カスタムアニメーション付きリフレッシュインジケーター
+
+#### 17f: ダークモード最適化
+
+現在のカレンダー画面のダークモード対応を強化。
+
+- **イベントカラー**: ダーク背景上での可読性を確保するため、イベント色のsaturationとluminanceを自動調整するユーティリティ関数作成
+- **表面レベルのトーナルエレベーション**: 純黒ではなくsurface/surfaceContainerのM3トークンを使用
+- **コントラスト比**: テキスト/背景のコントラスト比がWCAG AA（4.5:1）以上を維持
+
+#### 作成/変更対象ファイル
+
+```txt
+src/features/calendar/
+├── screens/
+│   └── CalendarScreen.tsx          # ビュー切り替えロジック追加
+├── components/
+│   ├── DaySelector.tsx             # ミニカレンダーヘッダーに刷新
+│   ├── EventCard.tsx               # 左ボーダー・時間範囲・場所表示
+│   ├── MonthView.tsx               # 新規: 月グリッドビュー
+│   ├── WeekView.tsx                # 新規: 週タイムグリッド
+│   ├── AgendaView.tsx              # 新規: アジェンダリスト
+│   ├── CustomDayTimeline.tsx       # 既存スタブを本実装
+│   ├── TimelineEventBlock.tsx      # 新規: タイムライン上のイベントブロック
+│   └── NowIndicator.tsx            # 新規: 現在時刻インジケーター
+├── hooks/
+│   └── useCalendarView.ts          # 新規: ビュー状態管理
+└── utils/
+    └── eventColorUtils.ts          # 新規: ダークモード色補正
+
+src/atoms/
+└── calendarAtoms.ts                # calendarViewModeAtom追加
+```
+
+#### デザイン参考
+
+- Google Calendar M3 Expressive: 角丸セル分離、Dynamic Color背景、Google Sans Flex
+- Fantastical: 月グリッド + アジェンダリストのハイブリッド、Calendar Sets
+- Apple Calendar: 微妙なシェーディング、現在時刻のアンビエント表示
+- Timepage: ヒートマップ型月ビュー（忙しさの視覚化）
+- Material Design 3: Date Picker states、トーナルエレベーション、16dpグリッド
+
+### Phase 18: Terraform GCPプロジェクト管理
+
+Google Cloud上のプロジェクトをTerraformでIaC管理し、アプリのOAuth2認証を動作可能にする。現在のauthConfigにはプレースホルダ（`__GOOGLE_OAUTH_CLIENT_ID__`, `__GOOGLE_WEB_CLIENT_ID__`）が入っており、実際のGoogle Cloudプロジェクトが未設定。
+
+#### Terraformの管理範囲と制約
+
+2025年9月に`google_iap_brand`（OAuth同意画面）が廃止され、標準のOAuth 2.0 Client ID（Android/Web型）にはTerraformリソースが存在しない（Google側にREST APIが非公開）。そのため、Terraformで管理できる範囲と手動設定が必要な範囲を明確に分離する。
+
+| 項目 | 管理方法 | Terraformリソース |
+|------|---------|------------------|
+| GCPプロジェクト作成 | Terraform | `google_project` |
+| API有効化 | Terraform | `google_project_service` |
+| サービスアカウント | Terraform | `google_service_account` |
+| IAMバインディング | Terraform | `google_project_iam_member` |
+| Terraformステートバケット | Terraform | `google_storage_bucket` |
+| OAuth同意画面 | 手動（gcloudまたはConsole） | なし（廃止済み） |
+| OAuth Client ID（Web） | 手動（gcloudまたはConsole） | なし（API非公開） |
+| OAuth Client ID（Android） | 手動（gcloudまたはConsole） | なし（API非公開） |
+
+#### 18a: Nix開発環境にTerraform追加
+
+`flake.nix`にTerraformとGoogle Cloudプロバイダーを追加。
+
+- `terraform.withPlugins`でGoogleプロバイダーをバンドル（プロバイダーダウンロード不要の完全再現可能な環境）
+- `google-cloud-sdk`（gcloud CLI）も追加。OAuth Client ID作成等のTerraform非対応操作に使用
+- Terraform BSLライセンスのため`config.allowUnfree = true`は既に設定済み
+- 既存のdefault devShellに統合（`commonPackages`に追加）
+
+```nix
+# flake.nix への追加イメージ
+terraform = pkgs.terraform.withPlugins (p: [
+  p.google       # hashicorp/google プロバイダー v7.x
+  p.google-beta  # beta リソース用（必要時）
+  p.null         # null_resource（手動ステップのラッパー）
+  p.local        # local_file（生成ファイル出力用）
+]);
+```
+
+#### 18b: Terraformプロジェクト構成
+
+`infra/` ディレクトリをプロジェクトルートに作成し、GCPリソースを管理。
+
+```txt
+infra/
+├── main.tf              # プロバイダー設定、バックエンド設定
+├── project.tf           # GCPプロジェクト作成
+├── apis.tf              # API有効化（Calendar, People, IAM等）
+├── variables.tf         # 変数定義（project_id, region, support_email等）
+├── outputs.tf           # 出力値（project_number, 手動設定ガイド等）
+├── terraform.tfvars.example  # 変数テンプレート（.gitignore対象の.tfvarsのコピー）
+└── README.md            # セットアップ手順（OAuth手動設定含む）
+```
+
+#### 18c: 管理するGCPリソース
+
+**プロジェクト作成:**
+
+```hcl
+resource "google_project" "laimelea" {
+  name       = "Laimelea"
+  project_id = var.project_id
+  org_id     = var.org_id  # optional
+}
+```
+
+**API有効化:**
+
+- `calendar-json.googleapis.com` — Google Calendar API
+- `people.googleapis.com` — People API（ユーザー情報取得）
+- `iamcredentials.googleapis.com` — IAM Credentials（サービスアカウントトークン）
+- `cloudresourcemanager.googleapis.com` — Resource Manager
+
+```hcl
+resource "google_project_service" "calendar_api" {
+  project            = google_project.laimelea.project_id
+  service            = "calendar-json.googleapis.com"
+  disable_on_destroy = false
+}
+```
+
+**Terraformステート用GCSバケット（オプション）:**
+
+```hcl
+resource "google_storage_bucket" "tfstate" {
+  name                        = "${var.project_id}-tfstate"
+  location                    = var.region
+  force_destroy               = false
+  public_access_prevention    = "enforced"
+  uniform_bucket_level_access = true
+  versioning { enabled = true }
+}
+```
+
+#### 18d: OAuth手動設定の自動化補助
+
+Terraformで管理できないOAuth設定について、セットアップスクリプトとterraform outputでガイドを提供する。
+
+**SHA-1フィンガープリント取得:**
+
+```bash
+keytool -list -v \
+  -keystore android/app/debug.keystore \
+  -alias androiddebugkey \
+  -storepass android 2>/dev/null | grep SHA1
+```
+
+**Terraform outputs で手動設定ガイドを出力:**
+
+```hcl
+output "manual_setup_instructions" {
+  value = <<-EOT
+    以下の手順でOAuth Client IDを手動作成してください:
+
+    1. OAuth同意画面を設定:
+       https://console.cloud.google.com/apis/credentials/consent?project=${google_project.laimelea.project_id}
+
+    2. Web Client ID を作成（AOSP用 + GMS用）:
+       https://console.cloud.google.com/apis/credentials/oauthclient?project=${google_project.laimelea.project_id}
+       - Application Type: Web application
+       - Name: Laimelea Web Client
+
+    3. Android Client ID を作成:
+       - Application Type: Android
+       - Package name: com.hayao0819.laimelea
+       - SHA-1: (keytoolで取得した値)
+
+    4. 取得したClient IDを以下に設定:
+       - .env → GOOGLE_OAUTH_CLIENT_ID, GOOGLE_WEB_CLIENT_ID
+  EOT
+}
+```
+
+#### 18e: Client IDの安全な管理
+
+プレースホルダをビルド時に環境変数から注入する仕組みを構築。Client IDはシークレットではない（APKに含まれる公開情報）が、リポジトリにハードコードしない方がベター。
+
+- `react-native-config`パッケージで`.env`を読み込み
+- authConfig.tsのプレースホルダを環境変数参照に変更
+
+```typescript
+// authConfig.ts
+import Config from 'react-native-config';
+
+export const AOSP_AUTH_CONFIG: AuthConfiguration = {
+  issuer: "https://accounts.google.com",
+  clientId: Config.GOOGLE_OAUTH_CLIENT_ID ?? "",
+  // ...
+};
+```
+
+`.env.example`をリポジトリに含め、実際の`.env`は`.gitignore`対象:
+
+```env
+GOOGLE_OAUTH_CLIENT_ID=xxxx.apps.googleusercontent.com
+GOOGLE_WEB_CLIENT_ID=xxxx.apps.googleusercontent.com
+```
+
+#### 18f: .gitignoreとセキュリティ
+
+```gitignore
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+!infra/*.tfvars.example
+infra/.terraform.lock.hcl
+
+# OAuth credentials
+.env
+.env.local
+```
+
+#### 作成/変更対象ファイル
+
+```txt
+infra/
+├── main.tf
+├── project.tf
+├── apis.tf
+├── variables.tf
+├── outputs.tf
+├── terraform.tfvars.example
+└── README.md
+
+flake.nix                               # terraform + google-cloud-sdk 追加
+treefmt.nix                             # infra/ を prettier 除外に追加
+.gitignore                              # Terraform + .env 追加
+.env.example                            # Client ID テンプレート
+src/core/platform/aosp/authConfig.ts    # react-native-config 参照に変更
+src/core/platform/gms/authConfig.ts     # react-native-config 参照に変更
+```
 
 ### 将来フェーズ（v1.0後）
 
