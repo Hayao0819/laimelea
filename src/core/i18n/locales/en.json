@@ -101,6 +101,7 @@
     "sourceHealthConnect": "Health Connect",
     "deleteConfirm": "Delete this sleep entry?",
     "saved": "Sleep entry saved",
+    "syncError": "Failed to sync sleep data",
     "validationError": "Wake time must be after sleep time",
     "date": "Date",
     "time": "Time",

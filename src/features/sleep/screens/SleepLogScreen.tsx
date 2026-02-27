@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, FlatList, StyleSheet, Pressable } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { View, FlatList, RefreshControl, StyleSheet, Pressable } from "react-native";
 import {
   Text,
   Card,
@@ -12,10 +12,9 @@ import {
   useTheme,
 } from "react-native-paper";
 import { useTranslation } from "react-i18next";
-import { useAtom } from "jotai";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { format } from "date-fns";
-import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
+import { useSleepSync } from "../../../hooks/useSleepSync";
 import { CycleEstimateCard } from "../components/CycleEstimateCard";
 import { SleepDriftChart } from "../components/SleepDriftChart";
 import type { SleepSession } from "../../../models/SleepSession";
@@ -43,9 +42,22 @@ export function SleepLogScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const [sessions, setSessions] = useAtom(sleepSessionsAtom);
+  const { sessions, loading, error, sync, deleteEntry } = useSleepSync();
   const [deleteTarget, setDeleteTarget] = useState<SleepSession | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (error) {
+      setSnackbar(t("sleep.syncError"));
+    }
+  }, [error, t]);
+
+  // Auto-sync when tab is focused and cache is stale
+  useFocusEffect(
+    useCallback(() => {
+      sync();
+    }, [sync]),
+  );
 
   const sortedSessions = useMemo(
     () =>
@@ -77,11 +89,15 @@ export function SleepLogScreen() {
     [],
   );
 
+  const handleRefresh = useCallback(() => {
+    sync(true);
+  }, [sync]);
+
   const handleConfirmDelete = useCallback(() => {
     if (!deleteTarget) return;
-    setSessions(sessions.filter((s) => s.id !== deleteTarget.id));
+    deleteEntry(deleteTarget.id);
     setDeleteTarget(null);
-  }, [deleteTarget, sessions, setSessions]);
+  }, [deleteTarget, deleteEntry]);
 
   const handleCancelDelete = useCallback(() => {
     setDeleteTarget(null);
@@ -179,6 +195,9 @@ export function SleepLogScreen() {
         keyExtractor={keyExtractor}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
+        }
         contentContainerStyle={
           sortedSessions.length === 0 ? styles.emptyList : styles.list
         }

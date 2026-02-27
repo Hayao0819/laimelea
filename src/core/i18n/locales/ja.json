@@ -101,6 +101,7 @@
     "sourceHealthConnect": "Health Connect",
     "deleteConfirm": "この睡眠記録を削除しますか？",
     "saved": "睡眠記録を保存しました",
+    "syncError": "睡眠データの同期に失敗しました",
     "validationError": "起床時刻は入眠時刻の後である必要があります",
     "date": "日付",
     "time": "時刻",
