@@ -1031,52 +1031,51 @@ RootNavigator (NativeStack)
   - `react-native-calendar-events`は5年間未更新でNew Architecture非対応のため、CalendarContract読取はKotlin Turbo Moduleとして自前実装
 - ファクトリ + Jotai atomでサービスインスタンス管理
 
-### Phase 11: カレンダー連携
+### Phase 11: カレンダー連携 ✅ 完了
 
-- Google Cloud プロジェクト設定
-- OAuth認証フロー（GMS/AOSP両対応）
-- Calendar REST API呼び出し + CalendarContractフォールバック
-- カスタム時間でのイベント表示
-- CustomDayTimeline
-- キャッシュレイヤー + 同期mutex
+- Google Calendar REST API クライアント (`googleCalendarApi.ts`)
+- OAuth認証フロー（GMS: GoogleSignin / AOSP: AppAuth + PKCE）
+- CalendarScreen MVP（DaySelector + EventCard + EventDetailScreen）
+- CalendarContract Turbo Module（Kotlin、AOSP向け）
+- キャッシュレイヤー + 同期mutex (`useCalendarSync`)
+- カレンダーリスト同期、表示カレンダーフィルタリング
 
-### Phase 12: カレンダー予定連動アラーム
+### Phase 12: カレンダー予定連動アラーム ✅ 完了
 
-- calendarAlarmSync.ts（予定変更時のアラーム自動更新、予定削除時のアラーム無効化）
-- EventCardへのアラーム設定UI
-- 同期時の自動アラーム更新ロジック
+- `calendarAlarmSync.ts`（予定変更時のアラーム自動更新、予定削除時のアラーム無効化）
+- CalendarScreen sync 後に linked alarms の時刻自動更新
+- EventCardへのアラーム設定UI + AlarmCard バッジ
 
-### Phase 13: 設定画面
+### Phase 13: 設定画面 ✅ 完了
 
 - 周期長変更（アラーム再計算警告付き）
 - 基準時刻リセット
-- アラームデフォルト設定
-- プラットフォーム状態表示
+- アラームデフォルト設定（6項目）
+- カレンダー設定（アカウント、表示カレンダー、リマインダー、週開始日）
+- バックアップ/復元（アラーム+設定+睡眠データ → JSON シリアライズ、ローカルストレージ）
 
-### Phase 14: 睡眠ログ・周期自動検出
+### Phase 14: 睡眠ログ・周期自動検出 ✅ 完了
 
-- `PlatformSleepService`インターフェース追加
 - GMS実装: `HealthConnectSleepService`（react-native-health-connect）
 - AOSP実装: `ManualSleepService`（手動入力CRUD）
-- 周期推定アルゴリズム: `cycleDetector.ts`（線形回帰）
-- SleepLogScreen + SleepDriftChart + CycleEstimateCard
-- 手動入力画面（ManualSleepEntryScreen）
-- 周期推定結果からcycleConfigへの自動適用フロー
+- 周期推定アルゴリズム: `cycleDetector.ts`（線形回帰、R²、信頼度）
+- SleepLogScreen（useSleepSync hook 統合、pull-to-refresh、auto-sync）
+- SleepDriftChart（SVG 散布図）+ CycleEstimateCard（適用ボタン付き）
+- ManualSleepEntryScreen（作成/編集、バリデーション）
 
-### Phase 15: ホーム画面ウィジェット
+### Phase 15: ホーム画面ウィジェット ✅ 完了
 
-- `react-native-android-widget`セットアップ
-- ClockWidget（カスタム時間 + 次のアラーム表示）
-- 1分ごとの自動更新 + アラーム変更時の即座更新
+- `react-native-android-widget`セットアップ + ClockWidgetProvider（Kotlin）
+- ClockWidget（カスタム時間 + Day + 24h + 次のアラーム）
+- WidgetTaskHandler（headless task）
+- `requestClockWidgetUpdate()` をアラーム/設定変更時に呼び出し
 
-### Phase 16: テスト・仕上げ
+### Phase 16: テスト・仕上げ ✅ 完了
 
-- ユニットテスト（時間変換、アラームスケジューリング、一括作成、プラットフォーム抽象化）
-- アラーム動作テスト（フォアグラウンド / バックグラウンド / アプリ終了時）
-- GMS有り/無し両方でのテスト
-- Android 12-15対応確認
-- アプリアイコン・スプラッシュ画面
-- アクセシビリティ対応（accessibilityLabel、大きいタッチターゲット48dp以上）
+- ユニットテスト: 67 suites, 551 tests all passing
+- E2Eテスト: calendar, sleep, settings 追加（既存: alarm, clock, navigation, setup, timer）
+- アクセシビリティ対応: 27ファイルに accessibilityLabel/Role/State 追加
+- 残タスク: アプリアイコン・スプラッシュ画面、Android 12-15実機テスト
 
 ### Phase 17: カレンダーデザイン改善
 
