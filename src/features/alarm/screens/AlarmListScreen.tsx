@@ -9,6 +9,7 @@ import type { RootStackParamList } from "../../../navigation/types";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { scheduleAlarm, cancelAlarm } from "../services/alarmScheduler";
+import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { setupForegroundHandler } from "../../../core/notifications/foregroundHandler";
 import { AlarmCard } from "../components/AlarmCard";
 import type { Alarm } from "../../../models/Alarm";
@@ -51,6 +52,7 @@ export function AlarmListScreen() {
       }
 
       setAlarms(alarms.map((a) => (a.id === alarm.id ? updated : a)));
+      requestClockWidgetUpdate();
     },
     [alarms, setAlarms, t],
   );
@@ -66,6 +68,7 @@ export function AlarmListScreen() {
     async (alarm: Alarm) => {
       await cancelAlarm(alarm);
       setAlarms(alarms.filter((a) => a.id !== alarm.id));
+      requestClockWidgetUpdate();
     },
     [alarms, setAlarms],
   );

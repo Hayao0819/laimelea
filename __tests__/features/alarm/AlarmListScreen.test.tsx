@@ -8,6 +8,10 @@ import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import type { Alarm } from "../../../src/models/Alarm";
 
+jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
   return {

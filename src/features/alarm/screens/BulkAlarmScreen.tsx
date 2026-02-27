@@ -9,6 +9,7 @@ import type { RootStackParamList } from "../../../navigation/types";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { scheduleAlarm } from "../services/alarmScheduler";
+import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { generateBulkAlarms } from "../services/bulkAlarmCreator";
 import { BulkAlarmForm } from "../components/BulkAlarmForm";
 import type { BulkAlarmParams } from "../../../models/Alarm";
@@ -78,6 +79,7 @@ export function BulkAlarmScreen() {
         scheduledAlarms.push({ ...alarm, notifeeTriggerId: triggerId });
       }
       setAlarms([...alarms, ...scheduledAlarms]);
+      requestClockWidgetUpdate();
       setSnackMessage(
         t("alarm.bulkCreated", { count: scheduledAlarms.length }),
       );

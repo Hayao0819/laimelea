@@ -23,6 +23,7 @@ import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { customToReal, realToCustom } from "../../../core/time/conversions";
 import { scheduleAlarm, cancelAlarm } from "../services/alarmScheduler";
+import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
 import { getAllStrategies, getStrategy } from "../strategies";
 import type { Alarm } from "../../../models/Alarm";
@@ -142,6 +143,7 @@ export function AlarmEditScreen() {
       setAlarms([...alarms, alarm]);
     }
 
+    requestClockWidgetUpdate();
     navigation.goBack();
   }, [
     computeTargetTimestamp,
@@ -169,6 +171,7 @@ export function AlarmEditScreen() {
         onPress: async () => {
           await cancelAlarm(existingAlarm);
           setAlarms(alarms.filter((a) => a.id !== existingAlarm.id));
+          requestClockWidgetUpdate();
           navigation.goBack();
         },
       },

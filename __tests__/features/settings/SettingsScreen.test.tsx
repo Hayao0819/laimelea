@@ -6,6 +6,10 @@ import { SettingsScreen } from "../../../src/features/settings/screens/SettingsS
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
+jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
+}));
+
 jest.mock("../../../src/core/i18n", () => ({
   __esModule: true,
   default: { language: "en", changeLanguage: jest.fn() },

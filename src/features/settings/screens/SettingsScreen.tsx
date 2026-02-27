@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { calendarListAtom } from "../../../atoms/calendarAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
+import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { TimezonePickerSheet } from "../components/TimezonePickerSheet";
 import { resolveLanguage } from "../../../core/i18n";
 import type { DismissalMethod } from "../../../models/Settings";
@@ -76,6 +77,7 @@ export function SettingsScreen() {
           cycleLengthMinutes: h * 60 + cycleMinutes,
         },
       });
+      requestClockWidgetUpdate();
     },
     [settings.cycleConfig, cycleMinutes, update],
   );
@@ -89,6 +91,7 @@ export function SettingsScreen() {
           cycleLengthMinutes: cycleHours * 60 + m,
         },
       });
+      requestClockWidgetUpdate();
     },
     [settings.cycleConfig, cycleHours, update],
   );
@@ -100,6 +103,7 @@ export function SettingsScreen() {
         baseTimeMs: Date.now(),
       },
     });
+    requestClockWidgetUpdate();
   }, [settings.cycleConfig, update]);
 
   const handleSignIn = useCallback(async () => {

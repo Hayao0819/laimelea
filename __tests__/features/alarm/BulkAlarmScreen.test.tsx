@@ -16,6 +16,10 @@ jest.mock("react-native-shake", () => ({
   },
 }));
 
+jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
   return {

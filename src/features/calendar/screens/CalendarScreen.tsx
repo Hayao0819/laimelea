@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, FlatList, RefreshControl, StyleSheet } from "react-native";
 import { Text, Card, Button, Snackbar, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
+import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
 import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
 import { DaySelector } from "../components/DaySelector";
 import { EventCard } from "../components/EventCard";
@@ -46,6 +47,22 @@ export function CalendarScreen() {
       }
     }, [isStale, sync]),
   );
+
+  // Sync linked alarm times when calendar events change
+  useEffect(() => {
+    if (events.length === 0) return;
+    setAlarms((prevAlarms) => {
+      const linkedAlarms = prevAlarms.filter(
+        (a) => a.linkedCalendarEventId != null,
+      );
+      if (linkedAlarms.length === 0) return prevAlarms;
+      const { updatedAlarms } = syncCalendarAlarms(prevAlarms, events);
+      const hasChanges = updatedAlarms.some(
+        (a, i) => a.updatedAt !== prevAlarms[i]?.updatedAt,
+      );
+      return hasChanges ? updatedAlarms : prevAlarms;
+    });
+  }, [events, setAlarms]);
 
   const dayEvents = useMemo(() => {
     return events
