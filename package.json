@@ -34,6 +34,7 @@
     "react-native": "0.84.0",
     "react-native-android-widget": "^0.20.1",
     "react-native-app-auth": "^8.0.0",
+    "react-native-config": "^1.6.1",
     "react-native-health-connect": "^3.2.0",
     "react-native-localize": "^3.4.0",
     "react-native-paper": "^5.15.0",

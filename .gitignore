@@ -94,5 +94,13 @@ result-*
 .claude/settings.local.json
 .claude/agent-memory
 
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+!infra/*.tfvars.example
+infra/.terraform.lock.hcl
+
 # Git worktrees
 .worktree/
