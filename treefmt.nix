@@ -8,6 +8,7 @@
     excludes = [
       "node_modules/**"
       "android/**"
+      "infra/**"
       "pnpm-lock.yaml"
     ];
   };

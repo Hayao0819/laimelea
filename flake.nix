@@ -73,11 +73,20 @@
             config.allowUnfree = true;
           };
 
+          terraform = pkgs.terraform.withPlugins (p: [
+            p.google
+            p.google-beta
+            p.null
+            p.local
+          ]);
+
           commonPackages = with pkgs; [
             nodejs_22
             pnpm
             watchman
             treefmtEval.${system}.config.build.wrapper
+            terraform
+            google-cloud-sdk
           ];
 
           hasAndroidSdk = builtins.hasAttr system android-nixpkgs.sdk;
@@ -151,6 +160,8 @@
                 echo "  Node.js: $(node --version)"
                 echo "  pnpm:    $(pnpm --version)"
                 echo "  Java:    $(java -version 2>&1 | head -1)"
+                echo "  Terraform: $(terraform version -json | head -1 | grep -o '"[0-9][^"]*"' | head -1)"
+                echo "  gcloud: $(gcloud version 2>/dev/null | head -1 | awk '{print $NF}')"
                 echo "  ANDROID_HOME: $ANDROID_HOME"
               '';
             };
@@ -165,6 +176,8 @@
               echo "Laimelea dev environment loaded (macOS/iOS)"
               echo "  Node.js: $(node --version)"
               echo "  pnpm:    $(pnpm --version)"
+              echo "  Terraform: $(terraform version -json | head -1 | grep -o '"[0-9][^"]*"' | head -1)"
+              echo "  gcloud: $(gcloud version 2>/dev/null | head -1 | awk '{print $NF}')"
             '';
           };
         in
@@ -183,6 +196,8 @@
                   echo "Laimelea dev environment loaded (Linux, no Android SDK)"
                   echo "  Node.js: $(node --version)"
                   echo "  pnpm:    $(pnpm --version)"
+                  echo "  Terraform: $(terraform version -json | head -1 | grep -o '"[0-9][^"]*"' | head -1)"
+                  echo "  gcloud: $(gcloud version 2>/dev/null | head -1 | awk '{print $NF}')"
                 '';
               };
         }
