@@ -1,42 +1,77 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, FlatList, RefreshControl, StyleSheet } from "react-native";
-import { Text, Card, Button, Snackbar, useTheme } from "react-native-paper";
+import { View, StyleSheet } from "react-native";
+import {
+  Text,
+  Card,
+  Button,
+  Snackbar,
+  SegmentedButtons,
+  IconButton,
+  useTheme,
+} from "react-native-paper";
 import { useTranslation } from "react-i18next";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { calendarSelectedDateAtom } from "../../../atoms/calendarAtoms";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
+import { useCalendarView } from "../hooks/useCalendarView";
 import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
 import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
 import { DaySelector } from "../components/DaySelector";
-import { EventCard } from "../components/EventCard";
+import { MonthView } from "../components/MonthView";
+import { WeekView } from "../components/WeekView";
+import { AgendaView } from "../components/AgendaView";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 import type { Alarm } from "../../../models/Alarm";
+import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+function formatNavigationTitle(
+  viewMode: CalendarViewMode,
+  selectedDate: number,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
+  const d = new Date(selectedDate);
+  const monthName = t(`calendar.monthNames.${d.getMonth()}`);
 
-function isSameDay(ms1: number, ms2: number): boolean {
-  const d1 = new Date(ms1);
-  const d2 = new Date(ms2);
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  );
+  switch (viewMode) {
+    case "month":
+      return `${monthName} ${d.getFullYear()}`;
+    case "week": {
+      const weekEnd = new Date(selectedDate);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const endMonthName = t(`calendar.monthNames.${weekEnd.getMonth()}`);
+      if (d.getMonth() === weekEnd.getMonth()) {
+        return `${monthName} ${d.getDate()}-${weekEnd.getDate()}`;
+      }
+      return `${monthName} ${d.getDate()} - ${endMonthName} ${weekEnd.getDate()}`;
+    }
+    case "agenda": {
+      return `${monthName} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+  }
 }
 
 export function CalendarScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
-  const [selectedDate, setSelectedDate] = useAtom(calendarSelectedDateAtom);
+  const {
+    viewMode,
+    setViewMode,
+    selectedDate,
+    setSelectedDate,
+    weekStart,
+    monthStart,
+    goToToday,
+    goToPrevious,
+    goToNext,
+  } = useCalendarView();
   const services = useAtomValue(platformServicesAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
-  const { events, loading, error, sync, isStale } = useCalendarSync();
+  const { events, error, sync, isStale } = useCalendarSync();
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   // Auto-sync when tab is focused and cache is stale
@@ -63,26 +98,6 @@ export function CalendarScreen() {
       return hasChanges ? updatedAlarms : prevAlarms;
     });
   }, [events, setAlarms]);
-
-  const dayEvents = useMemo(() => {
-    return events
-      .filter((e) => {
-        if (e.allDay) {
-          // All-day events span multiple days
-          return (
-            e.startTimestampMs <= selectedDate + MS_PER_DAY &&
-            e.endTimestampMs > selectedDate
-          );
-        }
-        return isSameDay(e.startTimestampMs, selectedDate);
-      })
-      .sort((a, b) => {
-        // All-day events first, then by start time
-        if (a.allDay && !b.allDay) return -1;
-        if (!a.allDay && b.allDay) return 1;
-        return a.startTimestampMs - b.startTimestampMs;
-      });
-  }, [events, selectedDate]);
 
   const handleCreateAlarm = useCallback(
     async (event: CalendarEvent) => {
@@ -121,10 +136,6 @@ export function CalendarScreen() {
     [settings, setAlarms, t],
   );
 
-  const handleRefresh = useCallback(() => {
-    sync(true);
-  }, [sync]);
-
   const handleEventPress = useCallback(
     (event: CalendarEvent) => {
       navigation.navigate("EventDetail", { eventId: event.id });
@@ -141,47 +152,15 @@ export function CalendarScreen() {
     }
   }, [services.auth, sync]);
 
-  const renderItem = useCallback(
-    ({ item }: { item: CalendarEvent }) => (
-      <EventCard
-        event={item}
-        onCreateAlarm={handleCreateAlarm}
-        onPress={handleEventPress}
-      />
-    ),
-    [handleCreateAlarm, handleEventPress],
-  );
+  const navTitle = formatNavigationTitle(viewMode, selectedDate, t);
 
-  const keyExtractor = useCallback((item: CalendarEvent) => item.id, []);
-
-  const renderEmpty = useCallback(() => {
-    if (loading) return null;
-    return (
-      <View style={styles.empty}>
-        <Text variant="bodyLarge">{t("calendar.noEvents")}</Text>
-      </View>
-    );
-  }, [loading, t]);
-
-  const renderHeader = useCallback(
-    () => (
-      <View>
-        <DaySelector
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-        />
-        {error && (
-          <Card style={styles.errorCard} mode="outlined">
-            <Card.Content>
-              <Text style={{ color: theme.colors.error }}>
-                {t("calendar.syncError")}
-              </Text>
-            </Card.Content>
-          </Card>
-        )}
-      </View>
-    ),
-    [selectedDate, setSelectedDate, error, theme, t],
+  const viewButtons = useMemo(
+    () => [
+      { value: "month", label: t("calendar.views.month") },
+      { value: "week", label: t("calendar.views.week") },
+      { value: "agenda", label: t("calendar.views.agenda") },
+    ],
+    [t],
   );
 
   // Unauthenticated state
@@ -216,22 +195,95 @@ export function CalendarScreen() {
     );
   }
 
+  const renderViewContent = () => {
+    switch (viewMode) {
+      case "month":
+        return (
+          <MonthView
+            events={events}
+            selectedDate={selectedDate}
+            monthStart={monthStart}
+            onSelectDate={setSelectedDate}
+            onEventPress={handleEventPress}
+            onCreateAlarm={handleCreateAlarm}
+          />
+        );
+      case "week":
+        return (
+          <WeekView
+            events={events}
+            selectedDate={selectedDate}
+            weekStart={weekStart}
+            onSelectDate={setSelectedDate}
+            onEventPress={handleEventPress}
+            onCreateAlarm={handleCreateAlarm}
+          />
+        );
+      case "agenda":
+        return (
+          <AgendaView
+            events={events}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onEventPress={handleEventPress}
+            onCreateAlarm={handleCreateAlarm}
+          />
+        );
+    }
+  };
+
   return (
     <View style={styles.container} testID="calendar-screen">
-      <FlatList
-        data={dayEvents}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
-        }
-        contentContainerStyle={
-          dayEvents.length === 0 ? styles.emptyList : styles.list
-        }
-        testID="calendar-event-list"
-      />
+      {/* View mode selector */}
+      <View style={styles.segmentedContainer}>
+        <SegmentedButtons
+          value={viewMode}
+          onValueChange={(v) => setViewMode(v as CalendarViewMode)}
+          buttons={viewButtons}
+        />
+      </View>
+
+      {/* Navigation header */}
+      <View style={styles.navHeader}>
+        <IconButton
+          icon="chevron-left"
+          onPress={goToPrevious}
+          size={24}
+          accessibilityLabel={t("calendar.scrollToToday")}
+        />
+        <View style={styles.navTitleContainer}>
+          <Text variant="titleMedium" style={styles.navTitle}>
+            {navTitle}
+          </Text>
+        </View>
+        <IconButton
+          icon="chevron-right"
+          onPress={goToNext}
+          size={24}
+          accessibilityLabel={t("calendar.scrollToToday")}
+        />
+        <IconButton
+          icon="calendar-today"
+          onPress={goToToday}
+          size={20}
+          accessibilityLabel={t("calendar.today")}
+        />
+      </View>
+
+      {/* Error card */}
+      {error && (
+        <Card style={styles.errorCard} mode="outlined">
+          <Card.Content>
+            <Text style={{ color: theme.colors.error }}>
+              {t("calendar.syncError")}
+            </Text>
+          </Card.Content>
+        </Card>
+      )}
+
+      {/* View content */}
+      {renderViewContent()}
+
       <Snackbar
         visible={snackbar != null}
         onDismiss={() => setSnackbar(null)}
@@ -247,17 +299,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  list: {
-    paddingBottom: 16,
+  segmentedContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  emptyList: {
-    flexGrow: 1,
-  },
-  empty: {
-    flex: 1,
-    justifyContent: "center",
+  navHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: 64,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  navTitleContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  navTitle: {
+    textAlign: "center",
   },
   errorCard: {
     marginHorizontal: 16,

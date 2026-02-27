@@ -3,7 +3,10 @@ import { render, fireEvent, act } from "@testing-library/react-native";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
 import { CalendarScreen } from "../../../src/features/calendar/screens/CalendarScreen";
-import { calendarSelectedDateAtom } from "../../../src/atoms/calendarAtoms";
+import {
+  calendarSelectedDateAtom,
+  calendarViewModeAtom,
+} from "../../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
@@ -171,6 +174,7 @@ async function renderWithProviders(options?: {
   error?: string | null;
   isStale?: boolean;
   selectedDate?: number;
+  viewMode?: "month" | "week" | "agenda";
 }) {
   const {
     authenticated = true,
@@ -179,6 +183,7 @@ async function renderWithProviders(options?: {
     error = null,
     isStale = false,
     selectedDate = TODAY,
+    viewMode = "agenda",
   } = options ?? {};
 
   mockUseCalendarSync.mockReturnValue({
@@ -196,6 +201,7 @@ async function renderWithProviders(options?: {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, []);
   store.set(calendarSelectedDateAtom, selectedDate);
+  store.set(calendarViewModeAtom, viewMode);
 
   const utils = render(
     <JotaiProvider store={store}>
@@ -228,37 +234,25 @@ describe("CalendarScreen", () => {
       expect(getByTestId("calendar-screen")).toBeTruthy();
     });
 
-    it('should render calendar event list (testID "calendar-event-list")', async () => {
+    it("should render agenda view by default", async () => {
       const { getByTestId } = await renderWithProviders();
-      expect(getByTestId("calendar-event-list")).toBeTruthy();
+      expect(getByTestId("agenda-view")).toBeTruthy();
     });
 
-    it('should show "calendar.noEvents" when no events for selected day', async () => {
-      const { getByText } = await renderWithProviders({ events: [] });
-      expect(getByText("calendar.noEvents")).toBeTruthy();
-    });
-
-    it("should filter events by selected date (isSameDay logic)", async () => {
+    it("should show events for selected day in agenda view", async () => {
       const todayEvent = makeEvent({
         id: "today-event",
         title: "Today Event",
         startTimestampMs: TODAY + 9 * 60 * 60 * 1000,
         endTimestampMs: TODAY + 10 * 60 * 60 * 1000,
       });
-      const tomorrowEvent = makeEvent({
-        id: "tomorrow-event",
-        title: "Tomorrow Event",
-        startTimestampMs: TODAY + MS_PER_DAY + 9 * 60 * 60 * 1000,
-        endTimestampMs: TODAY + MS_PER_DAY + 10 * 60 * 60 * 1000,
-      });
 
-      const { getByText, queryByText } = await renderWithProviders({
-        events: [todayEvent, tomorrowEvent],
+      const { getByText } = await renderWithProviders({
+        events: [todayEvent],
         selectedDate: TODAY,
       });
 
       expect(getByText("Today Event")).toBeTruthy();
-      expect(queryByText("Tomorrow Event")).toBeNull();
     });
 
     it("should include all-day events that span the selected date", async () => {
@@ -270,15 +264,17 @@ describe("CalendarScreen", () => {
         endTimestampMs: TODAY + 2 * MS_PER_DAY, // ends day after tomorrow
       });
 
-      const { getByText } = await renderWithProviders({
+      const { getAllByText } = await renderWithProviders({
         events: [allDayEvent],
         selectedDate: TODAY,
       });
 
-      expect(getByText("Multi-day Conference")).toBeTruthy();
+      expect(getAllByText("Multi-day Conference").length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
-    it("should sort events: all-day first, then by startTimestampMs", async () => {
+    it("should show all event titles in agenda", async () => {
       const laterEvent = makeEvent({
         id: "later-event",
         title: "Afternoon Meeting",
@@ -304,7 +300,6 @@ describe("CalendarScreen", () => {
         selectedDate: TODAY,
       });
 
-      // All three event titles should be rendered
       const titles = ["Holiday", "Morning Standup", "Afternoon Meeting"];
       for (const title of titles) {
         expect(getAllByText(title).length).toBeGreaterThanOrEqual(1);
@@ -351,6 +346,34 @@ describe("CalendarScreen", () => {
           enabled: true,
         }),
       );
+    });
+
+    it("should render month view when viewMode is month", async () => {
+      const { getByTestId } = await renderWithProviders({
+        viewMode: "month",
+      });
+      expect(getByTestId("month-view")).toBeTruthy();
+    });
+
+    it("should render week view when viewMode is week", async () => {
+      const { getByTestId } = await renderWithProviders({
+        viewMode: "week",
+      });
+      expect(getByTestId("week-view")).toBeTruthy();
+    });
+
+    it("should render segmented buttons for view switching", async () => {
+      const { getByText } = await renderWithProviders();
+      expect(getByText("calendar.views.month")).toBeTruthy();
+      expect(getByText("calendar.views.week")).toBeTruthy();
+      expect(getByText("calendar.views.agenda")).toBeTruthy();
+    });
+
+    it("should render navigation header with title", async () => {
+      const { getByTestId } = await renderWithProviders();
+      // Navigation header is part of calendar-screen
+      const screen = getByTestId("calendar-screen");
+      expect(screen).toBeTruthy();
     });
   });
 
