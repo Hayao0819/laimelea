@@ -68,7 +68,14 @@
     "customTime": "Custom: {{time}}",
     "realTime": "{{time}}",
     "alarmCreated": "Alarm set for {{title}}",
-    "createAlarm": "Create alarm"
+    "createAlarm": "Create alarm",
+    "eventDetail": "Event Detail",
+    "eventStart": "Start",
+    "eventEnd": "End",
+    "eventCalendar": "Calendar",
+    "eventDescription": "Description",
+    "eventNotFound": "Event not found",
+    "source": "Source"
   },
   "sleep": {
     "title": "Sleep",

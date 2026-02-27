@@ -68,7 +68,14 @@
     "customTime": "カスタム: {{time}}",
     "realTime": "{{time}}",
     "alarmCreated": "{{title}}のアラームを設定しました",
-    "createAlarm": "アラームを作成"
+    "createAlarm": "アラームを作成",
+    "eventDetail": "予定の詳細",
+    "eventStart": "開始",
+    "eventEnd": "終了",
+    "eventCalendar": "カレンダー",
+    "eventDescription": "説明",
+    "eventNotFound": "予定が見つかりません",
+    "source": "ソース"
   },
   "sleep": {
     "title": "睡眠",

@@ -3,7 +3,7 @@ import { View, FlatList, RefreshControl, StyleSheet } from "react-native";
 import { Text, Card, Button, Snackbar, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { calendarSelectedDateAtom } from "../../../atoms/calendarAtoms";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
@@ -30,6 +30,7 @@ function isSameDay(ms1: number, ms2: number): boolean {
 export function CalendarScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useAtom(calendarSelectedDateAtom);
   const services = useAtomValue(platformServicesAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
@@ -107,6 +108,13 @@ export function CalendarScreen() {
     sync(true);
   }, [sync]);
 
+  const handleEventPress = useCallback(
+    (event: CalendarEvent) => {
+      navigation.navigate("EventDetail", { eventId: event.id });
+    },
+    [navigation],
+  );
+
   const handleSignIn = useCallback(async () => {
     try {
       await services.auth.signIn();
@@ -118,9 +126,13 @@ export function CalendarScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: CalendarEvent }) => (
-      <EventCard event={item} onCreateAlarm={handleCreateAlarm} />
+      <EventCard
+        event={item}
+        onCreateAlarm={handleCreateAlarm}
+        onPress={handleEventPress}
+      />
     ),
-    [handleCreateAlarm],
+    [handleCreateAlarm, handleEventPress],
   );
 
   const keyExtractor = useCallback((item: CalendarEvent) => item.id, []);

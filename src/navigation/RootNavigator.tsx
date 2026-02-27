@@ -9,6 +9,7 @@ import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";
 import { ManualSleepEntryScreen } from "../features/sleep/screens/ManualSleepEntryScreen";
+import { EventDetailScreen } from "../features/calendar/screens/EventDetailScreen";
 import { setupCompleteAtom } from "../atoms/settingsAtoms";
 import type { RootStackParamList } from "./types";
 
@@ -49,6 +50,11 @@ export function RootNavigator() {
             name="BulkAlarm"
             component={BulkAlarmScreen}
             options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="EventDetail"
+            component={EventDetailScreen}
+            options={{ title: t("calendar.eventDetail") }}
           />
           <Stack.Screen
             name="ManualSleepEntry"

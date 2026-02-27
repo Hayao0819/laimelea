@@ -11,6 +11,7 @@ import type { CalendarEvent } from "../../../models/CalendarEvent";
 interface EventCardProps {
   event: CalendarEvent;
   onCreateAlarm?: (event: CalendarEvent) => void;
+  onPress?: (event: CalendarEvent) => void;
 }
 
 function formatRealTime(ms: number): string {
@@ -18,7 +19,7 @@ function formatRealTime(ms: number): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-export function EventCard({ event, onCreateAlarm }: EventCardProps) {
+export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const settings = useAtomValue(settingsAtom);
@@ -27,7 +28,7 @@ export function EventCard({ event, onCreateAlarm }: EventCardProps) {
   const customTimeStr = formatCustomTimeShort(customTime);
 
   return (
-    <Card style={styles.card} mode="outlined">
+    <Card style={styles.card} mode="outlined" onPress={onPress ? () => onPress(event) : undefined}>
       <Card.Content style={styles.content}>
         <View style={styles.row}>
           <View
