@@ -10,6 +10,7 @@ export const AOSP_AUTH_CONFIG: AuthConfiguration = {
     "email",
     "profile",
     "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/drive.appdata",
   ],
   usePKCE: true,
   androidAllowCustomBrowsers: ["chromeCustomTab"],

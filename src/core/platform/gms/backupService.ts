@@ -1,28 +1,61 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { STORAGE_KEYS } from "../../storage/keys";
-import type { PlatformBackupService } from "../types";
+import {
+  downloadBackup,
+  findBackupFile,
+  getFileMetadata,
+  uploadBackup,
+} from "../../drive/googleDriveApi";
+import type { PlatformAuthService, PlatformBackupService } from "../types";
 
-export function createGmsBackupService(): PlatformBackupService {
+export function createGmsBackupService(
+  authService: PlatformAuthService,
+): PlatformBackupService {
   return {
     async isAvailable() {
-      return true;
+      const token = await authService.getAccessToken();
+      return token != null;
     },
 
     async backup(data: string) {
-      await AsyncStorage.setItem(STORAGE_KEYS.BACKUP_DATA, data);
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.BACKUP_TIMESTAMP,
-        String(Date.now()),
-      );
+      const token = await authService.getAccessToken();
+      if (token == null) {
+        throw new Error("Not signed in");
+      }
+
+      const existing = await findBackupFile(token);
+      await uploadBackup(token, data, existing?.id);
     },
 
     async restore() {
-      return AsyncStorage.getItem(STORAGE_KEYS.BACKUP_DATA);
+      const token = await authService.getAccessToken();
+      if (token == null) {
+        return null;
+      }
+
+      const file = await findBackupFile(token);
+      if (file == null) {
+        return null;
+      }
+
+      return downloadBackup(token, file.id);
     },
 
     async getLastBackupTime() {
-      const raw = await AsyncStorage.getItem(STORAGE_KEYS.BACKUP_TIMESTAMP);
-      return raw ? Number(raw) : null;
+      const token = await authService.getAccessToken();
+      if (token == null) {
+        return null;
+      }
+
+      const file = await findBackupFile(token);
+      if (file == null) {
+        return null;
+      }
+
+      const metadata = await getFileMetadata(token, file.id);
+      if (metadata == null) {
+        return null;
+      }
+
+      return new Date(metadata.modifiedTime).getTime();
     },
   };
 }

@@ -37,6 +37,14 @@ jest.mock("react-native-health-connect", () => ({
   },
 }));
 
+jest.mock("../../../src/core/drive/googleDriveApi", () => ({
+  ...jest.requireActual("../../../src/core/drive/googleDriveApi"),
+  findBackupFile: jest.fn(),
+  uploadBackup: jest.fn(),
+  downloadBackup: jest.fn(),
+  getFileMetadata: jest.fn(),
+}));
+
 const mockStore: Record<string, string> = {};
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -78,7 +86,10 @@ describe("GMS AuthService", () => {
   it("should call GoogleSignin.configure on creation", () => {
     expect(mockConfigure).toHaveBeenCalledWith(
       expect.objectContaining({
-        scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+        scopes: [
+          "https://www.googleapis.com/auth/calendar.readonly",
+          "https://www.googleapis.com/auth/drive.appdata",
+        ],
       }),
     );
   });
@@ -259,9 +270,26 @@ describe("GMS CalendarService", () => {
 });
 
 describe("GMS BackupService", () => {
-  it("isAvailable should return true", async () => {
-    const backup = createGmsBackupService();
+  it("isAvailable should return true when signed in", async () => {
+    const mockAuthService: PlatformAuthService = {
+      isAvailable: jest.fn().mockResolvedValue(true),
+      signIn: jest.fn(),
+      signOut: jest.fn(),
+      getAccessToken: jest.fn().mockResolvedValue("test-token"),
+    };
+    const backup = createGmsBackupService(mockAuthService);
     expect(await backup.isAvailable()).toBe(true);
+  });
+
+  it("isAvailable should return false when not signed in", async () => {
+    const mockAuthService: PlatformAuthService = {
+      isAvailable: jest.fn().mockResolvedValue(true),
+      signIn: jest.fn(),
+      signOut: jest.fn(),
+      getAccessToken: jest.fn().mockResolvedValue(null),
+    };
+    const backup = createGmsBackupService(mockAuthService);
+    expect(await backup.isAvailable()).toBe(false);
   });
 });
 

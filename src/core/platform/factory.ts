@@ -20,7 +20,7 @@ export function createPlatformServices(type: PlatformType): PlatformServices {
         type: "gms",
         auth,
         calendar: createGmsCalendarService(auth),
-        backup: createGmsBackupService(),
+        backup: createGmsBackupService(auth),
         sleep: createGmsSleepService(),
       };
     }
