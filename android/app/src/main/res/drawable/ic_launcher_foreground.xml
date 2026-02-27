@@ -1,0 +1,95 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Clock face: white circle centered at (54, 54) with radius 24 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 A24,24 0 1,1 53.99,30 Z" />
+
+    <!-- Clock face border -->
+    <path
+        android:strokeColor="#4B2D8E"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M54,30 A24,24 0 1,1 53.99,30 Z" />
+
+    <!-- Major tick marks (12, 3, 6, 9) -->
+    <path
+        android:strokeColor="#4B2D8E"
+        android:strokeWidth="2"
+        android:pathData="M54,30 L54,34" />
+    <path
+        android:strokeColor="#4B2D8E"
+        android:strokeWidth="2"
+        android:pathData="M78,54 L74,54" />
+    <path
+        android:strokeColor="#4B2D8E"
+        android:strokeWidth="2"
+        android:pathData="M54,78 L54,74" />
+    <path
+        android:strokeColor="#4B2D8E"
+        android:strokeWidth="2"
+        android:pathData="M30,54 L34,54" />
+
+    <!-- Minor tick marks (1, 2, 4, 5, 7, 8, 10, 11) -->
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M66,33.22 L64,36.68" />
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M74.78,42 L71.32,44" />
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M74.78,66 L71.32,64" />
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M66,74.78 L64,71.32" />
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M42,74.78 L44,71.32" />
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M33.22,66 L36.68,64" />
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M33.22,42 L36.68,44" />
+    <path
+        android:strokeColor="#7B6BA3"
+        android:strokeWidth="1"
+        android:pathData="M42,33.22 L44,36.68" />
+
+    <!-- Hour hand pointing to ~10 o'clock (short, thick) -->
+    <path
+        android:strokeColor="#3A1D72"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L41.88,47" />
+
+    <!-- Minute hand pointing to ~2 o'clock (long, thinner) -->
+    <path
+        android:strokeColor="#3A1D72"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L69.59,45" />
+
+    <!-- Center dot -->
+    <path
+        android:fillColor="#3A1D72"
+        android:pathData="M54,51.5 A2.5,2.5 0 1,1 53.99,51.5 Z" />
+
+    <!-- Custom time accent: small diamond at 12 o'clock (symbolizes custom day cycle) -->
+    <path
+        android:fillColor="#9C27B0"
+        android:pathData="M54,29 L56,27 L54,25 L52,27 Z" />
+
+</vector>
