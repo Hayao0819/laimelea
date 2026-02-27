@@ -10,16 +10,28 @@ const resources = {
   en: { translation: en },
 };
 
+export const SUPPORTED_LANGUAGES = Object.keys(resources);
+
+export function detectSystemLanguage(): string {
+  const locales = RNLocalize.getLocales();
+  const bestMatch = locales.find((locale) =>
+    SUPPORTED_LANGUAGES.includes(locale.languageCode),
+  );
+  return bestMatch?.languageCode ?? "ja";
+}
+
+/** Resolve the effective language from a settings value ("auto", "en", "ja"). */
+export function resolveLanguage(setting: string): string {
+  if (setting === "auto" || !SUPPORTED_LANGUAGES.includes(setting)) {
+    return detectSystemLanguage();
+  }
+  return setting;
+}
+
 const languageDetector = {
   type: "languageDetector" as const,
   async: false,
-  detect: (): string => {
-    const locales = RNLocalize.getLocales();
-    const bestMatch = locales.find((locale) =>
-      Object.keys(resources).includes(locale.languageCode),
-    );
-    return bestMatch?.languageCode ?? "ja";
-  },
+  detect: (): string => detectSystemLanguage(),
   init: () => {},
   cacheUserLanguage: () => {},
 };
