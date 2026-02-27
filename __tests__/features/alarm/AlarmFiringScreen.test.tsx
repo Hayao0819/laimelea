@@ -51,22 +51,16 @@ jest.mock("@notifee/react-native", () => ({
   },
 }));
 
-jest.mock(
-  "../../../src/features/alarm/services/alarmScheduler",
-  () => ({
-    scheduleAlarm: jest.fn(() => Promise.resolve("trigger-id")),
-  }),
-);
+jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
+  scheduleAlarm: jest.fn(() => Promise.resolve("trigger-id")),
+}));
 
-jest.mock(
-  "../../../src/features/alarm/services/gradualVolumeManager",
-  () => ({
-    GradualVolumeManager: jest.fn().mockImplementation(() => ({
-      start: jest.fn(),
-      stop: jest.fn(),
-    })),
-  }),
-);
+jest.mock("../../../src/features/alarm/services/gradualVolumeManager", () => ({
+  GradualVolumeManager: jest.fn().mockImplementation(() => ({
+    start: jest.fn(),
+    stop: jest.fn(),
+  })),
+}));
 
 jest.mock(
   "../../../src/features/alarm/components/dismissal/DismissalContainer",

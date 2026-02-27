@@ -57,7 +57,8 @@ describe("AnalogClock", () => {
         return;
       }
       if (node.type === "G") gCount++;
-      if (node.children) node.children.forEach((c) => countGs(c as ReturnType<typeof toJSON>));
+      if (node.children)
+        node.children.forEach((c) => countGs(c as ReturnType<typeof toJSON>));
     }
     countGs(tree);
 
@@ -81,7 +82,10 @@ describe("AnalogClock", () => {
       if (node.type === "Line" && node.props?.strokeLinecap === "round") {
         lineStrokeWidths.push(Number(node.props.strokeWidth));
       }
-      if (node.children) node.children.forEach((c) => collectLines(c as ReturnType<typeof toJSON>));
+      if (node.children)
+        node.children.forEach((c) =>
+          collectLines(c as ReturnType<typeof toJSON>),
+        );
     }
     collectLines(tree);
 
@@ -106,7 +110,8 @@ describe("AnalogClock", () => {
         return;
       }
       if (node.type === "G") gCount++;
-      if (node.children) node.children.forEach((c) => countGs(c as ReturnType<typeof toJSON>));
+      if (node.children)
+        node.children.forEach((c) => countGs(c as ReturnType<typeof toJSON>));
     }
     countGs(tree);
 
@@ -128,7 +133,8 @@ describe("AnalogClock", () => {
         return;
       }
       if (node.type === "G") gCount++;
-      if (node.children) node.children.forEach((c) => countGs(c as ReturnType<typeof toJSON>));
+      if (node.children)
+        node.children.forEach((c) => countGs(c as ReturnType<typeof toJSON>));
     }
     countGs(tree);
 
@@ -146,7 +152,9 @@ describe("AnalogClock", () => {
     const tree = toJSON();
 
     // Find the Svg element and check its width/height
-    function findSvg(node: ReturnType<typeof toJSON>): Record<string, unknown> | null {
+    function findSvg(
+      node: ReturnType<typeof toJSON>,
+    ): Record<string, unknown> | null {
       if (!node || typeof node === "string") return null;
       if (Array.isArray(node)) {
         for (const n of node) {
@@ -190,7 +198,10 @@ describe("AnalogClock", () => {
           if (typeof child === "string") labels.push(child);
         }
       }
-      if (node.children) node.children.forEach((c) => collectLabels(c as ReturnType<typeof toJSON>));
+      if (node.children)
+        node.children.forEach((c) =>
+          collectLabels(c as ReturnType<typeof toJSON>),
+        );
     }
     collectLabels(tree);
 

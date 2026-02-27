@@ -32,33 +32,31 @@ jest.mock("../../../src/hooks/useTimers", () => ({
 
 const mockUseTimers = useTimers as jest.MockedFunction<typeof useTimers>;
 
-jest.mock(
-  "../../../src/features/timer/components/NumpadInput",
-  () => ({
-    NumpadInput: ({ onStart }: { onStart: (ms: number) => void }) => {
-      const { View, Button } = require("react-native");
-      return (
-        <View testID="numpad-mock">
-          <Button testID="numpad-start" title="Start" onPress={() => onStart(60000)} />
-        </View>
-      );
-    },
-  }),
-);
+jest.mock("../../../src/features/timer/components/NumpadInput", () => ({
+  NumpadInput: ({ onStart }: { onStart: (ms: number) => void }) => {
+    const { View, Button } = require("react-native");
+    return (
+      <View testID="numpad-mock">
+        <Button
+          testID="numpad-start"
+          title="Start"
+          onPress={() => onStart(60000)}
+        />
+      </View>
+    );
+  },
+}));
 
-jest.mock(
-  "../../../src/features/timer/components/TimerCard",
-  () => ({
-    TimerCard: ({ timer }: { timer: TimerState }) => {
-      const { View, Text } = require("react-native");
-      return (
-        <View testID={`timer-card-mock-${timer.id}`}>
-          <Text>{timer.id}</Text>
-        </View>
-      );
-    },
-  }),
-);
+jest.mock("../../../src/features/timer/components/TimerCard", () => ({
+  TimerCard: ({ timer }: { timer: TimerState }) => {
+    const { View, Text } = require("react-native");
+    return (
+      <View testID={`timer-card-mock-${timer.id}`}>
+        <Text>{timer.id}</Text>
+      </View>
+    );
+  },
+}));
 
 jest.mock("react-native-svg", () => {
   // eslint-disable-next-line @typescript-eslint/no-shadow
@@ -127,10 +125,7 @@ describe("CountdownTimer", () => {
   });
 
   it("should render timer list when timers exist", async () => {
-    const timers = [
-      makeTimer({ id: "t-1" }),
-      makeTimer({ id: "t-2" }),
-    ];
+    const timers = [makeTimer({ id: "t-1" }), makeTimer({ id: "t-2" })];
     mockUseTimers.mockReturnValue(createMockTimersReturn({ timers }));
 
     const { getByTestId, queryByTestId } = await renderWithProviders(

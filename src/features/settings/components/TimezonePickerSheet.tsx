@@ -49,10 +49,7 @@ function TimezoneItem({
 }) {
   const renderIcon = useCallback(
     (props: { color: string; style: object }) => (
-      <List.Icon
-        {...props}
-        icon={selected ? "check" : "clock-outline"}
-      />
+      <List.Icon {...props} icon={selected ? "check" : "clock-outline"} />
     ),
     [selected],
   );

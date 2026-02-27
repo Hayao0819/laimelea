@@ -82,7 +82,10 @@ function relativeLuminance(r: number, g: number, b: number): number {
   return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 }
 
-export function adjustEventColor(hexColor: string, isDarkMode: boolean): string {
+export function adjustEventColor(
+  hexColor: string,
+  isDarkMode: boolean,
+): string {
   if (!isValidHex(hexColor)) {
     return hexColor;
   }
@@ -99,7 +102,10 @@ export function adjustEventColor(hexColor: string, isDarkMode: boolean): string 
   return hslToHex(h, adjustedS, adjustedL);
 }
 
-export function getContrastRatio(foreground: string, background: string): number {
+export function getContrastRatio(
+  foreground: string,
+  background: string,
+): number {
   if (!isValidHex(foreground) || !isValidHex(background)) {
     return 1;
   }
@@ -116,6 +122,9 @@ export function getContrastRatio(foreground: string, background: string): number
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-export function meetsContrastAA(foreground: string, background: string): boolean {
+export function meetsContrastAA(
+  foreground: string,
+  background: string,
+): boolean {
   return getContrastRatio(foreground, background) >= 4.5;
 }

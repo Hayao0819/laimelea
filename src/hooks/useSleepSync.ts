@@ -63,9 +63,7 @@ export function useSleepSync(): SleepSyncResult {
           now,
         );
 
-        const existingManual = sessions.filter(
-          (s) => s.source === "manual",
-        );
+        const existingManual = sessions.filter((s) => s.source === "manual");
 
         const merged = [...existingManual, ...fetched];
         setSessions(merged);

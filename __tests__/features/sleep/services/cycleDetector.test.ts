@@ -45,8 +45,10 @@ function createRegularCycleSessions(
   for (let i = 0; i < count; i++) {
     const totalOnsetMinutes =
       startHour * 60 + startMinute + i * driftMinutesPerDay;
-    const hour = Math.floor(((totalOnsetMinutes % 1440) + 1440) % 1440 / 60);
-    const minute = Math.floor(((totalOnsetMinutes % 1440) + 1440) % 1440 % 60);
+    const hour = Math.floor((((totalOnsetMinutes % 1440) + 1440) % 1440) / 60);
+    const minute = Math.floor(
+      (((totalOnsetMinutes % 1440) + 1440) % 1440) % 60,
+    );
     // Place on successive calendar days, adjusting the day when onset wraps past midnight
     const extraDays = Math.floor(totalOnsetMinutes / 1440);
     sessions.push(

@@ -11,15 +11,12 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-jest.mock(
-  "../../../src/features/timer/components/CountdownTimer",
-  () => ({
-    CountdownTimer: () => {
-      const { View } = require("react-native");
-      return <View testID="countdown-timer-mock" />;
-    },
-  }),
-);
+jest.mock("../../../src/features/timer/components/CountdownTimer", () => ({
+  CountdownTimer: () => {
+    const { View } = require("react-native");
+    return <View testID="countdown-timer-mock" />;
+  },
+}));
 
 jest.mock("../../../src/features/timer/components/Stopwatch", () => ({
   Stopwatch: () => {
@@ -58,8 +55,9 @@ describe("TimerScreen", () => {
   });
 
   it("should render Stopwatch when stopwatch tab selected", async () => {
-    const { getByText, getByTestId, queryByTestId } =
-      await renderWithProviders(<TimerScreen />);
+    const { getByText, getByTestId, queryByTestId } = await renderWithProviders(
+      <TimerScreen />,
+    );
 
     await fireEvent.press(getByText("timer.stopwatch"));
 
@@ -68,8 +66,9 @@ describe("TimerScreen", () => {
   });
 
   it("should switch to stopwatch when stopwatch button pressed", async () => {
-    const { getByText, getByTestId, queryByTestId } =
-      await renderWithProviders(<TimerScreen />);
+    const { getByText, getByTestId, queryByTestId } = await renderWithProviders(
+      <TimerScreen />,
+    );
 
     // Initially countdown
     expect(getByTestId("countdown-timer-mock")).toBeTruthy();

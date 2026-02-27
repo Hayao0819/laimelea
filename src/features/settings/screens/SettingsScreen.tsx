@@ -43,9 +43,9 @@ export function SettingsScreen() {
   const platformServices = useAtomValue(platformServicesAtom);
 
   const [tzPickerVisible, setTzPickerVisible] = useState(false);
-  const [tzPickerTarget, setTzPickerTarget] = useState<
-    "primary" | "secondary"
-  >("primary");
+  const [tzPickerTarget, setTzPickerTarget] = useState<"primary" | "secondary">(
+    "primary",
+  );
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
@@ -146,7 +146,15 @@ export function SettingsScreen() {
     } catch {
       showSnackbar(t("settings.backupFailed"));
     }
-  }, [settings, alarms, sleepSessions, platformServices.backup, update, showSnackbar, t]);
+  }, [
+    settings,
+    alarms,
+    sleepSessions,
+    platformServices.backup,
+    update,
+    showSnackbar,
+    t,
+  ]);
 
   const handleRestore = useCallback(async () => {
     try {
@@ -167,7 +175,14 @@ export function SettingsScreen() {
     } catch {
       showSnackbar(t("settings.restoreFailed"));
     }
-  }, [platformServices.backup, setSettings, setAlarms, setSleepSessions, showSnackbar, t]);
+  }, [
+    platformServices.backup,
+    setSettings,
+    setAlarms,
+    setSleepSessions,
+    showSnackbar,
+    t,
+  ]);
 
   const handleTzOpen = useCallback((target: "primary" | "secondary") => {
     setTzPickerTarget(target);
@@ -197,13 +212,10 @@ export function SettingsScreen() {
     [settings.visibleCalendarIds, update],
   );
 
-  const cycleNext = useCallback(
-    <T,>(options: T[], current: T): T => {
-      const idx = options.indexOf(current);
-      return options[(idx + 1) % options.length];
-    },
-    [],
-  );
+  const cycleNext = useCallback(<T,>(options: T[], current: T): T => {
+    const idx = options.indexOf(current);
+    return options[(idx + 1) % options.length];
+  }, []);
 
   const renderChevron = useCallback(
     (props: { color: string; style: object }) => (
@@ -352,9 +364,7 @@ export function SettingsScreen() {
             </Text>
             <SegmentedButtons
               value={settings.timeFormat}
-              onValueChange={(v) =>
-                update({ timeFormat: v as "12h" | "24h" })
-              }
+              onValueChange={(v) => update({ timeFormat: v as "12h" | "24h" })}
               buttons={[
                 { value: "12h", label: "12h" },
                 { value: "24h", label: "24h" },
@@ -479,10 +489,7 @@ export function SettingsScreen() {
               value={settings.alarmDefaults.volumeButtonBehavior}
               onValueChange={(v) =>
                 updateAlarmDefaults({
-                  volumeButtonBehavior: v as
-                    | "snooze"
-                    | "dismiss"
-                    | "volume",
+                  volumeButtonBehavior: v as "snooze" | "dismiss" | "volume",
                 })
               }
               buttons={[
@@ -511,9 +518,7 @@ export function SettingsScreen() {
           <List.Subheader>{t("settings.calendarSection")}</List.Subheader>
           <List.Item
             title={t("settings.account")}
-            description={
-              settings.accountEmail ?? t("settings.notSignedIn")
-            }
+            description={settings.accountEmail ?? t("settings.notSignedIn")}
             right={renderAccountAction}
             testID="account-item"
           />

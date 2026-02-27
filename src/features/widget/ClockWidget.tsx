@@ -27,10 +27,7 @@ function getNextAlarm(alarms: Alarm[], nowMs: number): Alarm | undefined {
     .sort((a, b) => a.targetTimestampMs - b.targetTimestampMs)[0];
 }
 
-function formatNextAlarmText(
-  alarm: Alarm,
-  cycleConfig: CycleConfig,
-): string {
+function formatNextAlarmText(alarm: Alarm, cycleConfig: CycleConfig): string {
   const customTime: CustomTimeValue = realToCustom(
     alarm.targetTimestampMs,
     cycleConfig,

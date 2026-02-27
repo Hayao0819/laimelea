@@ -16,8 +16,7 @@ describe("createAospCalendarService", () => {
     jest.clearAllMocks();
     (getNativeCalendarModule as jest.Mock).mockReturnValue({
       getCalendars: (...args: unknown[]) => mockGetCalendars(...args),
-      getEventInstances: (...args: unknown[]) =>
-        mockGetEventInstances(...args),
+      getEventInstances: (...args: unknown[]) => mockGetEventInstances(...args),
     });
   });
 

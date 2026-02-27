@@ -1,9 +1,5 @@
 import { device, element, by, expect, waitFor } from "detox";
-import {
-  launchAppFresh,
-  completeSetup,
-  waitVisible,
-} from "./utils/helpers";
+import { launchAppFresh, completeSetup, waitVisible } from "./utils/helpers";
 
 describe("Settings Screen", () => {
   beforeAll(async () => {

@@ -115,7 +115,11 @@ export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
           <View style={styles.textContainer}>
             {event.allDay ? (
               <View style={styles.allDayRow}>
-                <Text variant="titleMedium" numberOfLines={1} style={styles.allDayTitle}>
+                <Text
+                  variant="titleMedium"
+                  numberOfLines={1}
+                  style={styles.allDayTitle}
+                >
                   {event.title}
                 </Text>
                 <Text variant="bodySmall" style={styles.allDayLabel}>
@@ -125,7 +129,11 @@ export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
             ) : (
               <>
                 <View style={styles.titleRow}>
-                  <Text variant="titleMedium" numberOfLines={1} style={styles.title}>
+                  <Text
+                    variant="titleMedium"
+                    numberOfLines={1}
+                    style={styles.title}
+                  >
                     {event.title}
                   </Text>
                 </View>

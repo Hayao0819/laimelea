@@ -47,10 +47,7 @@ export function useCalendarSync(): CalendarSyncResult {
           settings.visibleCalendarIds.length > 0
             ? settings.visibleCalendarIds
             : undefined;
-        const result = await syncCalendarEvents(
-          services.calendar,
-          visibleIds,
-        );
+        const result = await syncCalendarEvents(services.calendar, visibleIds);
         setEvents(result.events);
         setLastSync(result.syncTimestamp);
 

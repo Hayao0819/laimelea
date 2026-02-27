@@ -35,9 +35,7 @@ export interface OverlapGroup {
   columnAssignments: Map<string, number>;
 }
 
-export function computeOverlapGroups(
-  events: CalendarEvent[],
-): OverlapGroup[] {
+export function computeOverlapGroups(events: CalendarEvent[]): OverlapGroup[] {
   if (events.length === 0) return [];
 
   const sorted = [...events].sort(
@@ -115,10 +113,7 @@ function formatHourLabel(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
-function clampToDay(
-  event: CalendarEvent,
-  dayStartMs: number,
-): CalendarEvent {
+function clampToDay(event: CalendarEvent, dayStartMs: number): CalendarEvent {
   const dayEndMs = dayStartMs + MS_PER_DAY;
   return {
     ...event,
@@ -238,10 +233,7 @@ export function CustomDayTimeline({
             />
             <Text
               variant="labelSmall"
-              style={[
-                styles.rightLabel,
-                { color: theme.colors.primary },
-              ]}
+              style={[styles.rightLabel, { color: theme.colors.primary }]}
               numberOfLines={1}
             >
               {line.customLabel}
@@ -270,8 +262,7 @@ export function CustomDayTimeline({
               const top = (startMinutes / 60) * hourHeight;
               const blockHeight =
                 ((endMinutes - startMinutes) / 60) * hourHeight;
-              const eventColor =
-                event.colorId ?? theme.colors.primary;
+              const eventColor = event.colorId ?? theme.colors.primary;
 
               return (
                 <TimelineEventBlock

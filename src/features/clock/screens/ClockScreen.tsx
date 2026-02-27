@@ -1,10 +1,5 @@
 import React, { useCallback, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
 import { CustomDayIndicator } from "../components/CustomDayIndicator";

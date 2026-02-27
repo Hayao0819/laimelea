@@ -84,11 +84,7 @@ describe("uploadBackup", () => {
   it("should create new file with multipart upload when no existing file", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ id: "new-file-id" }));
 
-    const result = await uploadBackup(
-      "token-abc",
-      '{"alarms":[]}',
-      undefined,
-    );
+    const result = await uploadBackup("token-abc", '{"alarms":[]}', undefined);
 
     expect(result).toBe("new-file-id");
     const [url, options] = mockFetch.mock.calls[0];
@@ -101,9 +97,7 @@ describe("uploadBackup", () => {
   });
 
   it("should update existing file with PATCH when fileId provided", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({ id: "existing-file-id" }),
-    );
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: "existing-file-id" }));
 
     const result = await uploadBackup(
       "token-abc",

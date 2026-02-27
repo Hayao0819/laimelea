@@ -108,9 +108,7 @@ describe("Stopwatch", () => {
 
   it("should call start function when start button pressed", async () => {
     const mockStart = jest.fn();
-    mockUseStopwatch.mockReturnValue(
-      createMockStopwatch({ start: mockStart }),
-    );
+    mockUseStopwatch.mockReturnValue(createMockStopwatch({ start: mockStart }));
 
     const { getByTestId } = await renderWithProviders(<Stopwatch />);
     await fireEvent.press(getByTestId("stopwatch-start"));
@@ -199,15 +197,9 @@ describe("Stopwatch", () => {
     const { getByText } = await renderWithProviders(<Stopwatch />);
 
     // Lap numbers should appear (displayed in reverse order)
-    expect(
-      getByText('timer.lapNumber:{"number":3}'),
-    ).toBeTruthy();
-    expect(
-      getByText('timer.lapNumber:{"number":2}'),
-    ).toBeTruthy();
-    expect(
-      getByText('timer.lapNumber:{"number":1}'),
-    ).toBeTruthy();
+    expect(getByText('timer.lapNumber:{"number":3}')).toBeTruthy();
+    expect(getByText('timer.lapNumber:{"number":2}')).toBeTruthy();
+    expect(getByText('timer.lapNumber:{"number":1}')).toBeTruthy();
   });
 
   it("should show noLaps message when started but no laps recorded", async () => {

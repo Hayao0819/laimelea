@@ -62,9 +62,7 @@ function makeEstimation(
   };
 }
 
-function renderWithProviders(
-  store = createStore(),
-) {
+function renderWithProviders(store = createStore()) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   const utils = render(
     <JotaiProvider store={store}>

@@ -30,7 +30,9 @@ describe("CircularProgress", () => {
     );
 
     // Both background and progress circles are rendered as "Circle" elements
-    const circles = UNSAFE_getAllByType("Circle" as unknown as React.ComponentType);
+    const circles = UNSAFE_getAllByType(
+      "Circle" as unknown as React.ComponentType,
+    );
     expect(circles).toHaveLength(2);
   });
 
@@ -48,7 +50,9 @@ describe("CircularProgress", () => {
       <CircularProgress progress={-0.5} size={64} strokeWidth={4} />,
     );
 
-    const circles = UNSAFE_getAllByType("Circle" as unknown as React.ComponentType);
+    const circles = UNSAFE_getAllByType(
+      "Circle" as unknown as React.ComponentType,
+    );
     // Progress circle (second one) should have full offset (progress = 0)
     const progressCircle = circles[1];
     const radius = (64 - 4) / 2;
@@ -62,7 +66,9 @@ describe("CircularProgress", () => {
       <CircularProgress progress={1.5} size={64} strokeWidth={4} />,
     );
 
-    const circles = UNSAFE_getAllByType("Circle" as unknown as React.ComponentType);
+    const circles = UNSAFE_getAllByType(
+      "Circle" as unknown as React.ComponentType,
+    );
     const progressCircle = circles[1];
     // strokeDashoffset = circumference * (1 - 1) = 0
     expect(progressCircle.props.strokeDashoffset).toBeCloseTo(0);
@@ -72,14 +78,12 @@ describe("CircularProgress", () => {
     const size = 100;
     const strokeWidth = 8;
     const { UNSAFE_getAllByType } = await renderWithProviders(
-      <CircularProgress
-        progress={0.5}
-        size={size}
-        strokeWidth={strokeWidth}
-      />,
+      <CircularProgress progress={0.5} size={size} strokeWidth={strokeWidth} />,
     );
 
-    const circles = UNSAFE_getAllByType("Circle" as unknown as React.ComponentType);
+    const circles = UNSAFE_getAllByType(
+      "Circle" as unknown as React.ComponentType,
+    );
     const progressCircle = circles[1];
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
@@ -117,7 +121,9 @@ describe("CircularProgress", () => {
     expect(svgs[0].props.width).toBe(64); // default size
     expect(svgs[0].props.height).toBe(64);
 
-    const circles = UNSAFE_getAllByType("Circle" as unknown as React.ComponentType);
+    const circles = UNSAFE_getAllByType(
+      "Circle" as unknown as React.ComponentType,
+    );
     expect(circles[0].props.strokeWidth).toBe(4); // default strokeWidth
   });
 
@@ -130,7 +136,9 @@ describe("CircularProgress", () => {
     expect(svgs[0].props.width).toBe(120);
     expect(svgs[0].props.height).toBe(120);
 
-    const circles = UNSAFE_getAllByType("Circle" as unknown as React.ComponentType);
+    const circles = UNSAFE_getAllByType(
+      "Circle" as unknown as React.ComponentType,
+    );
     expect(circles[0].props.strokeWidth).toBe(10);
   });
 
@@ -145,7 +153,9 @@ describe("CircularProgress", () => {
       />,
     );
 
-    const circles = UNSAFE_getAllByType("Circle" as unknown as React.ComponentType);
+    const circles = UNSAFE_getAllByType(
+      "Circle" as unknown as React.ComponentType,
+    );
     const expectedRadius = (size - strokeWidth) / 2;
 
     for (const circle of circles) {

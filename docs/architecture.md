@@ -1176,16 +1176,16 @@ Google Cloud上のプロジェクトをTerraformでIaC管理し、アプリのOA
 
 2025年9月に`google_iap_brand`（OAuth同意画面）が廃止され、標準のOAuth 2.0 Client ID（Android/Web型）にはTerraformリソースが存在しない（Google側にREST APIが非公開）。そのため、Terraformで管理できる範囲と手動設定が必要な範囲を明確に分離する。
 
-| 項目 | 管理方法 | Terraformリソース |
-|------|---------|------------------|
-| GCPプロジェクト作成 | Terraform | `google_project` |
-| API有効化 | Terraform | `google_project_service` |
-| サービスアカウント | Terraform | `google_service_account` |
-| IAMバインディング | Terraform | `google_project_iam_member` |
-| Terraformステートバケット | Terraform | `google_storage_bucket` |
-| OAuth同意画面 | 手動（gcloudまたはConsole） | なし（廃止済み） |
-| OAuth Client ID（Web） | 手動（gcloudまたはConsole） | なし（API非公開） |
-| OAuth Client ID（Android） | 手動（gcloudまたはConsole） | なし（API非公開） |
+| 項目                       | 管理方法                    | Terraformリソース           |
+| -------------------------- | --------------------------- | --------------------------- |
+| GCPプロジェクト作成        | Terraform                   | `google_project`            |
+| API有効化                  | Terraform                   | `google_project_service`    |
+| サービスアカウント         | Terraform                   | `google_service_account`    |
+| IAMバインディング          | Terraform                   | `google_project_iam_member` |
+| Terraformステートバケット  | Terraform                   | `google_storage_bucket`     |
+| OAuth同意画面              | 手動（gcloudまたはConsole） | なし（廃止済み）            |
+| OAuth Client ID（Web）     | 手動（gcloudまたはConsole） | なし（API非公開）           |
+| OAuth Client ID（Android） | 手動（gcloudまたはConsole） | なし（API非公開）           |
 
 #### 18a: Nix開発環境にTerraform追加
 
@@ -1309,7 +1309,7 @@ output "manual_setup_instructions" {
 
 ```typescript
 // authConfig.ts
-import Config from 'react-native-config';
+import Config from "react-native-config";
 
 export const AOSP_AUTH_CONFIG: AuthConfiguration = {
   issuer: "https://accounts.google.com",

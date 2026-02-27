@@ -19,10 +19,7 @@ function startOfDay(ms: number): number {
 const TODAY = startOfDay(Date.now());
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-function renderDaySelector(
-  selectedDate = TODAY,
-  onSelectDate = jest.fn(),
-) {
+function renderDaySelector(selectedDate = TODAY, onSelectDate = jest.fn()) {
   const utils = render(
     <PaperProvider>
       <DaySelector selectedDate={selectedDate} onSelectDate={onSelectDate} />
@@ -75,7 +72,10 @@ describe("DaySelector", () => {
   it('should render a "today" button that scrolls back to today', async () => {
     const onSelectDate = jest.fn();
     const selectedDate = TODAY + 3 * MS_PER_DAY; // 3 days in the future
-    const { getAllByText } = await renderDaySelector(selectedDate, onSelectDate);
+    const { getAllByText } = await renderDaySelector(
+      selectedDate,
+      onSelectDate,
+    );
     // The bottom "today" button also has text "calendar.today"
     const todayElements = getAllByText("calendar.today");
     // Press the last one (the bottom button)

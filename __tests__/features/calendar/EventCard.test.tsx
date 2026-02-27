@@ -140,7 +140,8 @@ describe("EventCard", () => {
       color: string,
     ): boolean {
       if (!node || typeof node === "string") return false;
-      if (Array.isArray(node)) return node.some((n) => findByBorderColor(n, color));
+      if (Array.isArray(node))
+        return node.some((n) => findByBorderColor(n, color));
       const styles = Array.isArray(node.props?.style)
         ? node.props.style
         : [node.props?.style];
@@ -169,15 +170,11 @@ describe("EventCard", () => {
 
   it("should use theme primary color when colorId is null", async () => {
     const event = makeEvent({ colorId: null });
-    const { toJSON } = await renderWithProviders(
-      <EventCard event={event} />,
-    );
+    const { toJSON } = await renderWithProviders(<EventCard event={event} />);
 
     const tree = toJSON();
 
-    function findLeftBorder(
-      node: ReturnType<typeof toJSON>,
-    ): boolean {
+    function findLeftBorder(node: ReturnType<typeof toJSON>): boolean {
       if (!node || typeof node === "string") return false;
       if (Array.isArray(node)) return node.some((n) => findLeftBorder(n));
       const styles = Array.isArray(node.props?.style)
@@ -246,9 +243,7 @@ describe("EventCard", () => {
 
   it("should apply background color for all-day events", async () => {
     const event = makeEvent({ allDay: true, colorId: "#4285F4" });
-    const { toJSON } = await renderWithProviders(
-      <EventCard event={event} />,
-    );
+    const { toJSON } = await renderWithProviders(<EventCard event={event} />);
 
     const tree = toJSON();
 
@@ -257,7 +252,8 @@ describe("EventCard", () => {
       colorPrefix: string,
     ): boolean {
       if (!node || typeof node === "string") return false;
-      if (Array.isArray(node)) return node.some((n) => findByBgColor(n, colorPrefix));
+      if (Array.isArray(node))
+        return node.some((n) => findByBgColor(n, colorPrefix));
       const styles = Array.isArray(node.props?.style)
         ? node.props.style
         : [node.props?.style];
@@ -286,15 +282,11 @@ describe("EventCard", () => {
 
   it("should not apply background color for timed events", async () => {
     const event = makeEvent({ allDay: false, colorId: "#4285F4" });
-    const { toJSON } = await renderWithProviders(
-      <EventCard event={event} />,
-    );
+    const { toJSON } = await renderWithProviders(<EventCard event={event} />);
 
     const tree = toJSON();
 
-    function findAllDayBg(
-      node: ReturnType<typeof toJSON>,
-    ): boolean {
+    function findAllDayBg(node: ReturnType<typeof toJSON>): boolean {
       if (!node || typeof node === "string") return false;
       if (Array.isArray(node)) return node.some((n) => findAllDayBg(n));
       const styles = Array.isArray(node.props?.style)

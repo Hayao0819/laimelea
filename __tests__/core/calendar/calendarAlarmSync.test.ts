@@ -76,9 +76,7 @@ describe("syncCalendarAlarms", () => {
     expect(result.updatedAlarms[0].targetTimestampMs).toBe(
       1700010000000 - 900000,
     );
-    expect(result.updatedAlarms[0].updatedAt).toBeGreaterThan(
-      alarm.updatedAt,
-    );
+    expect(result.updatedAlarms[0].updatedAt).toBeGreaterThan(alarm.updatedAt);
     expect(result.orphanedAlarmIds).toHaveLength(0);
   });
 

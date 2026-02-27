@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, FlatList, RefreshControl, StyleSheet, Pressable } from "react-native";
+import {
+  View,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Pressable,
+} from "react-native";
 import {
   Text,
   Card,
@@ -60,10 +66,7 @@ export function SleepLogScreen() {
   );
 
   const sortedSessions = useMemo(
-    () =>
-      [...sessions].sort(
-        (a, b) => b.startTimestampMs - a.startTimestampMs,
-      ),
+    () => [...sessions].sort((a, b) => b.startTimestampMs - a.startTimestampMs),
     [sessions],
   );
 
@@ -80,14 +83,11 @@ export function SleepLogScreen() {
     [navigation],
   );
 
-  const handleLongPress = useCallback(
-    (session: SleepSession) => {
-      if (session.source === "manual") {
-        setDeleteTarget(session);
-      }
-    },
-    [],
-  );
+  const handleLongPress = useCallback((session: SleepSession) => {
+    if (session.source === "manual") {
+      setDeleteTarget(session);
+    }
+  }, []);
 
   const handleRefresh = useCallback(() => {
     sync(true);
@@ -225,7 +225,10 @@ export function SleepLogScreen() {
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={handleCancelDelete}>{t("common.cancel")}</Button>
-            <Button onPress={handleConfirmDelete} testID="confirm-delete-button">
+            <Button
+              onPress={handleConfirmDelete}
+              testID="confirm-delete-button"
+            >
               {t("common.delete")}
             </Button>
           </Dialog.Actions>

@@ -3,7 +3,10 @@ import { render, fireEvent } from "@testing-library/react-native";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
 import { TimeToggle } from "../../../src/features/clock/components/TimeToggle";
-import { settingsAtom, primaryTimeDisplayAtom } from "../../../src/atoms/settingsAtoms";
+import {
+  settingsAtom,
+  primaryTimeDisplayAtom,
+} from "../../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
@@ -31,9 +34,7 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-function createInitializedStore(
-  settings = DEFAULT_SETTINGS,
-) {
+function createInitializedStore(settings = DEFAULT_SETTINGS) {
   const store = createStore();
   store.set(settingsAtom, settings);
   return store;
@@ -66,7 +67,10 @@ describe("TimeToggle", () => {
   });
 
   it("should update primaryTimeDisplayAtom on value change", async () => {
-    const store = createInitializedStore({ ...DEFAULT_SETTINGS, primaryTimeDisplay: "custom" });
+    const store = createInitializedStore({
+      ...DEFAULT_SETTINGS,
+      primaryTimeDisplay: "custom",
+    });
 
     const { getByText } = await renderWithProviders(store);
 
@@ -81,7 +85,10 @@ describe("TimeToggle", () => {
   });
 
   it("should reflect current atom value", async () => {
-    const store = createInitializedStore({ ...DEFAULT_SETTINGS, primaryTimeDisplay: "24h" });
+    const store = createInitializedStore({
+      ...DEFAULT_SETTINGS,
+      primaryTimeDisplay: "24h",
+    });
 
     const { getByText } = await renderWithProviders(store);
 
@@ -94,7 +101,10 @@ describe("TimeToggle", () => {
   });
 
   it("should toggle back to custom from 24h", async () => {
-    const store = createInitializedStore({ ...DEFAULT_SETTINGS, primaryTimeDisplay: "24h" });
+    const store = createInitializedStore({
+      ...DEFAULT_SETTINGS,
+      primaryTimeDisplay: "24h",
+    });
 
     const { getByText } = await renderWithProviders(store);
 

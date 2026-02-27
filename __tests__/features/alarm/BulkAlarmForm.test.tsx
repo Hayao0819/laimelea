@@ -209,9 +209,7 @@ describe("BulkAlarmForm", () => {
     ];
     const { getByText } = await renderForm({ previewAlarms: alarms });
 
-    expect(
-      getByText('alarm.bulkPreviewCount:{"count":3}'),
-    ).toBeTruthy();
+    expect(getByText('alarm.bulkPreviewCount:{"count":3}')).toBeTruthy();
   });
 
   it('should show "alarm.bulkNoAlarms" when previewAlarms is empty', async () => {
@@ -244,9 +242,7 @@ describe("BulkAlarmForm", () => {
       existingAlarmCount: 48,
     });
 
-    expect(
-      getByText(/alarm\.bulkWarningLimit/),
-    ).toBeTruthy();
+    expect(getByText(/alarm\.bulkWarningLimit/)).toBeTruthy();
   });
 
   it("should not show warning banner when warning is null", async () => {

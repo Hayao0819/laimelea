@@ -1,6 +1,13 @@
 import React, { useMemo, useCallback } from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
-import { Text, Card, Button, Chip, Divider, useTheme } from "react-native-paper";
+import {
+  Text,
+  Card,
+  Button,
+  Chip,
+  Divider,
+  useTheme,
+} from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAtomValue } from "jotai";

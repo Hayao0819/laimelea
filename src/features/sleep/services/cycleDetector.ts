@@ -1,11 +1,12 @@
-import type { CycleEstimation, SleepSession } from "../../../models/SleepSession";
+import type {
+  CycleEstimation,
+  SleepSession,
+} from "../../../models/SleepSession";
 
 const MINUTES_PER_DAY = 1440;
 const MIN_DATA_POINTS = 7;
 
-function getConfidence(
-  dataPoints: number,
-): "low" | "medium" | "high" | null {
+function getConfidence(dataPoints: number): "low" | "medium" | "high" | null {
   if (dataPoints < MIN_DATA_POINTS) return null;
   if (dataPoints < 14) return "low";
   if (dataPoints < 28) return "medium";
@@ -29,7 +30,10 @@ function circularDiff(current: number, previous: number): number {
   return diff;
 }
 
-function linearRegression(xs: number[], ys: number[]): {
+function linearRegression(
+  xs: number[],
+  ys: number[],
+): {
   slope: number;
   intercept: number;
   r2: number;
@@ -80,9 +84,10 @@ function linearRegression(xs: number[], ys: number[]): {
  * Day indices are ordinal (0, 1, 2, ...) representing successive
  * observations.
  */
-function unwrapOnsetMinutes(
-  sorted: SleepSession[],
-): { dayIndices: number[]; unwrapped: number[] } {
+function unwrapOnsetMinutes(sorted: SleepSession[]): {
+  dayIndices: number[];
+  unwrapped: number[];
+} {
   const dayIndices: number[] = [];
   const unwrapped: number[] = [];
 

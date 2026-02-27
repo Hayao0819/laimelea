@@ -55,8 +55,7 @@ export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
 
   const maxDay = Math.max(...dataPoints.map((p) => p.dayOffset), 1);
 
-  const toX = (day: number) =>
-    PADDING_LEFT + (day / maxDay) * plotWidth;
+  const toX = (day: number) => PADDING_LEFT + (day / maxDay) * plotWidth;
   const toY = (minutes: number) =>
     PADDING_TOP + (minutes / MINUTES_IN_DAY) * plotHeight;
 

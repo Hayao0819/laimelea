@@ -61,14 +61,20 @@ function renderWithProviders(
 describe("DigitalClock", () => {
   it('should render with testID "digital-clock"', async () => {
     const { getByTestId } = await renderWithProviders(
-      <DigitalClock realTimeMs={sampleRealTimeMs} customTime={sampleCustomTime} />,
+      <DigitalClock
+        realTimeMs={sampleRealTimeMs}
+        customTime={sampleCustomTime}
+      />,
     );
     expect(getByTestId("digital-clock")).toBeTruthy();
   });
 
   it('should display formatted custom time as primary when primaryTimeDisplay is "custom"', async () => {
     const { getAllByText } = await renderWithProviders(
-      <DigitalClock realTimeMs={sampleRealTimeMs} customTime={sampleCustomTime} />,
+      <DigitalClock
+        realTimeMs={sampleRealTimeMs}
+        customTime={sampleCustomTime}
+      />,
       { primaryTimeDisplay: "custom" },
     );
 

@@ -69,20 +69,14 @@ jest.mock("react-i18next", () => ({
 }));
 
 // Mock SleepDriftChart to avoid SVG rendering complexity
-jest.mock(
-  "../../../src/features/sleep/components/SleepDriftChart",
-  () => ({
-    SleepDriftChart: () => null,
-  }),
-);
+jest.mock("../../../src/features/sleep/components/SleepDriftChart", () => ({
+  SleepDriftChart: () => null,
+}));
 
 // Mock CycleEstimateCard since it depends on atoms we're not providing
-jest.mock(
-  "../../../src/features/sleep/components/CycleEstimateCard",
-  () => ({
-    CycleEstimateCard: () => null,
-  }),
-);
+jest.mock("../../../src/features/sleep/components/CycleEstimateCard", () => ({
+  CycleEstimateCard: () => null,
+}));
 
 const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => ({

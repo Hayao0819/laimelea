@@ -100,9 +100,7 @@ export function ManualSleepEntryScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: existingSession
-        ? t("sleep.manualEntry")
-        : t("sleep.manualEntry"),
+      title: existingSession ? t("sleep.manualEntry") : t("sleep.manualEntry"),
     });
   }, [navigation, existingSession, t]);
 
