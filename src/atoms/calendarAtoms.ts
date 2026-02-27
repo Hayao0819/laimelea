@@ -2,6 +2,9 @@ import { atom } from "jotai";
 import type { CalendarEvent } from "../models/CalendarEvent";
 import type { CalendarInfo } from "../core/platform/types";
 
+export type CalendarViewMode = "month" | "week" | "agenda";
+export const calendarViewModeAtom = atom<CalendarViewMode>("agenda");
+
 export const CALENDAR_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export const calendarEventsAtom = atom<CalendarEvent[]>([]);
