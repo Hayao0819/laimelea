@@ -20,6 +20,7 @@ import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { calendarListAtom } from "../../../atoms/calendarAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { TimezonePickerSheet } from "../components/TimezonePickerSheet";
+import { resolveLanguage } from "../../../core/i18n";
 import type { DismissalMethod } from "../../../models/Settings";
 
 const GRADUAL_VOLUME_OPTIONS = [0, 15, 30, 60];
@@ -270,7 +271,7 @@ export function SettingsScreen() {
               {t("settings.language")}
             </Text>
             <SegmentedButtons
-              value={settings.language === "ja" ? "ja" : "en"}
+              value={resolveLanguage(settings.language)}
               onValueChange={(v) => update({ language: v })}
               buttons={[
                 { value: "en", label: t("settings.english") },

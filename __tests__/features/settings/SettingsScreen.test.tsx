@@ -6,6 +6,15 @@ import { SettingsScreen } from "../../../src/features/settings/screens/SettingsS
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
+jest.mock("../../../src/core/i18n", () => ({
+  __esModule: true,
+  default: { language: "en", changeLanguage: jest.fn() },
+  resolveLanguage: (setting: string) =>
+    setting === "auto" || !["en", "ja"].includes(setting) ? "en" : setting,
+  detectSystemLanguage: () => "en",
+  SUPPORTED_LANGUAGES: ["ja", "en"],
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
   return {

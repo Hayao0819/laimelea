@@ -17,7 +17,7 @@ import {
   createTimerChannel,
   ensureNotificationPermissions,
 } from "../core/notifications/notifeeSetup";
-import "../core/i18n";
+import i18n, { resolveLanguage } from "../core/i18n";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -34,6 +34,13 @@ export function Providers({ children }: ProvidersProps) {
     ensureNotificationPermissions();
     detectPlatform().then(setPlatformType);
   }, [setPlatformType]);
+
+  useEffect(() => {
+    const lang = resolveLanguage(settings.language);
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang);
+    }
+  }, [settings.language]);
 
   const isDark =
     settings.theme === "dark" ||
