@@ -119,7 +119,11 @@ export function EventDetailScreen() {
           </Text>
         </View>
 
-        <Text variant="headlineSmall" style={styles.title}>
+        <Text
+          variant="headlineSmall"
+          style={styles.title}
+          accessibilityRole="header"
+        >
           {event.title}
         </Text>
 
@@ -234,6 +238,7 @@ export function EventDetailScreen() {
             onPress={() => handleCreateAlarm(event)}
             style={styles.alarmButton}
             testID="create-alarm-button"
+            accessibilityLabel={t("calendar.createAlarm")}
           >
             {t("calendar.createAlarm")}
           </Button>

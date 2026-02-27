@@ -41,6 +41,7 @@ export function TimerCard({
         isComplete && { backgroundColor: theme.colors.errorContainer },
       ]}
       testID={`timer-card-${timer.id}`}
+      accessibilityLabel={`${timer.label}, ${isComplete ? t("timer.complete") : formatTime(timer.remainingMs)}`}
     >
       <Card.Content style={styles.content}>
         <CircularProgress progress={progress} size={56} strokeWidth={4} />

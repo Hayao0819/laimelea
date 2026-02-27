@@ -93,7 +93,11 @@ export function BulkAlarmForm({
   return (
     <View style={styles.container}>
       <Surface style={styles.timeCard} elevation={0}>
-        <Text variant="labelLarge" style={styles.sectionLabel}>
+        <Text
+          variant="labelLarge"
+          style={styles.sectionLabel}
+          accessibilityRole="header"
+        >
           {t("alarm.bulkFrom")}
         </Text>
         <AlarmTimePicker
@@ -102,7 +106,11 @@ export function BulkAlarmForm({
           cycleLengthMinutes={cycleLengthMinutes}
           onChange={onFromTimeChange}
         />
-        <Text variant="labelLarge" style={styles.sectionLabel}>
+        <Text
+          variant="labelLarge"
+          style={styles.sectionLabel}
+          accessibilityRole="header"
+        >
           {t("alarm.bulkTo")}
         </Text>
         <AlarmTimePicker
@@ -154,7 +162,11 @@ export function BulkAlarmForm({
       />
 
       <Surface style={styles.previewCard} elevation={0}>
-        <Text variant="titleMedium" style={styles.previewTitle}>
+        <Text
+          variant="titleMedium"
+          style={styles.previewTitle}
+          accessibilityRole="header"
+        >
           {t("alarm.bulkPreview")}
         </Text>
         {previewAlarms.length === 0 ? (

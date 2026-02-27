@@ -98,9 +98,10 @@ export function BulkAlarmScreen() {
         onPress={handleSave}
         disabled={preview.alarms.length === 0 || saving}
         testID="bulk-save-button"
+        accessibilityLabel={t("alarm.bulkSave")}
       />
     ),
-    [handleSave, preview.alarms.length, saving],
+    [handleSave, preview.alarms.length, saving, t],
   );
 
   useLayoutEffect(() => {

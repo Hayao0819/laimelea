@@ -28,7 +28,12 @@ export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
   const customTimeStr = formatCustomTimeShort(customTime);
 
   return (
-    <Card style={styles.card} mode="outlined" onPress={onPress ? () => onPress(event) : undefined}>
+    <Card
+      style={styles.card}
+      mode="outlined"
+      onPress={onPress ? () => onPress(event) : undefined}
+      accessibilityLabel={`${event.title}${event.allDay ? `, ${t("calendar.allDay")}` : `, ${formatRealTime(event.startTimestampMs)}`}`}
+    >
       <Card.Content style={styles.content}>
         <View style={styles.row}>
           <View

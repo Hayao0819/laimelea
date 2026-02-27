@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { TextInput, Text } from "react-native-paper";
+import { useTranslation } from "react-i18next";
 
 interface TimeValue {
   hours: number;
@@ -20,6 +21,7 @@ export function AlarmTimePicker({
   cycleLengthMinutes,
   onChange,
 }: AlarmTimePickerProps) {
+  const { t } = useTranslation();
   const maxHours =
     timeSystem === "custom" ? Math.floor(cycleLengthMinutes / 60) - 1 : 23;
 
@@ -51,6 +53,7 @@ export function AlarmTimePicker({
         style={styles.input}
         maxLength={2}
         testID="hours-input"
+        accessibilityLabel={t("setup.hours")}
       />
       <Text variant="headlineLarge" style={styles.separator}>
         :
@@ -63,6 +66,7 @@ export function AlarmTimePicker({
         style={styles.input}
         maxLength={2}
         testID="minutes-input"
+        accessibilityLabel={t("setup.minutes")}
       />
       <Text variant="bodySmall" style={styles.maxLabel}>
         (0–{maxHours}h)

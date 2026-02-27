@@ -109,6 +109,8 @@ export function SleepLogScreen() {
         onPress={() => handleEditEntry(item)}
         onLongPress={() => handleLongPress(item)}
         disabled={item.source !== "manual"}
+        accessibilityLabel={`${formatDate(item.startTimestampMs)}, ${formatTime(item.startTimestampMs)} - ${formatTime(item.endTimestampMs)}, ${t("sleep.duration")}: ${formatDuration(item.durationMs)}`}
+        accessibilityRole="button"
       >
         <Card style={styles.sessionCard} mode="outlined">
           <Card.Content style={styles.sessionContent}>
@@ -209,6 +211,7 @@ export function SleepLogScreen() {
         onPress={handleAddEntry}
         style={styles.fab}
         testID="add-sleep-fab"
+        accessibilityLabel={t("sleep.addEntry")}
       />
 
       <Portal>

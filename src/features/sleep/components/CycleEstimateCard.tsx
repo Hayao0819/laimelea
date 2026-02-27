@@ -40,7 +40,9 @@ export function CycleEstimateCard() {
         testID="cycle-estimate-card-empty"
       >
         <Card.Content>
-          <Text variant="titleMedium">{t("sleep.cycleEstimate")}</Text>
+          <Text variant="titleMedium" accessibilityRole="header">
+            {t("sleep.cycleEstimate")}
+          </Text>
           <Text
             variant="bodyMedium"
             style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}
@@ -60,7 +62,9 @@ export function CycleEstimateCard() {
     <Card style={styles.card} mode="outlined" testID="cycle-estimate-card">
       <Card.Content>
         <View style={styles.header}>
-          <Text variant="titleMedium">{t("sleep.cycleEstimate")}</Text>
+          <Text variant="titleMedium" accessibilityRole="header">
+            {t("sleep.cycleEstimate")}
+          </Text>
           <Chip
             compact
             style={{ backgroundColor: confidenceColor.bg }}
@@ -108,6 +112,7 @@ export function CycleEstimateCard() {
           onPress={handleApply}
           style={styles.applyButton}
           testID="apply-cycle-button"
+          accessibilityLabel={t("sleep.applyCycle")}
         >
           {t("sleep.applyCycle")}
         </Button>

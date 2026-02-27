@@ -19,6 +19,7 @@ export function SimpleDismissal({
           onPress={onSnooze}
           style={styles.button}
           testID="snooze-button"
+          accessibilityLabel={t("alarm.snoozeAction")}
         >
           {t("alarm.snoozeAction")}
         </Button>
@@ -28,6 +29,7 @@ export function SimpleDismissal({
         onPress={onDismiss}
         style={styles.button}
         testID="dismiss-button"
+        accessibilityLabel={t("dismissal.simple")}
       >
         {t("dismissal.simple")}
       </Button>

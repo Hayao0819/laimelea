@@ -49,6 +49,8 @@ export function AlarmCard({
       onPress={() => onPress(alarm)}
       onLongPress={() => onLongPress(alarm)}
       testID={`alarm-card-${alarm.id}`}
+      accessibilityLabel={`${alarm.label || t("alarm.title")}, ${timeDisplay}, ${alarm.enabled ? t("alarm.enabled") : t("alarm.disabled")}`}
+      accessibilityHint={t("alarm.editAlarm")}
     >
       <Card.Content style={styles.content}>
         <Text
@@ -91,6 +93,8 @@ export function AlarmCard({
           value={alarm.enabled}
           onValueChange={() => onToggle(alarm)}
           testID={`alarm-switch-${alarm.id}`}
+          accessibilityLabel={`${alarm.label || t("alarm.title")} ${alarm.enabled ? t("alarm.enabled") : t("alarm.disabled")}`}
+          accessibilityRole="switch"
         />
       </Card.Actions>
     </Card>

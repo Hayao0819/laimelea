@@ -62,7 +62,11 @@ export function NumpadInput({ onStart }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.display}>
+      <View
+        style={styles.display}
+        accessibilityLabel={`${h}${t("timer.hours")} ${m}${t("timer.minutes")} ${s}${t("timer.seconds")}`}
+        accessibilityRole="timer"
+      >
         <Text variant="headlineMedium" style={styles.displayText}>
           <Text
             style={
@@ -117,6 +121,7 @@ export function NumpadInput({ onStart }: Props) {
                     contentStyle={styles.numpadContent}
                     disabled={digits.length === 0}
                     testID="numpad-backspace"
+                    accessibilityLabel={t("timer.backspace")}
                   >
                     ⌫
                   </Button>
@@ -131,6 +136,7 @@ export function NumpadInput({ onStart }: Props) {
                   contentStyle={styles.numpadContent}
                   disabled={digits.length >= 6}
                   testID={`numpad-${key}`}
+                  accessibilityLabel={key}
                 >
                   {key}
                 </Button>
@@ -149,6 +155,7 @@ export function NumpadInput({ onStart }: Props) {
             compact
             style={styles.presetButton}
             testID={`preset-${min}`}
+            accessibilityLabel={t("timer.presetMin", { min })}
           >
             {t("timer.presetMin", { min })}
           </Button>
@@ -161,6 +168,7 @@ export function NumpadInput({ onStart }: Props) {
         disabled={totalMs <= 0}
         style={styles.startButton}
         testID="numpad-start"
+        accessibilityLabel={t("timer.start")}
       >
         {t("timer.start")}
       </Button>

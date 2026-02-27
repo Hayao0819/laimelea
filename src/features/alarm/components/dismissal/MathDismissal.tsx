@@ -36,6 +36,7 @@ export function MathDismissal({
         variant="displaySmall"
         style={styles.question}
         testID="math-question"
+        accessibilityLabel={`${problem.question} = ?`}
       >
         {problem.question} = ?
       </Text>
@@ -49,6 +50,7 @@ export function MathDismissal({
         }}
         style={styles.input}
         testID="math-input"
+        accessibilityLabel={t("dismissal.mathInstruction")}
       />
       {error && (
         <HelperText type="error" visible testID="math-error">
@@ -60,6 +62,7 @@ export function MathDismissal({
         onPress={handleSubmit}
         style={styles.submitButton}
         testID="math-submit"
+        accessibilityLabel={t("dismissal.mathSubmit")}
       >
         {t("dismissal.mathSubmit")}
       </Button>
@@ -69,6 +72,7 @@ export function MathDismissal({
           onPress={onSnooze}
           style={styles.snoozeButton}
           testID="snooze-button"
+          accessibilityLabel={t("alarm.snoozeAction")}
         >
           {t("alarm.snoozeAction")}
         </Button>

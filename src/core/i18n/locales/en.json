@@ -9,7 +9,9 @@
   "clock": {
     "customTime": "Custom Time",
     "realTime": "24h Time",
-    "day": "Day"
+    "day": "Day",
+    "toggleMode": "Toggle clock mode",
+    "analogClock": "Analog clock"
   },
   "alarm": {
     "title": "Alarms",
@@ -24,6 +26,7 @@
     "bulkWarningLimit": "Warning: Total alarms ({{total}}) may exceed Android's 50-alarm limit",
     "bulkNoAlarms": "No alarms to create",
     "bulkCreated": "{{count}} alarms created",
+    "bulkSave": "Save bulk alarms",
     "label": "Label",
     "repeat": "Repeat",
     "dismissal": "Dismissal Method",
@@ -42,7 +45,9 @@
     "scheduled": "Alarm set",
     "snoozed": "Snoozed for {{minutes}} min",
     "snoozeAction": "Snooze",
-    "linkedToEvent": "Linked to calendar event"
+    "linkedToEvent": "Linked to calendar event",
+    "saveAlarm": "Save alarm",
+    "deleteAlarm": "Delete alarm"
   },
   "dismissal": {
     "simple": "Tap to Dismiss",
@@ -62,6 +67,7 @@
     "noEvents": "No events",
     "allDay": "All Day",
     "today": "Today",
+    "scrollToToday": "Scroll to today",
     "syncError": "Failed to sync calendar",
     "signInRequired": "Sign in to view calendar events",
     "signIn": "Sign In",
@@ -88,6 +94,7 @@
       "medium": "Confidence: Medium",
       "high": "Confidence: High"
     },
+    "addEntry": "Add sleep entry",
     "noData": "No sleep data",
     "notEnoughData": "Need at least 7 days of data",
     "period": "Estimated Period",
@@ -125,6 +132,7 @@
     "seconds": "s",
     "lapNumber": "Lap {{number}}",
     "noLaps": "No laps yet",
+    "backspace": "Delete last digit",
     "addTimer": "Add Timer",
     "noTimers": "No timers",
     "delete": "Delete",

@@ -14,6 +14,7 @@ export function CustomDayIndicator({ customTime }: Props) {
       variant="titleLarge"
       style={styles.text}
       testID="custom-day-indicator"
+      accessibilityRole="header"
     >
       {formatCustomDay(customTime)}
     </Text>

@@ -109,18 +109,21 @@ export function AlarmListScreen() {
         open={fabOpen}
         visible
         icon={fabOpen ? "close" : "plus"}
+        accessibilityLabel={t("alarm.newAlarm")}
         actions={[
           {
             icon: "alarm-plus",
             label: t("alarm.newAlarm"),
             onPress: () => navigation.navigate("AlarmEdit", {}),
             testID: "add-alarm-fab",
+            accessibilityLabel: t("alarm.newAlarm"),
           },
           {
             icon: "playlist-plus",
             label: t("alarm.bulkCreate"),
             onPress: () => navigation.navigate("BulkAlarm"),
             testID: "bulk-create-fab",
+            accessibilityLabel: t("alarm.bulkCreate"),
           },
         ]}
         onStateChange={({ open }) => setFabOpen(open)}

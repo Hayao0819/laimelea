@@ -179,8 +179,15 @@ export function AlarmEditScreen() {
   }, [existingAlarm, alarms, setAlarms, navigation, t]);
 
   const SaveButton = useCallback(
-    () => <IconButton icon="check" onPress={handleSave} testID="save-button" />,
-    [handleSave],
+    () => (
+      <IconButton
+        icon="check"
+        onPress={handleSave}
+        testID="save-button"
+        accessibilityLabel={t("alarm.saveAlarm")}
+      />
+    ),
+    [handleSave, t],
   );
 
   useLayoutEffect(() => {
@@ -219,9 +226,11 @@ export function AlarmEditScreen() {
         value={vibration}
         onValueChange={setVibration}
         testID="vibration-switch"
+        accessibilityLabel={t("alarm.vibration")}
+        accessibilityRole="switch"
       />
     ),
-    [vibration],
+    [vibration, t],
   );
 
   const renderSilenceIcon = useCallback(
@@ -308,6 +317,7 @@ export function AlarmEditScreen() {
             textColor="red"
             style={styles.deleteButton}
             testID="delete-button"
+            accessibilityLabel={t("alarm.deleteAlarm")}
           >
             {t("common.delete")}
           </Button>

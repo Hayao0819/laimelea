@@ -41,6 +41,11 @@ export function ShakeDismissal({
         progress={progress}
         style={styles.progressBar}
         testID="shake-progress"
+        accessibilityLabel={t("dismissal.shakeCount", {
+          current: shakeCount,
+          total: REQUIRED_SHAKES,
+        })}
+        accessibilityRole="progressbar"
       />
       <Text variant="bodyLarge" testID="shake-count">
         {t("dismissal.shakeCount", {
@@ -54,6 +59,7 @@ export function ShakeDismissal({
           onPress={onSnooze}
           style={styles.snoozeButton}
           testID="snooze-button"
+          accessibilityLabel={t("alarm.snoozeAction")}
         >
           {t("alarm.snoozeAction")}
         </Button>

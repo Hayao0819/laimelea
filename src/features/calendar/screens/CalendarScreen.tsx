@@ -205,6 +205,7 @@ export function CalendarScreen() {
                 mode="contained"
                 onPress={handleSignIn}
                 style={styles.signInButton}
+                accessibilityLabel={t("calendar.signIn")}
               >
                 {t("calendar.signIn")}
               </Button>

@@ -23,7 +23,13 @@ export function Stopwatch() {
 
   return (
     <View style={styles.container}>
-      <Text variant="displayLarge" style={styles.display} testID="stopwatch-display">
+      <Text
+        variant="displayLarge"
+        style={styles.display}
+        testID="stopwatch-display"
+        accessibilityRole="timer"
+        accessibilityLabel={formatStopwatchTime(elapsedMs)}
+      >
         {formatStopwatchTime(elapsedMs)}
       </Text>
       <View style={styles.buttonRow}>

@@ -60,7 +60,11 @@ export function SetupScreen() {
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
-      <Text variant="headlineMedium" style={styles.title}>
+      <Text
+        variant="headlineMedium"
+        style={styles.title}
+        accessibilityRole="header"
+      >
         {t("setup.welcome")}
       </Text>
       <Text variant="bodyLarge" style={styles.description}>
@@ -68,7 +72,9 @@ export function SetupScreen() {
       </Text>
 
       <Surface style={styles.card} elevation={1}>
-        <Text variant="titleMedium">{t("setup.setCycleLength")}</Text>
+        <Text variant="titleMedium" accessibilityRole="header">
+          {t("setup.setCycleLength")}
+        </Text>
         <View style={styles.row}>
           <TextInput
             mode="outlined"
@@ -92,11 +98,18 @@ export function SetupScreen() {
       </Surface>
 
       <Surface style={styles.card} elevation={1}>
-        <Text variant="titleMedium">{t("setup.setBaseTime")}</Text>
+        <Text variant="titleMedium" accessibilityRole="header">
+          {t("setup.setBaseTime")}
+        </Text>
         <Text variant="bodySmall" style={styles.hint}>
           {t("setup.baseTimeDescription")}
         </Text>
-        <Button mode="outlined" onPress={handleUseNow} style={styles.button}>
+        <Button
+          mode="outlined"
+          onPress={handleUseNow}
+          style={styles.button}
+          accessibilityLabel={t("setup.useNow")}
+        >
           {t("setup.useNow")}
         </Button>
         {baseTimeMs !== null && (
@@ -108,7 +121,9 @@ export function SetupScreen() {
 
       {preview && (
         <Surface style={styles.card} elevation={1}>
-          <Text variant="titleMedium">{t("setup.preview")}</Text>
+          <Text variant="titleMedium" accessibilityRole="header">
+            {t("setup.preview")}
+          </Text>
           <Text variant="headlineSmall" style={styles.previewText}>
             {preview}
           </Text>
@@ -121,6 +136,7 @@ export function SetupScreen() {
         disabled={!isValid}
         style={styles.doneButton}
         testID="done-button"
+        accessibilityLabel={t("setup.done")}
       >
         {t("setup.done")}
       </Button>

@@ -104,10 +104,19 @@ export function AlarmFiringScreen() {
       <Text variant="displaySmall" style={styles.icon}>
         ⏰
       </Text>
-      <Text variant="headlineMedium" style={styles.label}>
+      <Text
+        variant="headlineMedium"
+        style={styles.label}
+        accessibilityRole="header"
+      >
         {alarm.label || t("alarm.title")}
       </Text>
-      <Text variant="displayLarge" style={styles.time}>
+      <Text
+        variant="displayLarge"
+        style={styles.time}
+        accessibilityLabel={`${t("alarm.title")}: ${timeDisplay}`}
+        accessibilityRole="timer"
+      >
         {timeDisplay}
       </Text>
       <DismissalContainer

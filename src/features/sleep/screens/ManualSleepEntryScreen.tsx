@@ -183,7 +183,11 @@ export function ManualSleepEntryScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        <Text variant="titleMedium" style={styles.sectionTitle}>
+        <Text
+          variant="titleMedium"
+          style={styles.sectionTitle}
+          accessibilityRole="header"
+        >
           {t("sleep.sleepStart")}
         </Text>
         <View style={styles.row}>
@@ -195,6 +199,7 @@ export function ManualSleepEntryScreen() {
             placeholder="YYYY-MM-DD"
             style={styles.input}
             testID="start-date-input"
+            accessibilityLabel={`${t("sleep.sleepStart")} ${t("sleep.date")}`}
           />
           <TextInput
             mode="outlined"
@@ -204,10 +209,15 @@ export function ManualSleepEntryScreen() {
             placeholder="HH:MM"
             style={styles.input}
             testID="start-time-input"
+            accessibilityLabel={`${t("sleep.sleepStart")} ${t("sleep.time")}`}
           />
         </View>
 
-        <Text variant="titleMedium" style={styles.sectionTitle}>
+        <Text
+          variant="titleMedium"
+          style={styles.sectionTitle}
+          accessibilityRole="header"
+        >
           {t("sleep.sleepEnd")}
         </Text>
         <View style={styles.row}>
@@ -219,6 +229,7 @@ export function ManualSleepEntryScreen() {
             placeholder="YYYY-MM-DD"
             style={styles.input}
             testID="end-date-input"
+            accessibilityLabel={`${t("sleep.sleepEnd")} ${t("sleep.date")}`}
           />
           <TextInput
             mode="outlined"
@@ -228,6 +239,7 @@ export function ManualSleepEntryScreen() {
             placeholder="HH:MM"
             style={styles.input}
             testID="end-time-input"
+            accessibilityLabel={`${t("sleep.sleepEnd")} ${t("sleep.time")}`}
           />
         </View>
 
@@ -236,6 +248,7 @@ export function ManualSleepEntryScreen() {
           onPress={handleSave}
           style={styles.saveButton}
           testID="save-button"
+          accessibilityLabel={t("common.save")}
         >
           {t("common.save")}
         </Button>

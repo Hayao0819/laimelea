@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import Svg, { Circle, Line, G, Text as SvgText } from "react-native-svg";
 import { useTheme } from "react-native-paper";
+import { useTranslation } from "react-i18next";
 import type { CustomTimeValue } from "../../../models/CustomTime";
 
 interface Props {
@@ -16,6 +17,7 @@ export function AnalogClock({
   size = 280,
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const totalHours = cycleLengthMinutes / 60;
   // One revolution = half cycle (e.g., 13h for 26h cycle, like 12h on a 24h clock)
   const hoursPerRevolution = totalHours / 2;
@@ -62,7 +64,12 @@ export function AnalogClock({
   const secondLen = radius * 0.8;
 
   return (
-    <View style={styles.container} testID="analog-clock">
+    <View
+      style={styles.container}
+      testID="analog-clock"
+      accessibilityRole="image"
+      accessibilityLabel={t("clock.analogClock")}
+    >
       <Svg width={size} height={size}>
         <Circle
           cx={center}

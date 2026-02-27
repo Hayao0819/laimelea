@@ -73,6 +73,8 @@ export function DaySelector({ selectedDate, onSelectDate }: DaySelectorProps) {
                 : undefined
             }
             compact
+            accessibilityLabel={`${label} ${formatWeekday(item)}`}
+            accessibilityState={{ selected: isSelected }}
           >
             {label}
           </Chip>
@@ -120,6 +122,7 @@ export function DaySelector({ selectedDate, onSelectDate }: DaySelectorProps) {
         onPress={handleScrollToToday}
         style={styles.todayButton}
         compact
+        accessibilityLabel={t("calendar.scrollToToday")}
       >
         {t("calendar.today")}
       </Chip>

@@ -9,7 +9,9 @@
   "clock": {
     "customTime": "カスタム時間",
     "realTime": "24時間",
-    "day": "日目"
+    "day": "日目",
+    "toggleMode": "時計モード切替",
+    "analogClock": "アナログ時計"
   },
   "alarm": {
     "title": "アラーム",
@@ -24,6 +26,7 @@
     "bulkWarningLimit": "注意: 合計（{{total}}件）がAndroidの50件制限を超える可能性があります",
     "bulkNoAlarms": "作成するアラームがありません",
     "bulkCreated": "{{count}}件のアラームを作成しました",
+    "bulkSave": "一括アラームを保存",
     "label": "ラベル",
     "repeat": "繰り返し",
     "dismissal": "解除方法",
@@ -42,7 +45,9 @@
     "scheduled": "アラームを設定しました",
     "snoozed": "{{minutes}}分後にスヌーズ",
     "snoozeAction": "スヌーズ",
-    "linkedToEvent": "カレンダー予定に連動"
+    "linkedToEvent": "カレンダー予定に連動",
+    "saveAlarm": "アラームを保存",
+    "deleteAlarm": "アラームを削除"
   },
   "dismissal": {
     "simple": "タップで解除",
@@ -62,6 +67,7 @@
     "noEvents": "予定はありません",
     "allDay": "終日",
     "today": "今日",
+    "scrollToToday": "今日にスクロール",
     "syncError": "カレンダーの同期に失敗しました",
     "signInRequired": "カレンダーを表示するにはサインインしてください",
     "signIn": "サインイン",
@@ -88,6 +94,7 @@
       "medium": "信頼度: 中",
       "high": "信頼度: 高"
     },
+    "addEntry": "睡眠記録を追加",
     "noData": "睡眠データがありません",
     "notEnoughData": "7日分以上のデータが必要です",
     "period": "推定周期",
@@ -125,6 +132,7 @@
     "seconds": "秒",
     "lapNumber": "ラップ {{number}}",
     "noLaps": "ラップなし",
+    "backspace": "最後の数字を削除",
     "addTimer": "タイマー追加",
     "noTimers": "タイマーなし",
     "delete": "削除",
