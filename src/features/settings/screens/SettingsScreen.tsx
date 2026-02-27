@@ -12,11 +12,13 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 
 import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { alarmsAtom } from "../../../atoms/alarmAtoms";
+import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
 import { calendarListAtom } from "../../../atoms/calendarAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
@@ -33,6 +35,10 @@ export function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const [settings, setSettings] = useAtom(settingsAtom);
+  const alarms = useAtomValue(alarmsAtom);
+  const setAlarms = useSetAtom(alarmsAtom);
+  const sleepSessions = useAtomValue(sleepSessionsAtom);
+  const setSleepSessions = useSetAtom(sleepSessionsAtom);
   const calendars = useAtomValue(calendarListAtom);
   const platformServices = useAtomValue(platformServicesAtom);
 
@@ -123,6 +129,45 @@ export function SettingsScreen() {
       showSnackbar("Sign out failed");
     }
   }, [platformServices.auth, update, showSnackbar]);
+
+  const handleBackup = useCallback(async () => {
+    try {
+      const data = JSON.stringify({
+        version: 1,
+        timestamp: Date.now(),
+        settings,
+        alarms,
+        sleepSessions,
+      });
+      await platformServices.backup.backup(data);
+      const now = Date.now();
+      update({ lastBackupTimestamp: now });
+      showSnackbar(t("settings.backupSuccess"));
+    } catch {
+      showSnackbar(t("settings.backupFailed"));
+    }
+  }, [settings, alarms, sleepSessions, platformServices.backup, update, showSnackbar, t]);
+
+  const handleRestore = useCallback(async () => {
+    try {
+      const raw = await platformServices.backup.restore();
+      if (raw == null) {
+        showSnackbar(t("settings.noBackupFound"));
+        return;
+      }
+      const data = JSON.parse(raw);
+      if (data.version !== 1) {
+        showSnackbar(t("settings.backupVersionError"));
+        return;
+      }
+      if (data.settings) setSettings(data.settings);
+      if (data.alarms) setAlarms(data.alarms);
+      if (data.sleepSessions) setSleepSessions(data.sleepSessions);
+      showSnackbar(t("settings.restoreSuccess"));
+    } catch {
+      showSnackbar(t("settings.restoreFailed"));
+    }
+  }, [platformServices.backup, setSettings, setAlarms, setSleepSessions, showSnackbar, t]);
 
   const handleTzOpen = useCallback((target: "primary" | "secondary") => {
     setTzPickerTarget(target);
@@ -537,7 +582,7 @@ export function SettingsScreen() {
           <View style={styles.backupButtons}>
             <Button
               mode="contained"
-              onPress={() => showSnackbar(t("settings.backupNotAvailable"))}
+              onPress={handleBackup}
               style={styles.backupButton}
               testID="backup-now-button"
             >
@@ -545,7 +590,7 @@ export function SettingsScreen() {
             </Button>
             <Button
               mode="outlined"
-              onPress={() => showSnackbar(t("settings.backupNotAvailable"))}
+              onPress={handleRestore}
               style={styles.backupButton}
               testID="restore-button"
             >
