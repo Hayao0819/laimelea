@@ -81,7 +81,14 @@
     "eventCalendar": "Calendar",
     "eventDescription": "Description",
     "eventNotFound": "Event not found",
-    "source": "Source"
+    "source": "Source",
+    "timeRange": "{{start}} - {{end}}",
+    "duration": {
+      "hours": "{{h}}h",
+      "minutes": "{{m}}m",
+      "hoursMinutes": "{{h}}h {{m}}m",
+      "days": "{{d}}d"
+    }
   },
   "sleep": {
     "title": "Sleep",

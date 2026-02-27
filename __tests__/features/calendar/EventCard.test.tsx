@@ -2,7 +2,10 @@ import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { EventCard } from "../../../src/features/calendar/components/EventCard";
+import {
+  EventCard,
+  formatDuration,
+} from "../../../src/features/calendar/components/EventCard";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import type { CalendarEvent } from "../../../src/models/CalendarEvent";
@@ -27,7 +30,7 @@ jest.mock("@react-native-async-storage/async-storage", () => {
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, string>) => {
+    t: (key: string, opts?: Record<string, unknown>) => {
       if (opts) return `${key}:${JSON.stringify(opts)}`;
       return key;
     },
@@ -52,10 +55,7 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-function renderWithProviders(
-  ui: React.ReactElement,
-  store = createStore(),
-) {
+function renderWithProviders(ui: React.ReactElement, store = createStore()) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   const utils = render(
     <JotaiProvider store={store}>
@@ -66,25 +66,24 @@ function renderWithProviders(
 }
 
 describe("EventCard", () => {
-  it("should display realTime and customTime for normal events", async () => {
+  it("should display time range and custom time for normal events", async () => {
     const event = makeEvent();
     const { getByText } = await renderWithProviders(
       <EventCard event={event} />,
     );
 
-    // The component uses t() with params, which our mock renders as key:JSON
-    expect(getByText(/calendar\.realTime/)).toBeTruthy();
+    expect(getByText(/calendar\.timeRange/)).toBeTruthy();
     expect(getByText(/calendar\.customTime/)).toBeTruthy();
   });
 
-  it("should display All Day chip and hide time for all-day events", async () => {
+  it("should display All Day label and hide time for all-day events", async () => {
     const event = makeEvent({ allDay: true });
     const { getByText, queryByText } = await renderWithProviders(
       <EventCard event={event} />,
     );
 
     expect(getByText("calendar.allDay")).toBeTruthy();
-    expect(queryByText(/calendar\.realTime/)).toBeNull();
+    expect(queryByText(/calendar\.timeRange/)).toBeNull();
     expect(queryByText(/calendar\.customTime/)).toBeNull();
   });
 
@@ -128,7 +127,7 @@ describe("EventCard", () => {
     expect(onCreateAlarm).toHaveBeenCalledWith(event);
   });
 
-  it("should use event colorId for the color dot when set", async () => {
+  it("should apply left border with event color", async () => {
     const event = makeEvent({ colorId: "#FF5733" });
     const { toJSON } = await renderWithProviders(
       <EventCard event={event} onCreateAlarm={jest.fn()} />,
@@ -136,24 +135,28 @@ describe("EventCard", () => {
 
     const tree = toJSON();
 
-    // Recursively find a node whose style includes backgroundColor === "#FF5733"
-    function findByBgColor(
+    function findByBorderColor(
       node: ReturnType<typeof toJSON>,
       color: string,
     ): boolean {
       if (!node || typeof node === "string") return false;
-      if (Array.isArray(node)) return node.some((n) => findByBgColor(n, color));
+      if (Array.isArray(node)) return node.some((n) => findByBorderColor(n, color));
       const styles = Array.isArray(node.props?.style)
         ? node.props.style
         : [node.props?.style];
       for (const s of styles) {
-        if (s && typeof s === "object" && s.backgroundColor === color) {
+        if (
+          s &&
+          typeof s === "object" &&
+          s.borderLeftColor === color &&
+          s.borderLeftWidth === 4
+        ) {
           return true;
         }
       }
       if (node.children) {
         for (const child of node.children) {
-          if (findByBgColor(child as ReturnType<typeof toJSON>, color)) {
+          if (findByBorderColor(child as ReturnType<typeof toJSON>, color)) {
             return true;
           }
         }
@@ -161,6 +164,220 @@ describe("EventCard", () => {
       return false;
     }
 
-    expect(findByBgColor(tree, "#FF5733")).toBe(true);
+    expect(findByBorderColor(tree, "#FF5733")).toBe(true);
+  });
+
+  it("should use theme primary color when colorId is null", async () => {
+    const event = makeEvent({ colorId: null });
+    const { toJSON } = await renderWithProviders(
+      <EventCard event={event} />,
+    );
+
+    const tree = toJSON();
+
+    function findLeftBorder(
+      node: ReturnType<typeof toJSON>,
+    ): boolean {
+      if (!node || typeof node === "string") return false;
+      if (Array.isArray(node)) return node.some((n) => findLeftBorder(n));
+      const styles = Array.isArray(node.props?.style)
+        ? node.props.style
+        : [node.props?.style];
+      for (const s of styles) {
+        if (s && typeof s === "object" && s.borderLeftWidth === 4) {
+          return true;
+        }
+      }
+      if (node.children) {
+        for (const child of node.children) {
+          if (findLeftBorder(child as ReturnType<typeof toJSON>)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    expect(findLeftBorder(tree)).toBe(true);
+  });
+
+  it("should display time range with start and end times", async () => {
+    const event = makeEvent({
+      startTimestampMs: new Date("2026-03-01T10:30:00Z").getTime(),
+      endTimestampMs: new Date("2026-03-01T11:30:00Z").getTime(),
+    });
+    const { getByText } = await renderWithProviders(
+      <EventCard event={event} />,
+    );
+
+    const timeRangeText = getByText(/calendar\.timeRange/);
+    expect(timeRangeText).toBeTruthy();
+    // The mock renders as key:JSON, verify both start and end keys exist
+    const content = timeRangeText.props.children;
+    expect(content).toMatch(/calendar\.timeRange/);
+    expect(content).toMatch(/"start":"\d{2}:\d{2}"/);
+    expect(content).toMatch(/"end":"\d{2}:\d{2}"/);
+  });
+
+  it("should display duration badge for timed events", async () => {
+    const event = makeEvent({
+      startTimestampMs: new Date("2026-03-01T10:30:00Z").getTime(),
+      endTimestampMs: new Date("2026-03-01T11:30:00Z").getTime(),
+    });
+    const { getByText } = await renderWithProviders(
+      <EventCard event={event} />,
+    );
+
+    expect(getByText(/calendar\.duration\.hours/)).toBeTruthy();
+  });
+
+  it("should hide duration for zero-duration events", async () => {
+    const ts = new Date("2026-03-01T10:30:00Z").getTime();
+    const event = makeEvent({
+      startTimestampMs: ts,
+      endTimestampMs: ts,
+    });
+    const { queryByText } = await renderWithProviders(
+      <EventCard event={event} />,
+    );
+
+    expect(queryByText(/calendar\.duration/)).toBeNull();
+  });
+
+  it("should apply background color for all-day events", async () => {
+    const event = makeEvent({ allDay: true, colorId: "#4285F4" });
+    const { toJSON } = await renderWithProviders(
+      <EventCard event={event} />,
+    );
+
+    const tree = toJSON();
+
+    function findByBgColor(
+      node: ReturnType<typeof toJSON>,
+      colorPrefix: string,
+    ): boolean {
+      if (!node || typeof node === "string") return false;
+      if (Array.isArray(node)) return node.some((n) => findByBgColor(n, colorPrefix));
+      const styles = Array.isArray(node.props?.style)
+        ? node.props.style
+        : [node.props?.style];
+      for (const s of styles) {
+        if (
+          s &&
+          typeof s === "object" &&
+          typeof s.backgroundColor === "string" &&
+          s.backgroundColor.startsWith(colorPrefix)
+        ) {
+          return true;
+        }
+      }
+      if (node.children) {
+        for (const child of node.children) {
+          if (findByBgColor(child as ReturnType<typeof toJSON>, colorPrefix)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    expect(findByBgColor(tree, "#4285F4")).toBe(true);
+  });
+
+  it("should not apply background color for timed events", async () => {
+    const event = makeEvent({ allDay: false, colorId: "#4285F4" });
+    const { toJSON } = await renderWithProviders(
+      <EventCard event={event} />,
+    );
+
+    const tree = toJSON();
+
+    function findAllDayBg(
+      node: ReturnType<typeof toJSON>,
+    ): boolean {
+      if (!node || typeof node === "string") return false;
+      if (Array.isArray(node)) return node.some((n) => findAllDayBg(n));
+      const styles = Array.isArray(node.props?.style)
+        ? node.props.style
+        : [node.props?.style];
+      for (const s of styles) {
+        if (
+          s &&
+          typeof s === "object" &&
+          typeof s.backgroundColor === "string" &&
+          s.backgroundColor === "#4285F426"
+        ) {
+          return true;
+        }
+      }
+      if (node.children) {
+        for (const child of node.children) {
+          if (findAllDayBg(child as ReturnType<typeof toJSON>)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    expect(findAllDayBg(tree)).toBe(false);
+  });
+
+  it("should call onPress with event when card is pressed", async () => {
+    const event = makeEvent();
+    const onPress = jest.fn();
+    const { getByText } = await renderWithProviders(
+      <EventCard event={event} onPress={onPress} />,
+    );
+
+    await fireEvent.press(getByText("Team Meeting"));
+    expect(onPress).toHaveBeenCalledWith(event);
+  });
+});
+
+describe("formatDuration", () => {
+  it("returns empty string when start equals end", () => {
+    const ts = Date.now();
+    expect(formatDuration(ts, ts)).toBe("");
+  });
+
+  it("returns empty string when end is before start", () => {
+    expect(formatDuration(1000, 500)).toBe("");
+  });
+
+  it("formats minutes only", () => {
+    const start = 0;
+    const end = 30 * 60 * 1000; // 30 min
+    expect(formatDuration(start, end)).toBe("30m");
+  });
+
+  it("formats hours only", () => {
+    const start = 0;
+    const end = 2 * 60 * 60 * 1000; // 2h
+    expect(formatDuration(start, end)).toBe("2h");
+  });
+
+  it("formats hours and minutes", () => {
+    const start = 0;
+    const end = 90 * 60 * 1000; // 1h 30m
+    expect(formatDuration(start, end)).toBe("1h 30m");
+  });
+
+  it("formats days for long durations", () => {
+    const start = 0;
+    const end = 2 * 24 * 60 * 60 * 1000; // 2 days
+    expect(formatDuration(start, end)).toBe("2d");
+  });
+
+  it("formats 1 day for exactly 24h", () => {
+    const start = 0;
+    const end = 24 * 60 * 60 * 1000;
+    expect(formatDuration(start, end)).toBe("1d");
+  });
+
+  it("formats sub-24h all-day event as 1d", () => {
+    const start = 0;
+    const end = 24 * 60 * 60 * 1000;
+    expect(formatDuration(start, end)).toBe("1d");
   });
 });

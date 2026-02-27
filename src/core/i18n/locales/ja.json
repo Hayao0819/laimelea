@@ -81,7 +81,14 @@
     "eventCalendar": "カレンダー",
     "eventDescription": "説明",
     "eventNotFound": "予定が見つかりません",
-    "source": "ソース"
+    "source": "ソース",
+    "timeRange": "{{start}} - {{end}}",
+    "duration": {
+      "hours": "{{h}}時間",
+      "minutes": "{{m}}分",
+      "hoursMinutes": "{{h}}時間{{m}}分",
+      "days": "{{d}}日間"
+    }
   },
   "sleep": {
     "title": "睡眠",
