@@ -1,0 +1,5 @@
+project_id      = "laimelea-dev"
+billing_account = "XXXXXX-XXXXXX-XXXXXX"
+support_email   = "your-email@example.com"
+# org_id        = "123456789"  # Optional
+# region        = "asia-northeast1"  # Default
