@@ -12,6 +12,7 @@ import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
 import { createPlatformServices } from "../../../src/core/platform/factory";
+import type { Alarm } from "../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../src/models/CalendarEvent";
 import type { PlatformServices } from "../../../src/core/platform/types";
 
@@ -175,6 +176,7 @@ async function renderWithProviders(options?: {
   isStale?: boolean;
   selectedDate?: number;
   viewMode?: "month" | "week" | "agenda";
+  initialAlarms?: Alarm[];
 }) {
   const {
     authenticated = true,
@@ -184,6 +186,7 @@ async function renderWithProviders(options?: {
     isStale = false,
     selectedDate = TODAY,
     viewMode = "agenda",
+    initialAlarms = [],
   } = options ?? {};
 
   mockUseCalendarSync.mockReturnValue({
@@ -199,7 +202,7 @@ async function renderWithProviders(options?: {
 
   const store = createStore();
   store.set(settingsAtom, DEFAULT_SETTINGS);
-  store.set(alarmsAtom, []);
+  store.set(alarmsAtom, initialAlarms);
   store.set(calendarSelectedDateAtom, selectedDate);
   store.set(calendarViewModeAtom, viewMode);
 
@@ -403,6 +406,123 @@ describe("CalendarScreen", () => {
 
       expect(mockServices.auth.signIn).toHaveBeenCalled();
       expect(mockSync).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("Array.isArray guard for atomWithStorage", () => {
+    function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
+      const now = Date.now();
+      return {
+        id: `alarm-${now}`,
+        label: "Test Alarm",
+        enabled: true,
+        targetTimestampMs: TODAY + 8 * 60 * 60 * 1000,
+        setInTimeSystem: "24h",
+        repeat: null,
+        dismissalMethod: "simple",
+        gradualVolumeDurationSec: 30,
+        snoozeDurationMin: 5,
+        snoozeMaxCount: 3,
+        snoozeCount: 0,
+        autoSilenceMin: 10,
+        soundUri: null,
+        vibrationEnabled: true,
+        notifeeTriggerId: null,
+        skipNextOccurrence: false,
+        linkedCalendarEventId: null,
+        linkedEventOffsetMs: 0,
+        lastFiredAt: null,
+        createdAt: now,
+        updatedAt: now,
+        ...overrides,
+      };
+    }
+
+    it("should create alarm from event and add to empty alarms list", async () => {
+      const event = makeEvent({
+        id: "new-event",
+        title: "New Meeting",
+        startTimestampMs: TODAY + 14 * 60 * 60 * 1000,
+        endTimestampMs: TODAY + 15 * 60 * 60 * 1000,
+      });
+
+      const { getByTestId, store } = await renderWithProviders({
+        events: [event],
+        initialAlarms: [],
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId("event-create-alarm-new-event"));
+      });
+
+      const alarms = store.get(alarmsAtom);
+      expect(alarms).toHaveLength(1);
+      expect(alarms[0].label).toBe("New Meeting");
+      expect(alarms[0].linkedCalendarEventId).toBe("new-event");
+      expect(alarms[0].enabled).toBe(true);
+    });
+
+    it("should append alarm to existing alarms list", async () => {
+      const existingAlarm = makeAlarm({
+        id: "existing-1",
+        label: "Existing Alarm",
+        targetTimestampMs: TODAY + 8 * 60 * 60 * 1000,
+      });
+
+      const event = makeEvent({
+        id: "event-append",
+        title: "Appended Meeting",
+        startTimestampMs: TODAY + 16 * 60 * 60 * 1000,
+        endTimestampMs: TODAY + 17 * 60 * 60 * 1000,
+      });
+
+      const { getByTestId, store } = await renderWithProviders({
+        events: [event],
+        initialAlarms: [existingAlarm],
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId("event-create-alarm-event-append"));
+      });
+
+      const alarms = store.get(alarmsAtom);
+      expect(alarms).toHaveLength(2);
+      expect(alarms[0].id).toBe("existing-1");
+      expect(alarms[0].label).toBe("Existing Alarm");
+      expect(alarms[1].label).toBe("Appended Meeting");
+      expect(alarms[1].linkedCalendarEventId).toBe("event-append");
+    });
+
+    it("should sync linked alarm times when calendar events change", async () => {
+      const linkedAlarm = makeAlarm({
+        id: "linked-alarm-1",
+        label: "Linked Alarm",
+        linkedCalendarEventId: "event-linked",
+        linkedEventOffsetMs: -15 * 60 * 1000, // 15 min before
+        targetTimestampMs: TODAY + 10 * 60 * 60 * 1000 - 15 * 60 * 1000,
+      });
+
+      const updatedEvent = makeEvent({
+        id: "event-linked",
+        sourceEventId: "src-linked",
+        title: "Rescheduled Meeting",
+        startTimestampMs: TODAY + 12 * 60 * 60 * 1000, // moved from 10:00 to 12:00
+        endTimestampMs: TODAY + 13 * 60 * 60 * 1000,
+      });
+
+      const { store } = await renderWithProviders({
+        events: [updatedEvent],
+        initialAlarms: [linkedAlarm],
+      });
+
+      // The useEffect runs on mount with events, triggering syncCalendarAlarms
+      await act(async () => {});
+
+      const alarms = store.get(alarmsAtom);
+      expect(alarms).toHaveLength(1);
+      // targetTimestampMs should be updated: 12:00 - 15min = 11:45
+      const expectedTarget = TODAY + 12 * 60 * 60 * 1000 - 15 * 60 * 1000;
+      expect(alarms[0].targetTimestampMs).toBe(expectedTarget);
     });
   });
 });
