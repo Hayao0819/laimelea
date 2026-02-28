@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Card, Text, IconButton, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
+import { spacing } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
@@ -177,12 +178,12 @@ export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
-    marginVertical: 4,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.xs,
     borderLeftWidth: 4,
   },
   content: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   row: {
     flexDirection: "row",
@@ -207,12 +208,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   allDayLabel: {
-    marginLeft: 8,
+    marginLeft: spacing.sm,
   },
   timeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: spacing.sm,
     marginTop: 2,
   },
   realTime: {

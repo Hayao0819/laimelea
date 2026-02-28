@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { View, SectionList, StyleSheet } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 import { EventCard } from "./EventCard";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 
@@ -226,17 +227,17 @@ export function AgendaView({
 
 const styles = StyleSheet.create({
   sectionHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#e0e0e0",
   },
   emptyDay: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.base,
     alignItems: "center",
   },
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: spacing.base,
   },
 });

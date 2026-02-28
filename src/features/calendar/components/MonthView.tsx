@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 import { EventCard } from "./EventCard";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
   weekdayHeader: {
     flexDirection: "row",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   weekdayCell: {
     alignItems: "center",
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     alignItems: "center",
-    paddingTop: 4,
+    paddingTop: spacing.xs,
   },
   dayNumberContainer: {
     width: 28,
@@ -289,12 +290,12 @@ const styles = StyleSheet.create({
     borderRadius: DOT_SIZE / 2,
   },
   eventList: {
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.base,
   },
   noEvents: {
     alignItems: "center",
-    paddingVertical: 24,
+    paddingVertical: spacing.lg,
   },
   dayHighlight: {
     borderRadius: 14,

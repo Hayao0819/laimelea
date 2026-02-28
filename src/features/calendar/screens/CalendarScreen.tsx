@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
@@ -300,14 +301,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   segmentedContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
   },
   navHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
   },
   navTitleContainer: {
     flex: 1,
@@ -317,23 +318,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   errorCard: {
-    marginHorizontal: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.sm,
   },
   signInContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xl,
   },
   signInCard: {
     width: "100%",
   },
   signInContent: {
     alignItems: "center",
-    gap: 16,
+    gap: spacing.base,
   },
   signInButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });

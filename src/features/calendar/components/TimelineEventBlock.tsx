@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, View, StyleSheet } from "react-native";
 import { Text } from "react-native-paper";
+import { spacing } from "../../../app/spacing";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 
 interface TimelineEventBlockProps {
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderLeftWidth: BORDER_WIDTH,
     borderRadius: BORDER_RADIUS,
-    paddingHorizontal: 6,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     overflow: "hidden",
   },

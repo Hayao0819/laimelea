@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 import { CustomDayTimeline } from "./CustomDayTimeline";
 import { EventCard } from "./EventCard";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
@@ -168,13 +169,13 @@ const styles = StyleSheet.create({
   dayHeaders: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   dayHeader: {
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
     minWidth: 40,
   },
   dayNumberContainer: {
@@ -191,6 +192,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   allDayStrip: {
-    paddingBottom: 4,
+    paddingBottom: spacing.xs,
   },
 });

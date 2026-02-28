@@ -14,6 +14,7 @@ import { useAtomValue } from "jotai";
 import { useSetAtom } from "jotai";
 import { format } from "date-fns";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { spacing, radius } from "../../../app/spacing";
 import type { RootStackParamList } from "../../../navigation/types";
 import { calendarEventsAtom } from "../../../atoms/calendarAtoms";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -260,8 +261,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: 16,
-    gap: 16,
+    padding: spacing.base,
+    gap: spacing.base,
   },
   notFound: {
     flex: 1,
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   colorDot: {
     width: 12,
@@ -279,28 +280,28 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   title: {
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   allDayChip: {
     alignSelf: "flex-start",
   },
   detailCard: {
-    borderRadius: 12,
+    borderRadius: radius.md,
   },
   detailContent: {
     gap: 0,
   },
   detailRow: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     gap: 2,
   },
   divider: {
     marginVertical: 0,
   },
   sectionLabel: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   alarmButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });

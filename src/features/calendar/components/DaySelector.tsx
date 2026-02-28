@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useMemo } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Chip, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 
 const DAY_RANGE = 14;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
   chipContainer: {
     width: ITEM_WIDTH,
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   chip: {
     marginHorizontal: 2,
@@ -147,10 +148,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   listContent: {
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   todayButton: {
     alignSelf: "center",
-    marginVertical: 4,
+    marginVertical: spacing.xs,
   },
 });
