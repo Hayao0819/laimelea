@@ -1,9 +1,59 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet } from "react-native";
-import Svg, { Circle, Line, G, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, Line, G, Path, Text as SvgText } from "react-native-svg";
 import { useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import type { CustomTimeValue } from "../../../models/CustomTime";
+
+// Proportions (relative to radius)
+const FACE_INNER_TRACK_R = 0.88;
+const CARDINAL_LABEL_R_FACTOR = 0.78;
+const MINOR_LABEL_R_FACTOR = 0.85;
+
+const HOUR_HAND_LENGTH = 0.52;
+const HOUR_HAND_BASE_HALF = 3;
+const HOUR_HAND_TIP_HALF = 0.8;
+
+const MINUTE_HAND_LENGTH = 0.72;
+const MINUTE_HAND_BASE_HALF = 2.5;
+const MINUTE_HAND_TIP_HALF = 0.5;
+
+const SECOND_HAND_LENGTH = 0.82;
+const SECOND_HAND_WIDTH = 1;
+const SECOND_TAIL_LENGTH = 0.15;
+const SECOND_TAIL_WIDTH = 2.5;
+const SECOND_TAIL_DOT_R = 3.5;
+
+const CENTER_OUTER_R = 5;
+const CENTER_INNER_R = 2.5;
+
+const CARDINAL_FONT_SIZE = 14;
+const MINOR_FONT_SIZE = 10;
+
+function taperedHandPath(
+  cx: number,
+  cy: number,
+  length: number,
+  baseHalf: number,
+  tipHalf: number,
+  angleRad: number,
+): string {
+  const perpX = -Math.sin(angleRad);
+  const perpY = Math.cos(angleRad);
+  const dirX = Math.cos(angleRad);
+  const dirY = Math.sin(angleRad);
+
+  const bx1 = cx + perpX * baseHalf;
+  const by1 = cy + perpY * baseHalf;
+  const bx2 = cx - perpX * baseHalf;
+  const by2 = cy - perpY * baseHalf;
+  const tx1 = cx + dirX * length + perpX * tipHalf;
+  const ty1 = cy + dirY * length + perpY * tipHalf;
+  const tx2 = cx + dirX * length - perpX * tipHalf;
+  const ty2 = cy + dirY * length - perpY * tipHalf;
+
+  return `M${bx1} ${by1} L${tx1} ${ty1} L${tx2} ${ty2} L${bx2} ${by2} Z`;
+}
 
 interface Props {
   customTime: CustomTimeValue;
@@ -24,28 +74,36 @@ export function AnalogClock({
   const center = size / 2;
   const radius = center - 10;
 
+  const cardinalIndices = useMemo(() => {
+    const count = Math.ceil(hoursPerRevolution);
+    const indices = new Set<number>();
+    for (let q = 0; q < 4; q++) {
+      const ideal = (q / 4) * hoursPerRevolution;
+      const idx = Math.round(ideal) % count;
+      indices.add(idx);
+    }
+    return indices;
+  }, [hoursPerRevolution]);
+
   const markers = useMemo(() => {
     const count = Math.ceil(hoursPerRevolution);
     const result = [];
     for (let i = 0; i < count; i++) {
       const angle = (i / hoursPerRevolution) * 360 - 90;
       const rad = (angle * Math.PI) / 180;
-      const isEven = i % 2 === 0;
-      const innerR = isEven ? radius - 20 : radius - 12;
-      const outerR = radius - 4;
+      const isCardinal = cardinalIndices.has(i);
+      const rFactor = isCardinal
+        ? CARDINAL_LABEL_R_FACTOR
+        : MINOR_LABEL_R_FACTOR;
       result.push({
         i,
-        x1: center + innerR * Math.cos(rad),
-        y1: center + innerR * Math.sin(rad),
-        x2: center + outerR * Math.cos(rad),
-        y2: center + outerR * Math.sin(rad),
-        labelX: center + (radius - 32) * Math.cos(rad),
-        labelY: center + (radius - 32) * Math.sin(rad),
-        isEven,
+        isCardinal,
+        labelX: center + radius * rFactor * Math.cos(rad),
+        labelY: center + radius * rFactor * Math.sin(rad),
       });
     }
     return result;
-  }, [hoursPerRevolution, center, radius]);
+  }, [hoursPerRevolution, center, radius, cardinalIndices]);
 
   // Hour hand wraps around at half-cycle (2 revolutions per full cycle)
   const wrappedHours =
@@ -59,9 +117,12 @@ export function AnalogClock({
   const minuteRad = (minuteAngle * Math.PI) / 180;
   const secondRad = (secondAngle * Math.PI) / 180;
 
-  const hourLen = radius * 0.5;
-  const minuteLen = radius * 0.7;
-  const secondLen = radius * 0.8;
+  const hourLen = radius * HOUR_HAND_LENGTH;
+  const minuteLen = radius * MINUTE_HAND_LENGTH;
+  const secondLen = radius * SECOND_HAND_LENGTH;
+  const tailLen = radius * SECOND_TAIL_LENGTH;
+
+  const elevationColors = theme.colors.elevation as Record<string, string>;
 
   return (
     <View
@@ -71,60 +132,90 @@ export function AnalogClock({
       accessibilityLabel={t("clock.analogClock")}
     >
       <Svg width={size} height={size}>
+        {/* Clock face */}
         <Circle
           cx={center}
           cy={center}
           r={radius}
-          fill={theme.colors.surfaceVariant}
-          stroke={theme.colors.outline}
-          strokeWidth={2}
+          fill={elevationColors.level1 ?? theme.colors.surfaceVariant}
+          stroke={theme.colors.outlineVariant}
+          strokeWidth={1}
         />
 
+        {/* Inner track ring */}
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius * FACE_INNER_TRACK_R}
+          fill="none"
+          stroke={theme.colors.outlineVariant}
+          strokeWidth={0.5}
+          opacity={0.5}
+        />
+
+        {/* Markers */}
         {markers.map((m) => (
           <G key={m.i}>
-            <Line
-              x1={m.x1}
-              y1={m.y1}
-              x2={m.x2}
-              y2={m.y2}
-              stroke={theme.colors.onSurface}
-              strokeWidth={m.isEven ? 2 : 1}
-            />
-            {m.isEven && (
-              <SvgText
-                x={m.labelX}
-                y={m.labelY}
-                fill={theme.colors.onSurface}
-                fontSize={12}
-                textAnchor="middle"
-                alignmentBaseline="central"
-              >
-                {m.i}
-              </SvgText>
-            )}
+            <SvgText
+              x={m.labelX}
+              y={m.labelY}
+              fill={
+                m.isCardinal
+                  ? theme.colors.onSurface
+                  : theme.colors.onSurfaceVariant
+              }
+              fontSize={m.isCardinal ? CARDINAL_FONT_SIZE : MINOR_FONT_SIZE}
+              fontWeight={m.isCardinal ? "500" : "400"}
+              opacity={m.isCardinal ? 1 : 0.6}
+              textAnchor="middle"
+              alignmentBaseline="central"
+            >
+              {m.i}
+            </SvgText>
           </G>
         ))}
 
-        {/* Hour hand */}
-        <Line
-          x1={center}
-          y1={center}
-          x2={center + hourLen * Math.cos(hourRad)}
-          y2={center + hourLen * Math.sin(hourRad)}
-          stroke={theme.colors.onSurface}
-          strokeWidth={4}
-          strokeLinecap="round"
+        {/* Hour hand (tapered) */}
+        <Path
+          d={taperedHandPath(
+            center,
+            center,
+            hourLen,
+            HOUR_HAND_BASE_HALF,
+            HOUR_HAND_TIP_HALF,
+            hourRad,
+          )}
+          fill={theme.colors.onSurface}
         />
 
-        {/* Minute hand */}
+        {/* Minute hand (tapered) */}
+        <Path
+          d={taperedHandPath(
+            center,
+            center,
+            minuteLen,
+            MINUTE_HAND_BASE_HALF,
+            MINUTE_HAND_TIP_HALF,
+            minuteRad,
+          )}
+          fill={theme.colors.onSurface}
+        />
+
+        {/* Second hand tail (counterweight) */}
         <Line
           x1={center}
           y1={center}
-          x2={center + minuteLen * Math.cos(minuteRad)}
-          y2={center + minuteLen * Math.sin(minuteRad)}
-          stroke={theme.colors.onSurface}
-          strokeWidth={3}
+          x2={center - tailLen * Math.cos(secondRad)}
+          y2={center - tailLen * Math.sin(secondRad)}
+          stroke={theme.colors.primary}
+          strokeWidth={SECOND_TAIL_WIDTH}
           strokeLinecap="round"
+        />
+        <Circle
+          cx={center - tailLen * Math.cos(secondRad)}
+          cy={center - tailLen * Math.sin(secondRad)}
+          r={SECOND_TAIL_DOT_R}
+          fill={theme.colors.primary}
         />
 
         {/* Second hand */}
@@ -134,12 +225,23 @@ export function AnalogClock({
           x2={center + secondLen * Math.cos(secondRad)}
           y2={center + secondLen * Math.sin(secondRad)}
           stroke={theme.colors.primary}
-          strokeWidth={1.5}
+          strokeWidth={SECOND_HAND_WIDTH}
           strokeLinecap="round"
         />
 
-        {/* Center dot */}
-        <Circle cx={center} cy={center} r={4} fill={theme.colors.primary} />
+        {/* Center cap */}
+        <Circle
+          cx={center}
+          cy={center}
+          r={CENTER_OUTER_R}
+          fill={theme.colors.onSurface}
+        />
+        <Circle
+          cx={center}
+          cy={center}
+          r={CENTER_INNER_R}
+          fill={theme.colors.primary}
+        />
       </Svg>
     </View>
   );

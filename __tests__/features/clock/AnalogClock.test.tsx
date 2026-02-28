@@ -17,6 +17,7 @@ jest.mock("react-native-svg", () => {
     Svg: createMockComponent("Svg"),
     Circle: createMockComponent("Circle"),
     Line: createMockComponent("Line"),
+    Path: createMockComponent("Path"),
     G: createMockComponent("G"),
     Text: createMockComponent("SvgText"),
   };
@@ -42,13 +43,11 @@ describe("AnalogClock", () => {
   });
 
   it("should render SVG with correct markers for 26h cycle (13 markers)", async () => {
-    // 26h cycle = 1560 minutes. hoursPerRevolution = 26/2 = 13. count = ceil(13) = 13
     const { toJSON } = await renderWithPaper(
       <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1560} />,
     );
     const tree = toJSON();
 
-    // Count G elements in the tree (each marker generates one G)
     let gCount = 0;
     function countGs(node: ReturnType<typeof toJSON>): void {
       if (!node || typeof node === "string") return;
@@ -65,38 +64,64 @@ describe("AnalogClock", () => {
     expect(gCount).toBe(13);
   });
 
-  it("should render hour, minute, and second hands", async () => {
+  it("should render tapered hour and minute hands as Path elements", async () => {
     const { toJSON } = await renderWithPaper(
       <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1560} />,
     );
     const tree = toJSON();
 
-    // Collect all Line elements with their strokeWidth props
-    const lineStrokeWidths: number[] = [];
-    function collectLines(node: ReturnType<typeof toJSON>): void {
+    const paths: Record<string, unknown>[] = [];
+    function collectPaths(node: ReturnType<typeof toJSON>): void {
       if (!node || typeof node === "string") return;
       if (Array.isArray(node)) {
-        node.forEach(collectLines);
+        node.forEach(collectPaths);
         return;
       }
-      if (node.type === "Line" && node.props?.strokeLinecap === "round") {
-        lineStrokeWidths.push(Number(node.props.strokeWidth));
+      if (node.type === "Path" && node.props?.d) {
+        paths.push(node.props as Record<string, unknown>);
       }
       if (node.children)
         node.children.forEach((c) =>
-          collectLines(c as ReturnType<typeof toJSON>),
+          collectPaths(c as ReturnType<typeof toJSON>),
         );
     }
-    collectLines(tree);
+    collectPaths(tree);
 
-    // Hour hand: strokeWidth 4, Minute hand: strokeWidth 3, Second hand: strokeWidth 1.5
-    expect(lineStrokeWidths).toContain(4);
-    expect(lineStrokeWidths).toContain(3);
-    expect(lineStrokeWidths).toContain(1.5);
+    // Hour hand + Minute hand = 2 Path elements
+    expect(paths).toHaveLength(2);
+  });
+
+  it("should render second hand as a thin Line", async () => {
+    const { toJSON } = await renderWithPaper(
+      <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1560} />,
+    );
+    const tree = toJSON();
+
+    let hasSecondHand = false;
+    function findSecondHand(node: ReturnType<typeof toJSON>): void {
+      if (!node || typeof node === "string") return;
+      if (Array.isArray(node)) {
+        node.forEach(findSecondHand);
+        return;
+      }
+      if (
+        node.type === "Line" &&
+        node.props?.strokeWidth === 1 &&
+        node.props?.strokeLinecap === "round"
+      ) {
+        hasSecondHand = true;
+      }
+      if (node.children)
+        node.children.forEach((c) =>
+          findSecondHand(c as ReturnType<typeof toJSON>),
+        );
+    }
+    findSecondHand(tree);
+
+    expect(hasSecondHand).toBe(true);
   });
 
   it("should handle 24h cycle (12 markers)", async () => {
-    // 24h cycle = 1440 minutes. hoursPerRevolution = 24/2 = 12. count = ceil(12) = 12
     const { toJSON } = await renderWithPaper(
       <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1440} />,
     );
@@ -119,7 +144,6 @@ describe("AnalogClock", () => {
   });
 
   it("should handle 28h cycle (14 markers)", async () => {
-    // 28h cycle = 1680 minutes. hoursPerRevolution = 28/2 = 14. count = ceil(14) = 14
     const { toJSON } = await renderWithPaper(
       <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1680} />,
     );
@@ -151,7 +175,6 @@ describe("AnalogClock", () => {
     );
     const tree = toJSON();
 
-    // Find the Svg element and check its width/height
     function findSvg(
       node: ReturnType<typeof toJSON>,
     ): Record<string, unknown> | null {
@@ -179,14 +202,14 @@ describe("AnalogClock", () => {
     expect(svgProps?.height).toBe(400);
   });
 
-  it("should display even-numbered hour labels", async () => {
+  it("should display all hour labels with cardinal emphasis for 26h cycle", async () => {
     const { toJSON } = await renderWithPaper(
       <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1560} />,
     );
     const tree = toJSON();
 
-    // Collect SvgText children (labels for even markers: 0, 2, 4, 6, 8, 10, 12)
-    const labels: string[] = [];
+    const labels: { text: string; fontSize: unknown; fontWeight: unknown }[] =
+      [];
     function collectLabels(node: ReturnType<typeof toJSON>): void {
       if (!node || typeof node === "string") return;
       if (Array.isArray(node)) {
@@ -195,7 +218,13 @@ describe("AnalogClock", () => {
       }
       if (node.type === "SvgText" && node.children) {
         for (const child of node.children) {
-          if (typeof child === "string") labels.push(child);
+          if (typeof child === "string") {
+            labels.push({
+              text: child,
+              fontSize: node.props?.fontSize,
+              fontWeight: node.props?.fontWeight,
+            });
+          }
         }
       }
       if (node.children)
@@ -205,16 +234,86 @@ describe("AnalogClock", () => {
     }
     collectLabels(tree);
 
-    // Even markers for 13-marker clock: 0, 2, 4, 6, 8, 10, 12
-    expect(labels).toContain("0");
-    expect(labels).toContain("2");
-    expect(labels).toContain("4");
-    expect(labels).toContain("6");
-    expect(labels).toContain("8");
-    expect(labels).toContain("10");
-    expect(labels).toContain("12");
-    // Odd markers should NOT have labels
-    expect(labels).not.toContain("1");
-    expect(labels).not.toContain("3");
+    // All 13 markers should have labels
+    expect(labels).toHaveLength(13);
+    // Cardinal labels (0, 3, 7, 10) should be larger
+    const cardinals = labels.filter((l) =>
+      ["0", "3", "7", "10"].includes(l.text),
+    );
+    expect(cardinals).toHaveLength(4);
+    for (const c of cardinals) {
+      expect(c.fontSize).toBe(14);
+      expect(c.fontWeight).toBe("500");
+    }
+    // Non-cardinal labels should be smaller
+    const minors = labels.filter(
+      (l) => !["0", "3", "7", "10"].includes(l.text),
+    );
+    expect(minors).toHaveLength(9);
+    for (const m of minors) {
+      expect(m.fontSize).toBe(10);
+    }
+  });
+
+  it("should render second hand counterweight", async () => {
+    const { toJSON } = await renderWithPaper(
+      <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1560} />,
+    );
+    const tree = toJSON();
+
+    let hasTailLine = false;
+    let hasTailDot = false;
+    function findCounterweight(node: ReturnType<typeof toJSON>): void {
+      if (!node || typeof node === "string") return;
+      if (Array.isArray(node)) {
+        node.forEach(findCounterweight);
+        return;
+      }
+      if (node.type === "Line" && node.props?.strokeWidth === 2.5)
+        hasTailLine = true;
+      if (node.type === "Circle" && node.props?.r === 3.5) hasTailDot = true;
+      if (node.children)
+        node.children.forEach((c) =>
+          findCounterweight(c as ReturnType<typeof toJSON>),
+        );
+    }
+    findCounterweight(tree);
+
+    expect(hasTailLine).toBe(true);
+    expect(hasTailDot).toBe(true);
+  });
+
+  it("should render non-cardinal labels with reduced opacity", async () => {
+    const { toJSON } = await renderWithPaper(
+      <AnalogClock customTime={sampleCustomTime} cycleLengthMinutes={1560} />,
+    );
+    const tree = toJSON();
+
+    const minorLabels: { opacity: unknown }[] = [];
+    function collectMinorLabels(node: ReturnType<typeof toJSON>): void {
+      if (!node || typeof node === "string") return;
+      if (Array.isArray(node)) {
+        node.forEach(collectMinorLabels);
+        return;
+      }
+      if (
+        node.type === "SvgText" &&
+        node.props?.fontSize === 10 &&
+        node.props?.opacity !== undefined
+      ) {
+        minorLabels.push({ opacity: node.props.opacity });
+      }
+      if (node.children)
+        node.children.forEach((c) =>
+          collectMinorLabels(c as ReturnType<typeof toJSON>),
+        );
+    }
+    collectMinorLabels(tree);
+
+    // 9 non-cardinal labels should have reduced opacity
+    expect(minorLabels).toHaveLength(9);
+    for (const label of minorLabels) {
+      expect(label.opacity).toBe(0.6);
+    }
   });
 });
