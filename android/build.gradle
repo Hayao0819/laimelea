@@ -21,9 +21,9 @@ buildscript {
 allprojects {
     repositories {
         // @react-native-async-storage/async-storage v3: shared_storage bundled artifact
-        maven { url "$rootDir/../node_modules/@react-native-async-storage/async-storage/android/local_repo" }
+        maven { url = "$rootDir/../node_modules/@react-native-async-storage/async-storage/android/local_repo" }
         // Detox E2E testing framework
-        maven { url "$rootDir/../node_modules/detox/Detox-android" }
+        maven { url = "$rootDir/../node_modules/detox/Detox-android" }
     }
 }
 
