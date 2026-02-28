@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, View, StyleSheet } from "react-native";
+import { Pressable, View, StyleSheet, type DimensionValue } from "react-native";
 import { Text } from "react-native-paper";
 import { spacing } from "../../../app/spacing";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
@@ -42,8 +42,8 @@ export function TimelineEventBlock({
     {
       top: topOffset,
       height: displayHeight,
-      left: leftPercent,
-      width: widthPercent,
+      left: leftPercent as DimensionValue,
+      width: widthPercent as DimensionValue,
       borderLeftColor: color,
       backgroundColor: colorWithOpacity(color, BG_OPACITY),
     },

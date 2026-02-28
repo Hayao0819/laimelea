@@ -39,18 +39,18 @@ function formatNextAlarmText(alarm: Alarm, cycleConfig: CycleConfig): string {
 
 const widgetStyles = {
   container: {
-    height: "match_parent" as const,
-    width: "match_parent" as const,
-    flexDirection: "column" as const,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
+    height: "match_parent",
+    width: "match_parent",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#1C1B1F",
     borderRadius: 16,
     padding: 12,
   },
   customTime: {
     fontSize: 36,
-    fontWeight: "bold" as const,
+    fontWeight: "bold",
     color: "#E6E1E5",
   },
   day: {
@@ -68,7 +68,7 @@ const widgetStyles = {
     color: "#D0BCFF",
     marginTop: 6,
   },
-};
+} as const;
 
 export function ClockWidget({ cycleConfig, alarms, nowMs }: ClockWidgetData) {
   const customTime = realToCustom(nowMs, cycleConfig);

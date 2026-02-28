@@ -372,7 +372,7 @@ export function AlarmEditScreen() {
         </Surface>
 
         <Button
-          mode="tonal"
+          mode="contained-tonal"
           onPress={handleTestAlarm}
           icon="alarm-check"
           style={styles.testButton}

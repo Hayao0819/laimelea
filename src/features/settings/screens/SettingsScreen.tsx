@@ -219,7 +219,7 @@ export function SettingsScreen() {
   }, []);
 
   const renderChevron = useCallback(
-    (props: { color: string; style: object }) => (
+    (props: { color: string; style?: object }) => (
       <List.Icon {...props} icon="chevron-right" />
     ),
     [],
@@ -312,7 +312,10 @@ export function SettingsScreen() {
         {/* Section 2: General */}
         <List.Section>
           <List.Subheader>{t("settings.general")}</List.Subheader>
-          <View style={styles.segmentContainer}>
+          <View
+            style={styles.segmentContainer}
+            testID="primary-display-segment"
+          >
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.primaryDisplay")}
             </Text>
@@ -328,10 +331,9 @@ export function SettingsScreen() {
                 { value: "custom", label: t("settings.custom") },
                 { value: "24h", label: t("settings.standard24h") },
               ]}
-              testID="primary-display-segment"
             />
           </View>
-          <View style={styles.segmentContainer}>
+          <View style={styles.segmentContainer} testID="language-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.language")}
             </Text>
@@ -342,10 +344,9 @@ export function SettingsScreen() {
                 { value: "en", label: t("settings.english") },
                 { value: "ja", label: t("settings.japanese") },
               ]}
-              testID="language-segment"
             />
           </View>
-          <View style={styles.segmentContainer}>
+          <View style={styles.segmentContainer} testID="theme-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.theme")}
             </Text>
@@ -359,10 +360,9 @@ export function SettingsScreen() {
                 { value: "dark", label: t("settings.themeDark") },
                 { value: "system", label: t("settings.themeSystem") },
               ]}
-              testID="theme-segment"
             />
           </View>
-          <View style={styles.segmentContainer}>
+          <View style={styles.segmentContainer} testID="time-format-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.timeFormat")}
             </Text>
@@ -373,7 +373,6 @@ export function SettingsScreen() {
                 { value: "12h", label: "12h" },
                 { value: "24h", label: "24h" },
               ]}
-              testID="time-format-segment"
             />
           </View>
         </List.Section>
@@ -390,7 +389,7 @@ export function SettingsScreen() {
             right={renderChevron}
             testID="timezone-item"
           />
-          <View style={styles.segmentContainer}>
+          <View style={styles.segmentContainer} testID="dst-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.dst")}
             </Text>
@@ -403,7 +402,6 @@ export function SettingsScreen() {
                 { value: "auto", label: t("settings.dstAuto") },
                 { value: "ignore", label: t("settings.dstIgnore") },
               ]}
-              testID="dst-segment"
             />
           </View>
           <List.Item
@@ -420,7 +418,7 @@ export function SettingsScreen() {
         {/* Section 4: Alarm Defaults */}
         <List.Section>
           <List.Subheader>{t("settings.alarmDefaults")}</List.Subheader>
-          <View style={styles.segmentContainer}>
+          <View style={styles.segmentContainer} testID="dismissal-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.dismissalMethod")}
             </Text>
@@ -436,7 +434,6 @@ export function SettingsScreen() {
                 { value: "shake", label: "Shake" },
                 { value: "math", label: "Math" },
               ]}
-              testID="dismissal-segment"
             />
           </View>
           <List.Item
@@ -485,7 +482,7 @@ export function SettingsScreen() {
             right={renderVibrationSwitch}
             testID="vibration-item"
           />
-          <View style={styles.segmentContainer}>
+          <View style={styles.segmentContainer} testID="volume-button-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.volumeButton")}
             </Text>
@@ -510,7 +507,6 @@ export function SettingsScreen() {
                   label: t("settings.volumeButtonVolume"),
                 },
               ]}
-              testID="volume-button-segment"
             />
           </View>
         </List.Section>
@@ -526,7 +522,7 @@ export function SettingsScreen() {
             right={renderAccountAction}
             testID="account-item"
           />
-          <View style={styles.segmentContainer}>
+          <View style={styles.segmentContainer} testID="first-day-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.firstDayOfWeek")}
             </Text>
@@ -542,7 +538,6 @@ export function SettingsScreen() {
                 { value: "1", label: t("settings.monday") },
                 { value: "6", label: t("settings.saturday") },
               ]}
-              testID="first-day-segment"
             />
           </View>
           <List.Item
