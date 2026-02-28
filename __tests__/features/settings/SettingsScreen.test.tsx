@@ -191,6 +191,18 @@ describe("SettingsScreen", () => {
     expect(getByTestId("gradual-volume-item")).toBeTruthy();
   });
 
+  it("should display default time display setting in general section", async () => {
+    const { getByText } = await renderWithProviders();
+    expect(getByText("settings.primaryDisplay")).toBeTruthy();
+    expect(getByText("settings.custom")).toBeTruthy();
+    expect(getByText("settings.standard24h")).toBeTruthy();
+  });
+
+  it("should display primary display description text", async () => {
+    const { getByText } = await renderWithProviders();
+    expect(getByText("settings.primaryDisplayDescription")).toBeTruthy();
+  });
+
   describe("backup", () => {
     it("should call backup service with serialized data on backup button press", async () => {
       const store = createStore();
