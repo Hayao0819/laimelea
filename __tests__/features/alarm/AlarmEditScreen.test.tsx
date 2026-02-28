@@ -1,5 +1,6 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react-native";
+import { Alert } from "react-native";
+import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
 import { AlarmEditScreen } from "../../../src/features/alarm/screens/AlarmEditScreen";
@@ -7,6 +8,7 @@ import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import type { Alarm } from "../../../src/models/Alarm";
+import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
 
 jest.mock("react-native-shake", () => ({
   __esModule: true,
@@ -66,6 +68,16 @@ jest.mock("@notifee/react-native", () => ({
   AuthorizationStatus: { AUTHORIZED: 1 },
   EventType: { PRESS: 1, ACTION_PRESS: 7, DISMISSED: 2 },
 }));
+
+jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
+  scheduleAlarm: jest.fn().mockResolvedValue("test-trigger-id"),
+  cancelAlarm: jest.fn().mockResolvedValue(undefined),
+  rescheduleAllAlarms: jest.fn().mockResolvedValue(undefined),
+}));
+
+const mockScheduleAlarm = scheduleAlarm as jest.MockedFunction<
+  typeof scheduleAlarm
+>;
 
 const mockGoBack = jest.fn();
 const mockSetOptions = jest.fn();
@@ -210,5 +222,79 @@ describe("AlarmEditScreen", () => {
 
     const options = mockSetOptions.mock.calls[0][0];
     expect(options.title).toBe("alarm.editAlarm");
+  });
+
+  describe("helper text", () => {
+    it("should show time system helper text for custom mode", async () => {
+      const { getByTestId } = await renderWithProviders();
+      const helper = getByTestId("time-system-helper");
+      expect(helper).toBeTruthy();
+      expect(helper.props.children).toBe("alarm.settingInCustom");
+    });
+
+    it("should show time system helper text for 24h mode", async () => {
+      const { getByTestId, getByText } = await renderWithProviders();
+
+      await fireEvent.press(getByText("clock.realTime"));
+
+      await waitFor(() => {
+        const helper = getByTestId("time-system-helper");
+        expect(helper.props.children).toBe("alarm.settingIn24h");
+      });
+    });
+  });
+
+  describe("test alarm button", () => {
+    it("should render test alarm button", async () => {
+      const { getByTestId } = await renderWithProviders();
+      const button = getByTestId("test-alarm-button");
+      expect(button).toBeTruthy();
+    });
+
+    it("should schedule test alarm when test button is pressed", async () => {
+      const before = Date.now();
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("test-alarm-button"));
+
+      await waitFor(() => {
+        expect(mockScheduleAlarm).toHaveBeenCalledTimes(1);
+      });
+
+      const alarmArg = mockScheduleAlarm.mock.calls[0][0];
+      expect(alarmArg.id).toMatch(/^test-alarm-/);
+      expect(alarmArg.targetTimestampMs).toBeGreaterThanOrEqual(before + 10_000);
+      expect(alarmArg.targetTimestampMs).toBeLessThanOrEqual(
+        Date.now() + 10_000,
+      );
+    });
+
+    it("should show snackbar after scheduling test alarm", async () => {
+      const { getByTestId, getByText } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("test-alarm-button"));
+
+      await waitFor(() => {
+        expect(getByText("alarm.testAlarmScheduled")).toBeTruthy();
+      });
+    });
+
+    it("should show alert when scheduleAlarm fails", async () => {
+      mockScheduleAlarm.mockRejectedValueOnce(new Error("fail"));
+      const alertSpy = jest.spyOn(Alert, "alert");
+
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("test-alarm-button"));
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(
+          "alarm.testAlarm",
+          "alarm.testAlarmFailed",
+        );
+      });
+
+      alertSpy.mockRestore();
+    });
   });
 });
