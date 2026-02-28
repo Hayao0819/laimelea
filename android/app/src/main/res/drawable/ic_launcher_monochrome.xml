@@ -4,39 +4,31 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Outer glow ring -->
-    <path
-        android:strokeColor="#D4A843"
-        android:strokeWidth="0.4"
-        android:strokeAlpha="0.2"
-        android:fillColor="#00000000"
-        android:pathData="M54,24.5 A29.5,29.5 0 1,1 53.99,24.5 Z" />
-
     <!-- Main clock circle -->
     <path
-        android:strokeColor="#D4A843"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:fillColor="#00000000"
         android:pathData="M54,27 A27,27 0 1,1 53.99,27 Z" />
 
     <!-- Major tick marks (12, 3, 6, 9) -->
     <path
-        android:strokeColor="#D4A843"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:pathData="M54,27 L54,32" />
     <path
-        android:strokeColor="#D4A843"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:pathData="M81,54 L76,54" />
     <path
-        android:strokeColor="#D4A843"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:pathData="M54,81 L54,76" />
     <path
-        android:strokeColor="#D4A843"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:pathData="M27,54 L32,54" />
@@ -44,42 +36,42 @@
     <!-- Minor tick marks (opacity 0.55) -->
     <group android:alpha="0.55">
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M67.5,30.62 L65.75,33.65" />
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M77.38,40.5 L74.36,42.25" />
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M77.38,67.5 L74.36,65.75" />
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M67.5,77.38 L65.75,74.36" />
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M40.5,77.38 L42.25,74.36" />
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M30.62,67.5 L33.65,65.75" />
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M30.62,40.5 L33.65,42.25" />
         <path
-            android:strokeColor="#D4A843"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="1"
             android:strokeLineCap="round"
             android:pathData="M40.5,30.62 L42.25,33.65" />
@@ -88,21 +80,21 @@
     <!-- Triskelion wind spirals (arms pre-transformed) -->
     <!-- Arm 1 (0 degrees) -->
     <path
-        android:strokeColor="#5B9BD5"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M54,52 C59,48 63,42 59,36" />
     <!-- Arm 2 (120 degrees) -->
     <path
-        android:strokeColor="#5B9BD5"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
         android:pathData="M55.73,55 C56.7,61.33 59.89,67.79 67.09,67.33" />
     <!-- Arm 3 (240 degrees) -->
     <path
-        android:strokeColor="#5B9BD5"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:fillColor="#00000000"
@@ -110,7 +102,7 @@
 
     <!-- Center dot -->
     <path
-        android:fillColor="#D4A843"
+        android:fillColor="#FFFFFF"
         android:pathData="M54,51.5 A2.5,2.5 0 1,1 53.99,51.5 Z" />
 
 </vector>
