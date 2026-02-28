@@ -3,6 +3,7 @@ package com.hayao0819.laimelea.deviceinfo
 import android.os.Build
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.annotations.ReactModule
+import com.hayao0819.laimelea.calendar.NativeDeviceInfoModuleSpec
 
 @ReactModule(name = DeviceInfoModule.NAME)
 class DeviceInfoModule(reactContext: ReactApplicationContext) :
