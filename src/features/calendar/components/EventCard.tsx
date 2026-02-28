@@ -103,7 +103,7 @@ export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
     <Card
       style={[
         styles.card,
-        { borderLeftWidth: 4, borderLeftColor: eventColor },
+        { borderLeftColor: eventColor },
         allDayBg,
       ]}
       mode="outlined"
@@ -183,6 +183,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginVertical: 4,
+    borderLeftWidth: 4,
   },
   content: {
     paddingVertical: 8,

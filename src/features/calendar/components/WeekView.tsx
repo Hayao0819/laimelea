@@ -91,10 +91,10 @@ export function WeekView({
               key={dayMs}
               style={[
                 styles.dayHeader,
-                isSelected && {
-                  backgroundColor: theme.colors.primaryContainer,
-                  borderRadius: 8,
-                },
+                isSelected && [
+                  styles.selectedDayHeader,
+                  { backgroundColor: theme.colors.primaryContainer },
+                ],
               ]}
               onPress={() => onSelectDate(dayMs)}
               accessibilityLabel={`${t(WEEKDAY_KEYS[i])} ${date.getDate()}`}
@@ -114,10 +114,10 @@ export function WeekView({
               <View
                 style={[
                   styles.dayNumberContainer,
-                  isToday && {
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: 12,
-                  },
+                  isToday && [
+                    styles.todayDayNumber,
+                    { backgroundColor: theme.colors.primary },
+                  ],
                 ]}
               >
                 <Text
@@ -183,6 +183,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
+  },
+  selectedDayHeader: {
+    borderRadius: 8,
+  },
+  todayDayNumber: {
+    borderRadius: 12,
   },
   allDayStrip: {
     paddingBottom: 4,

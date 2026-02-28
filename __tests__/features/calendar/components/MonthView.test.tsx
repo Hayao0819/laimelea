@@ -156,33 +156,37 @@ describe("MonthView", () => {
     const tree = toJSON();
 
     // Today (Aug 15) should have a container with backgroundColor = primary and borderRadius 14
+    function flattenStyles(
+      style: unknown,
+    ): Record<string, unknown> {
+      const result: Record<string, unknown> = {};
+      if (Array.isArray(style)) {
+        for (const s of style) {
+          Object.assign(result, flattenStyles(s));
+        }
+      } else if (style && typeof style === "object") {
+        Object.assign(result, style);
+      }
+      return result;
+    }
+
     function findTodayHighlight(
       node: ReturnType<typeof toJSON>,
     ): boolean {
       if (!node || typeof node === "string") return false;
       if (Array.isArray(node))
         return node.some((n) => findTodayHighlight(n));
-      const styles = Array.isArray(node.props?.style)
-        ? node.props.style
-        : [node.props?.style];
-      for (const s of styles) {
-        if (
-          s &&
-          typeof s === "object" &&
-          s.backgroundColor &&
-          s.borderRadius === 14
-        ) {
-          // Check if a child Text contains "15" (Aug 15)
-          if (node.children) {
-            for (const child of node.children) {
-              if (
-                child &&
-                typeof child !== "string" &&
-                !Array.isArray(child) &&
-                child.children?.includes("15")
-              ) {
-                return true;
-              }
+      const merged = flattenStyles(node.props?.style);
+      if (merged.backgroundColor && merged.borderRadius === 14) {
+        if (node.children) {
+          for (const child of node.children) {
+            if (
+              child &&
+              typeof child !== "string" &&
+              !Array.isArray(child) &&
+              child.children?.includes("15")
+            ) {
+              return true;
             }
           }
         }
@@ -216,32 +220,37 @@ describe("MonthView", () => {
     const tree = toJSON();
 
     // Selected date (Aug 20, not today) should have primaryContainer bg + borderRadius 14
+    function flattenStyles(
+      style: unknown,
+    ): Record<string, unknown> {
+      const result: Record<string, unknown> = {};
+      if (Array.isArray(style)) {
+        for (const s of style) {
+          Object.assign(result, flattenStyles(s));
+        }
+      } else if (style && typeof style === "object") {
+        Object.assign(result, style);
+      }
+      return result;
+    }
+
     function findSelectedHighlight(
       node: ReturnType<typeof toJSON>,
     ): boolean {
       if (!node || typeof node === "string") return false;
       if (Array.isArray(node))
         return node.some((n) => findSelectedHighlight(n));
-      const styles = Array.isArray(node.props?.style)
-        ? node.props.style
-        : [node.props?.style];
-      for (const s of styles) {
-        if (
-          s &&
-          typeof s === "object" &&
-          s.borderRadius === 14 &&
-          s.backgroundColor
-        ) {
-          if (node.children) {
-            for (const child of node.children) {
-              if (
-                child &&
-                typeof child !== "string" &&
-                !Array.isArray(child) &&
-                child.children?.includes("20")
-              ) {
-                return true;
-              }
+      const merged = flattenStyles(node.props?.style);
+      if (merged.borderRadius === 14 && merged.backgroundColor) {
+        if (node.children) {
+          for (const child of node.children) {
+            if (
+              child &&
+              typeof child !== "string" &&
+              !Array.isArray(child) &&
+              child.children?.includes("20")
+            ) {
+              return true;
             }
           }
         }

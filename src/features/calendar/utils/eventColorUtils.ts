@@ -6,6 +6,7 @@ function isValidHex(hex: string): boolean {
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const n = parseInt(hex.slice(1), 16);
+  // eslint-disable-next-line no-bitwise
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
 }
 

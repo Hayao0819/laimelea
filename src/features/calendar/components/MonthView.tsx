@@ -184,15 +184,15 @@ export function MonthView({
                 <View
                   style={[
                     styles.dayNumberContainer,
-                    isToday && {
-                      backgroundColor: theme.colors.primary,
-                      borderRadius: 14,
-                    },
+                    isToday && [
+                      styles.dayHighlight,
+                      { backgroundColor: theme.colors.primary },
+                    ],
                     isSelected &&
-                      !isToday && {
-                        backgroundColor: theme.colors.primaryContainer,
-                        borderRadius: 14,
-                      },
+                      !isToday && [
+                        styles.dayHighlight,
+                        { backgroundColor: theme.colors.primaryContainer },
+                      ],
                   ]}
                 >
                   <Text
@@ -203,10 +203,10 @@ export function MonthView({
                         !isToday && {
                           color: theme.colors.onPrimaryContainer,
                         },
-                      !cell.isCurrentMonth && {
-                        color: theme.colors.onSurfaceDisabled,
-                        opacity: 0.5,
-                      },
+                      !cell.isCurrentMonth && [
+                        styles.disabledText,
+                        { color: theme.colors.onSurfaceDisabled },
+                      ],
                     ]}
                   >
                     {cell.date}
@@ -296,5 +296,11 @@ const styles = StyleSheet.create({
   noEvents: {
     alignItems: "center",
     paddingVertical: 24,
+  },
+  dayHighlight: {
+    borderRadius: 14,
+  },
+  disabledText: {
+    opacity: 0.5,
   },
 });

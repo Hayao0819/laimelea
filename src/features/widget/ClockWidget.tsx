@@ -37,6 +37,39 @@ function formatNextAlarmText(alarm: Alarm, cycleConfig: CycleConfig): string {
   return `\u23F0 ${time}${label}`;
 }
 
+const widgetStyles = {
+  container: {
+    height: "match_parent" as const,
+    width: "match_parent" as const,
+    flexDirection: "column" as const,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    backgroundColor: "#1C1B1F",
+    borderRadius: 16,
+    padding: 12,
+  },
+  customTime: {
+    fontSize: 36,
+    fontWeight: "bold" as const,
+    color: "#E6E1E5",
+  },
+  day: {
+    fontSize: 14,
+    color: "#CAC4D0",
+    marginTop: 2,
+  },
+  realTime: {
+    fontSize: 12,
+    color: "#938F99",
+    marginTop: 4,
+  },
+  alarm: {
+    fontSize: 12,
+    color: "#D0BCFF",
+    marginTop: 6,
+  },
+};
+
 export function ClockWidget({ cycleConfig, alarms, nowMs }: ClockWidgetData) {
   const customTime = realToCustom(nowMs, cycleConfig);
   const customTimeStr = formatCustomTimeShort(customTime);
@@ -45,51 +78,14 @@ export function ClockWidget({ cycleConfig, alarms, nowMs }: ClockWidgetData) {
   const nextAlarm = getNextAlarm(alarms, nowMs);
 
   return (
-    <FlexWidget
-      style={{
-        height: "match_parent",
-        width: "match_parent",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#1C1B1F",
-        borderRadius: 16,
-        padding: 12,
-      }}
-      clickAction="OPEN_APP"
-    >
-      <TextWidget
-        text={customTimeStr}
-        style={{
-          fontSize: 36,
-          fontWeight: "bold",
-          color: "#E6E1E5",
-        }}
-      />
-      <TextWidget
-        text={dayStr}
-        style={{
-          fontSize: 14,
-          color: "#CAC4D0",
-          marginTop: 2,
-        }}
-      />
-      <TextWidget
-        text={realTimeStr}
-        style={{
-          fontSize: 12,
-          color: "#938F99",
-          marginTop: 4,
-        }}
-      />
+    <FlexWidget style={widgetStyles.container} clickAction="OPEN_APP">
+      <TextWidget text={customTimeStr} style={widgetStyles.customTime} />
+      <TextWidget text={dayStr} style={widgetStyles.day} />
+      <TextWidget text={realTimeStr} style={widgetStyles.realTime} />
       {nextAlarm ? (
         <TextWidget
           text={formatNextAlarmText(nextAlarm, cycleConfig)}
-          style={{
-            fontSize: 12,
-            color: "#D0BCFF",
-            marginTop: 6,
-          }}
+          style={widgetStyles.alarm}
           maxLines={1}
           truncate="END"
         />
