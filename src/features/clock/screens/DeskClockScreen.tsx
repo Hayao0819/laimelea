@@ -1,10 +1,5 @@
 import React, { useCallback } from "react";
-import {
-  View,
-  StyleSheet,
-  StatusBar,
-  useWindowDimensions,
-} from "react-native";
+import { View, StyleSheet, StatusBar, useWindowDimensions } from "react-native";
 import { IconButton } from "react-native-paper";
 import { Text } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";

@@ -52,32 +52,26 @@ jest.mock("react-native-svg", () => {
 });
 
 const mockAnalogClock = jest.fn();
-jest.mock(
-  "../../../src/features/clock/components/AnalogClock",
-  () => ({
-    AnalogClock: (props: Record<string, unknown>) => {
-      mockAnalogClock(props);
-      // eslint-disable-next-line @typescript-eslint/no-shadow
-      const React = require("react");
-      const { View } = require("react-native");
-      return React.createElement(View, { testID: "analog-clock" });
-    },
-  }),
-);
+jest.mock("../../../src/features/clock/components/AnalogClock", () => ({
+  AnalogClock: (props: Record<string, unknown>) => {
+    mockAnalogClock(props);
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    const React = require("react");
+    const { View } = require("react-native");
+    return React.createElement(View, { testID: "analog-clock" });
+  },
+}));
 
 const mockCustomDayIndicator = jest.fn();
-jest.mock(
-  "../../../src/features/clock/components/CustomDayIndicator",
-  () => ({
-    CustomDayIndicator: (props: Record<string, unknown>) => {
-      mockCustomDayIndicator(props);
-      // eslint-disable-next-line @typescript-eslint/no-shadow
-      const React = require("react");
-      const { View } = require("react-native");
-      return React.createElement(View, { testID: "custom-day-indicator" });
-    },
-  }),
-);
+jest.mock("../../../src/features/clock/components/CustomDayIndicator", () => ({
+  CustomDayIndicator: (props: Record<string, unknown>) => {
+    mockCustomDayIndicator(props);
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    const React = require("react");
+    const { View } = require("react-native");
+    return React.createElement(View, { testID: "custom-day-indicator" });
+  },
+}));
 
 function renderWithProviders(
   overrides?: Partial<AppSettings>,

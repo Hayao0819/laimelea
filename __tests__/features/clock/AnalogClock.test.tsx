@@ -47,8 +47,7 @@ function countNodesByType(tree: TreeNode, type: string): number {
       return;
     }
     if (node.type === type) count++;
-    if (node.children)
-      node.children.forEach((c) => walk(c as TreeNode));
+    if (node.children) node.children.forEach((c) => walk(c as TreeNode));
   }
   walk(tree);
   return count;
@@ -75,8 +74,7 @@ function collectLabels(
         }
       }
     }
-    if (node.children)
-      node.children.forEach((c) => walk(c as TreeNode));
+    if (node.children) node.children.forEach((c) => walk(c as TreeNode));
   }
   walk(tree);
   return labels;
@@ -207,9 +205,7 @@ describe("AnalogClock", () => {
       );
       const tree = toJSON();
 
-      function findSvg(
-        node: TreeNode,
-      ): Record<string, unknown> | null {
+      function findSvg(node: TreeNode): Record<string, unknown> | null {
         if (!node || typeof node === "string") return null;
         if (Array.isArray(node)) {
           for (const n of node) {
@@ -287,12 +283,9 @@ describe("AnalogClock", () => {
         }
         if (node.type === "Line" && node.props?.strokeWidth === 2.5)
           hasTailLine = true;
-        if (node.type === "Circle" && node.props?.r === 3.5)
-          hasTailDot = true;
+        if (node.type === "Circle" && node.props?.r === 3.5) hasTailDot = true;
         if (node.children)
-          node.children.forEach((c) =>
-            findCounterweight(c as TreeNode),
-          );
+          node.children.forEach((c) => findCounterweight(c as TreeNode));
       }
       findCounterweight(tree);
 
@@ -326,9 +319,7 @@ describe("AnalogClock", () => {
           minorLabels.push({ opacity: node.props.opacity });
         }
         if (node.children)
-          node.children.forEach((c) =>
-            collectMinorLabels(c as TreeNode),
-          );
+          node.children.forEach((c) => collectMinorLabels(c as TreeNode));
       }
       collectMinorLabels(tree);
 

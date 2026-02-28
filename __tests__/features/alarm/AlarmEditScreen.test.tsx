@@ -263,7 +263,9 @@ describe("AlarmEditScreen", () => {
 
       const alarmArg = mockScheduleAlarm.mock.calls[0][0];
       expect(alarmArg.id).toMatch(/^test-alarm-/);
-      expect(alarmArg.targetTimestampMs).toBeGreaterThanOrEqual(before + 10_000);
+      expect(alarmArg.targetTimestampMs).toBeGreaterThanOrEqual(
+        before + 10_000,
+      );
       expect(alarmArg.targetTimestampMs).toBeLessThanOrEqual(
         Date.now() + 10_000,
       );

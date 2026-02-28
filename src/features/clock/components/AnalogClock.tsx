@@ -127,9 +127,8 @@ export function AnalogClock({
     const hours = date.getHours();
     const minutes = date.getMinutes();
     const seconds = date.getSeconds();
-    hourAngle =
-      ((hours % 12) + minutes / 60) / 12 * 360 - 90;
-    minuteAngle = (minutes + seconds / 60) / 60 * 360 - 90;
+    hourAngle = (((hours % 12) + minutes / 60) / 12) * 360 - 90;
+    minuteAngle = ((minutes + seconds / 60) / 60) * 360 - 90;
     secondAngle = (seconds / 60) * 360 - 90;
   } else {
     // Hour hand wraps around at half-cycle (2 revolutions per full cycle)
