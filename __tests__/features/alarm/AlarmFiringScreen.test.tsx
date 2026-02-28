@@ -201,7 +201,7 @@ describe("AlarmFiringScreen", () => {
     });
 
     // Verify alarms atom was updated with lastFiredAt
-    const updatedAlarms = store.get(alarmsAtom);
+    const updatedAlarms = await store.get(alarmsAtom);
     expect(updatedAlarms[0].lastFiredAt).not.toBeNull();
     expect(updatedAlarms[0].lastFiredAt).toBeGreaterThan(0);
   });
@@ -249,8 +249,8 @@ describe("AlarmFiringScreen", () => {
       fireEvent.press(getByTestId("snooze-button"));
     });
 
-    await waitFor(() => {
-      const updatedAlarms = store.get(alarmsAtom);
+    await waitFor(async () => {
+      const updatedAlarms = await store.get(alarmsAtom);
       expect(updatedAlarms[0].snoozeCount).toBe(2);
     });
   });

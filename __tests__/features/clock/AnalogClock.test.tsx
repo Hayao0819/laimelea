@@ -47,7 +47,8 @@ function countNodesByType(tree: TreeNode, type: string): number {
       return;
     }
     if (node.type === type) count++;
-    if (node.children) node.children.forEach((c) => walk(c as TreeNode));
+    if (node.children)
+      node.children.forEach((c: unknown) => walk(c as TreeNode));
   }
   walk(tree);
   return count;
@@ -74,7 +75,8 @@ function collectLabels(
         }
       }
     }
-    if (node.children) node.children.forEach((c) => walk(c as TreeNode));
+    if (node.children)
+      node.children.forEach((c: unknown) => walk(c as TreeNode));
   }
   walk(tree);
   return labels;
@@ -128,7 +130,7 @@ describe("AnalogClock", () => {
           paths.push(node.props as Record<string, unknown>);
         }
         if (node.children)
-          node.children.forEach((c) => collectPaths(c as TreeNode));
+          node.children.forEach((c: unknown) => collectPaths(c as TreeNode));
       }
       collectPaths(tree);
 
@@ -162,7 +164,7 @@ describe("AnalogClock", () => {
           hasSecondHand = true;
         }
         if (node.children)
-          node.children.forEach((c) => findSecondHand(c as TreeNode));
+          node.children.forEach((c: unknown) => findSecondHand(c as TreeNode));
       }
       findSecondHand(tree);
 
@@ -285,7 +287,9 @@ describe("AnalogClock", () => {
           hasTailLine = true;
         if (node.type === "Circle" && node.props?.r === 3.5) hasTailDot = true;
         if (node.children)
-          node.children.forEach((c) => findCounterweight(c as TreeNode));
+          node.children.forEach((c: unknown) =>
+            findCounterweight(c as TreeNode),
+          );
       }
       findCounterweight(tree);
 
@@ -319,7 +323,9 @@ describe("AnalogClock", () => {
           minorLabels.push({ opacity: node.props.opacity });
         }
         if (node.children)
-          node.children.forEach((c) => collectMinorLabels(c as TreeNode));
+          node.children.forEach((c: unknown) =>
+            collectMinorLabels(c as TreeNode),
+          );
       }
       collectMinorLabels(tree);
 
@@ -411,7 +417,7 @@ describe("AnalogClock", () => {
           paths.push(node.props.d as string);
         }
         if (node.children)
-          node.children.forEach((c) => collectPaths(c as TreeNode));
+          node.children.forEach((c: unknown) => collectPaths(c as TreeNode));
       }
       collectPaths(tree);
 

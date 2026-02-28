@@ -218,7 +218,7 @@ describe("EventDetailScreen", () => {
     );
 
     // Verify alarm was added to store
-    const alarms = store.get(alarmsAtom);
+    const alarms = await store.get(alarmsAtom);
     expect(alarms.length).toBe(1);
     expect(alarms[0].label).toBe("Important Meeting");
     expect(alarms[0].linkedCalendarEventId).toBe("event-alarm");

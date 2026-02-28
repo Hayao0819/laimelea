@@ -115,8 +115,8 @@ describe("CycleEstimateCard", () => {
 
     await fireEvent.press(getByTestId("apply-cycle-button"));
 
-    await waitFor(() => {
-      const settings = store.get(settingsAtom);
+    await waitFor(async () => {
+      const settings = await store.get(settingsAtom);
       expect(settings.cycleConfig.cycleLengthMinutes).toBe(1620);
     });
   });

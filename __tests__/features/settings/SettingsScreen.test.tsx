@@ -255,8 +255,8 @@ describe("SettingsScreen", () => {
 
       await fireEvent.press(getByTestId("backup-now-button"));
 
-      await waitFor(() => {
-        const updatedSettings = store.get(settingsAtom);
+      await waitFor(async () => {
+        const updatedSettings = await store.get(settingsAtom);
         expect(updatedSettings.lastBackupTimestamp).not.toBeNull();
         expect(updatedSettings.lastBackupTimestamp).toBeGreaterThan(0);
       });
@@ -319,12 +319,14 @@ describe("SettingsScreen", () => {
 
       await fireEvent.press(getByTestId("restore-button"));
 
-      await waitFor(() => {
-        expect(store.get(settingsAtom).language).toBe("ja");
-        expect(store.get(alarmsAtom)).toHaveLength(1);
-        expect(store.get(alarmsAtom)[0].id).toBe("alarm-1");
-        expect(store.get(sleepSessionsAtom)).toHaveLength(1);
-        expect(store.get(sleepSessionsAtom)[0].id).toBe("sleep-1");
+      await waitFor(async () => {
+        expect((await store.get(settingsAtom)).language).toBe("ja");
+        const restoredAlarms = await store.get(alarmsAtom);
+        expect(restoredAlarms).toHaveLength(1);
+        expect(restoredAlarms[0].id).toBe("alarm-1");
+        const restoredSleep = await store.get(sleepSessionsAtom);
+        expect(restoredSleep).toHaveLength(1);
+        expect(restoredSleep[0].id).toBe("sleep-1");
       });
     });
 
@@ -447,9 +449,9 @@ describe("SettingsScreen", () => {
 
       await fireEvent.press(getByTestId("restore-button"));
 
-      await waitFor(() => {
+      await waitFor(async () => {
         // Settings should be updated from backup
-        expect(store.get(settingsAtom).language).toBe("ja");
+        expect((await store.get(settingsAtom)).language).toBe("ja");
         // Restore should succeed even without alarms/sleepSessions in backup
         expect(getByTestId("settings-snackbar")).toHaveTextContent(
           "settings.restoreSuccess",
