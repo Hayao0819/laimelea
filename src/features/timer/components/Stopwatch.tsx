@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: spacing.base,
-    paddingTop: 48,
+    paddingTop: spacing.xl,
   },
   display: {
     fontVariant: ["tabular-nums"],
@@ -132,8 +132,8 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   lapList: {
+    flex: 1,
     width: "100%",
-    maxHeight: 300,
   },
   lapRow: {
     flexDirection: "row",

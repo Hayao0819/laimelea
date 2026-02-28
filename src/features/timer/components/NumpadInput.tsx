@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, useWindowDimensions } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { spacing } from "../../../app/spacing";
@@ -29,7 +29,12 @@ function digitsToMs(digits: string): number {
 export function NumpadInput({ onStart }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
   const [digits, setDigits] = useState("");
+  const numpadPadding = spacing.base * 2;
+  const numpadGap = spacing.sm;
+  const buttonWidth = (screenWidth - numpadPadding - numpadGap * 2) / 3;
+  const buttonHeight = Math.max(56, buttonWidth * 0.55);
 
   const handleDigit = useCallback(
     (d: string) => {
@@ -68,7 +73,7 @@ export function NumpadInput({ onStart }: Props) {
         accessibilityLabel={`${h}${t("timer.hours")} ${m}${t("timer.minutes")} ${s}${t("timer.seconds")}`}
         accessibilityRole="timer"
       >
-        <Text variant="headlineMedium" style={styles.displayText}>
+        <Text variant="displaySmall" style={styles.displayText}>
           <Text
             style={
               digits.length > 4 ? { color: theme.colors.primary } : undefined
@@ -109,8 +114,13 @@ export function NumpadInput({ onStart }: Props) {
         ].map((row, ri) => (
           <View key={ri} style={styles.numpadRow}>
             {row.map((key) => {
+              const btnStyle = {
+                width: buttonWidth,
+                height: buttonHeight,
+              };
+              const btnContentStyle = { height: buttonHeight };
               if (key === "") {
-                return <View key="empty" style={styles.numpadButton} />;
+                return <View key="empty" style={btnStyle} />;
               }
               if (key === "⌫") {
                 return (
@@ -118,8 +128,9 @@ export function NumpadInput({ onStart }: Props) {
                     key={key}
                     mode="text"
                     onPress={handleBackspace}
-                    style={styles.numpadButton}
-                    contentStyle={styles.numpadContent}
+                    style={btnStyle}
+                    contentStyle={btnContentStyle}
+                    labelStyle={styles.numpadLabel}
                     disabled={digits.length === 0}
                     testID="numpad-backspace"
                     accessibilityLabel={t("timer.backspace")}
@@ -133,8 +144,9 @@ export function NumpadInput({ onStart }: Props) {
                   key={key}
                   mode="text"
                   onPress={() => handleDigit(key)}
-                  style={styles.numpadButton}
-                  contentStyle={styles.numpadContent}
+                  style={btnStyle}
+                  contentStyle={btnContentStyle}
+                  labelStyle={styles.numpadLabel}
                   disabled={digits.length >= 6}
                   testID={`numpad-${key}`}
                   accessibilityLabel={key}
@@ -183,7 +195,7 @@ const styles = StyleSheet.create({
   },
   display: {
     alignItems: "center",
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   displayText: {
     fontVariant: ["tabular-nums"],
@@ -192,31 +204,27 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   numpad: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   numpadRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  numpadButton: {
-    width: 72,
-    height: 48,
-  },
-  numpadContent: {
-    height: 48,
+  numpadLabel: {
+    fontSize: 22,
   },
   presets: {
     flexDirection: "row",
     justifyContent: "center",
     gap: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: spacing.base,
   },
   presetButton: {
     minWidth: 0,
   },
   startButton: {
-    marginTop: spacing.md,
+    marginTop: spacing.base,
     marginHorizontal: spacing.xl,
   },
 });
