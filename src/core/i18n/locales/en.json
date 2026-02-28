@@ -49,7 +49,12 @@
     "snoozeAction": "Snooze",
     "linkedToEvent": "Linked to calendar event",
     "saveAlarm": "Save alarm",
-    "deleteAlarm": "Delete alarm"
+    "deleteAlarm": "Delete alarm",
+    "settingInCustom": "\u23f0 Setting in Custom Time",
+    "settingIn24h": "\ud83d\udd50 Setting in 24h Time",
+    "testAlarm": "Test Alarm",
+    "testAlarmScheduled": "Test alarm will fire in 10 seconds",
+    "testAlarmFailed": "Failed to schedule test alarm"
   },
   "dismissal": {
     "simple": "Tap to Dismiss",

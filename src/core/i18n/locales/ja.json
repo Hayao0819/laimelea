@@ -49,7 +49,12 @@
     "snoozeAction": "スヌーズ",
     "linkedToEvent": "カレンダー予定に連動",
     "saveAlarm": "アラームを保存",
-    "deleteAlarm": "アラームを削除"
+    "deleteAlarm": "アラームを削除",
+    "settingInCustom": "\u23f0 カスタム時間で設定中",
+    "settingIn24h": "\ud83d\udd50 24時間で設定中",
+    "testAlarm": "テストアラーム",
+    "testAlarmScheduled": "10秒後にテストアラームが鳴ります",
+    "testAlarmFailed": "テストアラームのスケジュールに失敗しました"
   },
   "dismissal": {
     "simple": "タップで解除",

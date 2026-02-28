@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useLayoutEffect } from "react";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import {
+  Text,
   TextInput,
   SegmentedButtons,
   List,
@@ -12,6 +13,7 @@ import {
   Portal,
   Dialog,
   RadioButton,
+  Snackbar,
   useTheme,
 } from "react-native-paper";
 import { useAtom, useAtomValue } from "jotai";
@@ -79,6 +81,7 @@ export function AlarmEditScreen() {
     existingAlarm?.dismissalMethod ?? defaults.dismissalMethod,
   );
   const [dismissalDialogVisible, setDismissalDialogVisible] = useState(false);
+  const [testSnackbarVisible, setTestSnackbarVisible] = useState(false);
 
   const computeTargetTimestamp = useCallback(() => {
     if (timeSystem === "custom") {
@@ -178,6 +181,54 @@ export function AlarmEditScreen() {
     ]);
   }, [existingAlarm, alarms, setAlarms, navigation, t]);
 
+  const handleTestAlarm = useCallback(async () => {
+    const now = Date.now();
+    const testAlarm: Alarm = {
+      id: `test-alarm-${now}`,
+      label: "Test Alarm",
+      enabled: true,
+      targetTimestampMs: now + 10_000,
+      setInTimeSystem: timeSystem,
+      repeat: null,
+      dismissalMethod,
+      gradualVolumeDurationSec:
+        existingAlarm?.gradualVolumeDurationSec ??
+        defaults.gradualVolumeDurationSec,
+      snoozeDurationMin: snoozeDuration,
+      snoozeMaxCount: 0,
+      snoozeCount: 0,
+      autoSilenceMin: 1,
+      soundUri: null,
+      vibrationEnabled: vibration,
+      notifeeTriggerId: null,
+      skipNextOccurrence: false,
+      linkedCalendarEventId: null,
+      linkedEventOffsetMs: 0,
+      lastFiredAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    try {
+      const triggerId = await scheduleAlarm(testAlarm);
+      testAlarm.notifeeTriggerId = triggerId;
+      setAlarms([...alarms, testAlarm]);
+      setTestSnackbarVisible(true);
+    } catch {
+      Alert.alert(t("alarm.testAlarm"), t("alarm.testAlarmFailed"));
+    }
+  }, [
+    timeSystem,
+    dismissalMethod,
+    existingAlarm,
+    defaults,
+    snoozeDuration,
+    vibration,
+    alarms,
+    setAlarms,
+    t,
+  ]);
+
   const SaveButton = useCallback(
     () => (
       <IconButton
@@ -255,6 +306,15 @@ export function AlarmEditScreen() {
             cycleLengthMinutes={cycleConfig.cycleLengthMinutes}
             onChange={setTime}
           />
+          <Text
+            variant="labelLarge"
+            style={[styles.helperText, { color: theme.colors.primary }]}
+            testID="time-system-helper"
+          >
+            {timeSystem === "custom"
+              ? t("alarm.settingInCustom")
+              : t("alarm.settingIn24h")}
+          </Text>
           <SegmentedButtons
             value={timeSystem}
             onValueChange={(v) => setTimeSystem(v as "custom" | "24h")}
@@ -310,6 +370,16 @@ export function AlarmEditScreen() {
           />
         </Surface>
 
+        <Button
+          mode="tonal"
+          onPress={handleTestAlarm}
+          icon="alarm-check"
+          style={styles.testButton}
+          testID="test-alarm-button"
+        >
+          {t("alarm.testAlarm")}
+        </Button>
+
         {existingAlarm && (
           <Button
             mode="outlined"
@@ -349,6 +419,14 @@ export function AlarmEditScreen() {
             </RadioButton.Group>
           </Dialog.Content>
         </Dialog>
+        <Snackbar
+          visible={testSnackbarVisible}
+          onDismiss={() => setTestSnackbarVisible(false)}
+          duration={4000}
+          testID="test-alarm-snackbar"
+        >
+          {t("alarm.testAlarmScheduled")}
+        </Snackbar>
       </Portal>
     </View>
   );
@@ -374,6 +452,12 @@ const styles = StyleSheet.create({
   settingsCard: {
     borderRadius: 16,
     overflow: "hidden",
+  },
+  helperText: {
+    marginTop: 8,
+  },
+  testButton: {
+    marginTop: 0,
   },
   deleteButton: {
     marginTop: 8,
