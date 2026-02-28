@@ -11,7 +11,9 @@
     "realTime": "24時間",
     "day": "日目",
     "toggleMode": "時計モード切替",
-    "analogClock": "アナログ時計"
+    "analogClock": "アナログ時計",
+    "deskClock": "置き時計",
+    "exitDeskClock": "置き時計を閉じる"
   },
   "alarm": {
     "title": "アラーム",

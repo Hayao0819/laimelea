@@ -4,6 +4,7 @@ import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 
 import { BottomTabNavigator } from "./BottomTabNavigator";
+import { DeskClockScreen } from "../features/clock/screens/DeskClockScreen";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
 import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
@@ -71,6 +72,16 @@ export function RootNavigator() {
               headerShown: false,
               presentation: "fullScreenModal",
               gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="DeskClock"
+            component={DeskClockScreen}
+            options={{
+              headerShown: false,
+              presentation: "fullScreenModal",
+              gestureEnabled: false,
+              animation: "fade",
             }}
           />
         </>

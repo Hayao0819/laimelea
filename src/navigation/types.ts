@@ -17,6 +17,7 @@ export type RootStackParamList = {
   Settings: undefined;
   AlarmFiring: { alarmId: string };
   ManualSleepEntry: { sessionId?: string };
+  DeskClock: undefined;
 };
 
 declare global {

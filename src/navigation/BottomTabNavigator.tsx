@@ -93,6 +93,24 @@ export function BottomTabNavigator() {
     [rootNavigation],
   );
 
+  const renderClockHeader = useCallback(
+    ({ options }: { options: { title?: string } }) => (
+      <Appbar.Header elevated={false}>
+        <Appbar.Content title={options.title ?? ""} />
+        <Appbar.Action
+          icon="fullscreen"
+          onPress={() => rootNavigation.navigate("DeskClock")}
+          accessibilityLabel={t("clock.deskClock")}
+        />
+        <Appbar.Action
+          icon="cog-outline"
+          onPress={() => rootNavigation.navigate("Settings")}
+        />
+      </Appbar.Header>
+    ),
+    [rootNavigation, t],
+  );
+
   return (
     <Tab.Navigator
       tabBar={TabBar}
@@ -106,6 +124,7 @@ export function BottomTabNavigator() {
         options={{
           title: t("tabs.clock"),
           tabBarIcon: ClockTabIcon,
+          header: renderClockHeader,
         }}
       />
       <Tab.Screen

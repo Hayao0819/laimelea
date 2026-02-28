@@ -11,7 +11,9 @@
     "realTime": "24h Time",
     "day": "Day",
     "toggleMode": "Toggle clock mode",
-    "analogClock": "Analog clock"
+    "analogClock": "Analog clock",
+    "deskClock": "Desk clock",
+    "exitDeskClock": "Exit desk clock"
   },
   "alarm": {
     "title": "Alarms",
