@@ -11,14 +11,18 @@ import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";
 import { ManualSleepEntryScreen } from "../features/sleep/screens/ManualSleepEntryScreen";
 import { EventDetailScreen } from "../features/calendar/screens/EventDetailScreen";
-import { setupCompleteAtom } from "../atoms/settingsAtoms";
+import { setupCompleteAtom, settingsLoadedAtom } from "../atoms/settingsAtoms";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
+  const settingsLoaded = useAtomValue(settingsLoadedAtom);
   const setupComplete = useAtomValue(setupCompleteAtom);
   const { t } = useTranslation();
+
+  // Settings still loading from AsyncStorage — keep native splash visible
+  if (!settingsLoaded) return null;
 
   return (
     <Stack.Navigator>

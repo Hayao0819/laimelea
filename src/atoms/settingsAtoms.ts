@@ -13,6 +13,18 @@ export const settingsAtom = atomWithStorage<AppSettings>(
   { getOnInit: true },
 );
 
+// Sentinel value used to detect whether AsyncStorage has resolved yet.
+const LOADING = Symbol("settings-loading");
+
+// unwrap without a fallback returning the real value would give `undefined`,
+// but we use a sentinel so we can distinguish "loading" from any real value.
+const settingsOrLoadingAtom = unwrap(settingsAtom, () => LOADING as never);
+
+/** true once settings have been loaded from AsyncStorage */
+export const settingsLoadedAtom = atom<boolean>(
+  (get) => get(settingsOrLoadingAtom) !== (LOADING as never),
+);
+
 // atomWithStorage + AsyncStorage keeps a Promise in the store until resolved.
 // `unwrap` provides a synchronous view: returns the fallback while the Promise
 // is pending, then switches to the resolved value once AsyncStorage responds.
