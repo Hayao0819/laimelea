@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, Text, TextInput, HelperText } from "react-native-paper";
+import { spacing } from "../../../../app/spacing";
 import { useTranslation } from "react-i18next";
 import { generateMathProblem } from "../../services/mathProblemGenerator";
 import type { DismissalComponentProps } from "../../strategies/types";
@@ -84,9 +85,9 @@ export function MathDismissal({
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    gap: 12,
+    gap: spacing.md,
     width: "100%",
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xl,
   },
   instruction: {
     textAlign: "center",
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   snoozeButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     minWidth: 120,
   },
 });

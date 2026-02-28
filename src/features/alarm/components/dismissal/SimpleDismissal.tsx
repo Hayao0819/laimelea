@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Button } from "react-native-paper";
+import { spacing } from "../../../../app/spacing";
 import { useTranslation } from "react-i18next";
 import type { DismissalComponentProps } from "../../strategies/types";
 
@@ -40,7 +41,7 @@ export function SimpleDismissal({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    gap: 16,
+    gap: spacing.base,
   },
   button: {
     minWidth: 120,

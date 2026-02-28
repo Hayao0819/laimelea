@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Card, Icon, Switch, Text, useTheme } from "react-native-paper";
+import { spacing } from "../../../app/spacing";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import type { Alarm } from "../../../models/Alarm";
@@ -103,8 +104,8 @@ export function AlarmCard({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
-    marginVertical: 4,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.xs,
   },
   disabled: {
     opacity: 0.6,
@@ -118,14 +119,14 @@ const styles = StyleSheet.create({
   labelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: spacing.sm,
   },
   repeat: {
     marginTop: 2,
   },
   actions: {
     position: "absolute",
-    right: 8,
-    top: 8,
+    right: spacing.sm,
+    top: spacing.sm,
   },
 });

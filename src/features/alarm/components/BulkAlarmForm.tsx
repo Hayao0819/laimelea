@@ -17,6 +17,7 @@ import { AlarmTimePicker } from "./AlarmTimePicker";
 import { getAllStrategies, getStrategy } from "../strategies";
 import type { Alarm } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
+import { spacing, radius } from "../../../app/spacing";
 
 interface TimeValue {
   hours: number;
@@ -230,31 +231,31 @@ export function BulkAlarmForm({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
+    gap: spacing.base,
   },
   timeCard: {
-    padding: 20,
-    borderRadius: 16,
+    padding: spacing.base,
+    borderRadius: radius.md,
     alignItems: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   sectionLabel: {
     alignSelf: "flex-start",
-    marginLeft: 4,
+    marginLeft: spacing.xs,
   },
   segment: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   settingsCard: {
-    borderRadius: 16,
+    borderRadius: radius.md,
     overflow: "hidden",
   },
   previewCard: {
-    padding: 16,
-    borderRadius: 16,
+    padding: spacing.base,
+    borderRadius: radius.md,
   },
   previewTitle: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   noAlarms: {
     opacity: 0.6,
@@ -262,8 +263,8 @@ const styles = StyleSheet.create({
   chipContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   chip: {},
   warningBanner: {

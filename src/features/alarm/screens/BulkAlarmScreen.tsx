@@ -14,6 +14,7 @@ import { generateBulkAlarms } from "../services/bulkAlarmCreator";
 import { BulkAlarmForm } from "../components/BulkAlarmForm";
 import type { BulkAlarmParams } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
+import { spacing } from "../../../app/spacing";
 
 type Props = NativeStackScreenProps<RootStackParamList, "BulkAlarm">;
 
@@ -152,6 +153,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: 16,
+    padding: spacing.base,
   },
 });

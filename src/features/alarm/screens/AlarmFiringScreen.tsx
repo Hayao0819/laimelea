@@ -16,6 +16,7 @@ import { GradualVolumeManager } from "../services/gradualVolumeManager";
 import { DismissalContainer } from "../components/dismissal/DismissalContainer";
 import "../strategies"; // ensure strategies are registered
 import type { Alarm } from "../../../models/Alarm";
+import { spacing } from "../../../app/spacing";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmFiring">;
 
@@ -135,14 +136,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 32,
+    padding: spacing.xl,
   },
   icon: {
     fontSize: 64,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   label: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   time: {
     fontVariant: ["tabular-nums"],

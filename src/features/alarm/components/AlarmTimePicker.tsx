@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { TextInput, Text } from "react-native-paper";
+import { spacing } from "../../../app/spacing";
 import { useTranslation } from "react-i18next";
 
 interface TimeValue {
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   input: {
     width: 72,
@@ -87,10 +88,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   separator: {
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   maxLabel: {
-    marginLeft: 8,
+    marginLeft: spacing.sm,
     opacity: 0.6,
   },
 });

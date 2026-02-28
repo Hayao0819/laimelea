@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { FAB, Text, Snackbar, useTheme } from "react-native-paper";
+import { spacing } from "../../../app/spacing";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -151,6 +152,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   list: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
+    paddingBottom: 80,
+    flexGrow: 1,
   },
 });

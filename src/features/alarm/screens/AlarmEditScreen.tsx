@@ -30,6 +30,7 @@ import { AlarmTimePicker } from "../components/AlarmTimePicker";
 import { getAllStrategies, getStrategy } from "../strategies";
 import type { Alarm } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
+import { spacing, radius } from "../../../app/spacing";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmEdit">;
 
@@ -437,29 +438,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: 16,
-    gap: 16,
+    padding: spacing.base,
+    gap: spacing.base,
   },
   timeCard: {
-    padding: 20,
-    borderRadius: 16,
+    padding: spacing.base,
+    borderRadius: radius.md,
     alignItems: "center",
   },
   segment: {
-    marginTop: 16,
+    marginTop: spacing.base,
   },
   input: {},
   settingsCard: {
-    borderRadius: 16,
+    borderRadius: radius.md,
     overflow: "hidden",
   },
   helperText: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   testButton: {
     marginTop: 0,
   },
   deleteButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });

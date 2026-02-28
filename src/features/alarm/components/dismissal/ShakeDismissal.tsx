@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, ProgressBar, Text } from "react-native-paper";
+import { spacing } from "../../../../app/spacing";
 import { useTranslation } from "react-i18next";
 import RNShake from "react-native-shake";
 import type { DismissalComponentProps } from "../../strategies/types";
@@ -71,9 +72,9 @@ export function ShakeDismissal({
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    gap: 16,
+    gap: spacing.base,
     width: "100%",
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xl,
   },
   instruction: {
     textAlign: "center",
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   snoozeButton: {
-    marginTop: 16,
+    marginTop: spacing.base,
     minWidth: 120,
   },
 });
