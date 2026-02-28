@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
 import { primaryTimeDisplayAtom } from "../../../atoms/settingsAtoms";
+import { spacing } from "../../../app/spacing";
 import { CustomDayIndicator } from "../components/CustomDayIndicator";
 import { AnalogClock } from "../components/AnalogClock";
 import { DigitalClock } from "../components/DigitalClock";
@@ -55,20 +56,20 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    gap: 16,
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.base,
+    gap: spacing.base,
   },
   clockArea: {
     alignItems: "center",
-    gap: 16,
+    gap: spacing.base,
   },
   clockSection: {
-    marginVertical: 8,
+    marginVertical: spacing.sm,
   },
   toggleSection: {
     width: "100%",
-    paddingHorizontal: 32,
-    marginTop: 8,
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.sm,
   },
 });

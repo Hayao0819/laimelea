@@ -2,6 +2,7 @@ import React from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { Button, Text, Divider, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 import { useStopwatch } from "../../../hooks/useStopwatch";
 
 function formatStopwatchTime(ms: number): string {
@@ -115,17 +116,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    padding: 16,
+    padding: spacing.base,
     paddingTop: 48,
   },
   display: {
     fontVariant: ["tabular-nums"],
-    marginBottom: 32,
+    marginBottom: spacing.xl,
   },
   buttonRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   button: {
     minWidth: 120,
@@ -137,10 +138,10 @@ const styles = StyleSheet.create({
   lapRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
   },
   noLaps: {
-    marginTop: 16,
+    marginTop: spacing.base,
   },
 });

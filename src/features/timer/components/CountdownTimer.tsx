@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { Snackbar, Text } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 import { useTimers } from "../../../hooks/useTimers";
 import { TimerCard } from "./TimerCard";
 import { NumpadInput } from "./NumpadInput";
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   empty: {
     flex: 1,

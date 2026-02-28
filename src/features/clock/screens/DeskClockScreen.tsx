@@ -15,6 +15,7 @@ import { useCurrentTime } from "../../../hooks/useCurrentTime";
 import { useFullscreen } from "../../../hooks/useFullscreen";
 import { formatCustomTime } from "../../../core/time/formatting";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { spacing } from "../../../app/spacing";
 
 export function DeskClockScreen() {
   const navigation = useNavigation();
@@ -87,8 +88,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: spacing.sm,
+    right: spacing.sm,
     zIndex: 1,
   },
   content: {
@@ -104,6 +105,6 @@ const styles = StyleSheet.create({
   secondaryTime: {
     color: "rgba(255,255,255,0.5)",
     fontVariant: ["tabular-nums"],
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });

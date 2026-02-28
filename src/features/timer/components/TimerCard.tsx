@@ -2,6 +2,7 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Card, IconButton, Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 import type { TimerState } from "../../../models/Timer";
 import { CircularProgress } from "./CircularProgress";
 
@@ -100,13 +101,13 @@ export function TimerCard({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
-    marginVertical: 4,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.xs,
   },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: spacing.base,
   },
   info: {
     flex: 1,

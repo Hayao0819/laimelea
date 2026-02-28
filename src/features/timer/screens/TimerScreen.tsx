@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { SegmentedButtons } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 import { CountdownTimer } from "../components/CountdownTimer";
 import { Stopwatch } from "../components/Stopwatch";
 
@@ -33,7 +34,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggle: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
   },
 });

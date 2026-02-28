@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { spacing } from "../../../app/spacing";
 
 interface Props {
   onStart: (durationMs: number) => void;
@@ -178,11 +179,11 @@ export function NumpadInput({ onStart }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: spacing.base,
   },
   display: {
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   displayText: {
     fontVariant: ["tabular-nums"],
@@ -191,12 +192,12 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   numpad: {
-    gap: 4,
+    gap: spacing.xs,
   },
   numpadRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 4,
+    gap: spacing.xs,
   },
   numpadButton: {
     width: 72,
@@ -208,14 +209,14 @@ const styles = StyleSheet.create({
   presets: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 8,
-    marginTop: 12,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   presetButton: {
     minWidth: 0,
   },
   startButton: {
-    marginTop: 12,
-    marginHorizontal: 32,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.xl,
   },
 });
