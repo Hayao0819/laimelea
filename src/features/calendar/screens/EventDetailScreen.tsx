@@ -81,7 +81,7 @@ export function EventDetailScreen() {
         updatedAt: now,
       };
 
-      setAlarms((prev) => [...prev, alarm]);
+      setAlarms((prev) => (Array.isArray(prev) ? [...prev, alarm] : [alarm]));
       await scheduleAlarm(alarm);
       navigation.goBack();
     },

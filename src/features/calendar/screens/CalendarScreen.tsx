@@ -88,6 +88,9 @@ export function CalendarScreen() {
   useEffect(() => {
     if (events.length === 0) return;
     setAlarms((prevAlarms) => {
+      // Guard: atomWithStorage with async storage may pass a Promise
+      // before the stored value is resolved
+      if (!Array.isArray(prevAlarms)) return prevAlarms;
       const linkedAlarms = prevAlarms.filter(
         (a) => a.linkedCalendarEventId != null,
       );
@@ -130,7 +133,7 @@ export function CalendarScreen() {
         updatedAt: now,
       };
 
-      setAlarms((prev) => [...prev, alarm]);
+      setAlarms((prev) => (Array.isArray(prev) ? [...prev, alarm] : [alarm]));
       await scheduleAlarm(alarm);
       setSnackbar(t("calendar.alarmCreated", { title: event.title }));
     },

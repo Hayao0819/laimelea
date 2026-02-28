@@ -107,14 +107,18 @@ export function useSleepSync(): SleepSyncResult {
         createdAt: now,
         updatedAt: now,
       };
-      setSessions((prev) => [...prev, session]);
+      setSessions((prev) =>
+        Array.isArray(prev) ? [...prev, session] : [session],
+      );
     },
     [setSessions],
   );
 
   const deleteEntry = useCallback(
     (id: string) => {
-      setSessions((prev) => prev.filter((s) => s.id !== id));
+      setSessions((prev) =>
+        Array.isArray(prev) ? prev.filter((s) => s.id !== id) : prev,
+      );
     },
     [setSessions],
   );
