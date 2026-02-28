@@ -2,89 +2,85 @@ import React from "react";
 import { render } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
 import { CustomDayIndicator } from "../../../src/features/clock/components/CustomDayIndicator";
-import type { CustomTimeValue } from "../../../src/models/CustomTime";
+
+let mockLanguage = "en";
+
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { get language() { return mockLanguage; } },
+  }),
+}));
 
 describe("CustomDayIndicator", () => {
   function renderWithPaper(ui: React.ReactElement) {
     return render(<PaperProvider>{ui}</PaperProvider>);
   }
 
+  beforeEach(() => {
+    mockLanguage = "en";
+  });
+
   it('should render with testID "custom-day-indicator"', async () => {
-    const customTime: CustomTimeValue = {
-      day: 1,
-      hours: 0,
-      minutes: 0,
-      seconds: 0,
-    };
+    const realTimeMs = new Date(2026, 1, 28, 10, 0, 0).getTime();
     const { getByTestId } = await renderWithPaper(
-      <CustomDayIndicator customTime={customTime} />,
+      <CustomDayIndicator realTimeMs={realTimeMs} />,
     );
     expect(getByTestId("custom-day-indicator")).toBeTruthy();
   });
 
-  it("should display formatted custom day text using formatCustomDay", async () => {
-    const customTime: CustomTimeValue = {
-      day: 5,
-      hours: 14,
-      minutes: 30,
-      seconds: 0,
-    };
+  it("should display date in English format (M/d (EEE))", async () => {
+    // Saturday, February 28, 2026
+    const realTimeMs = new Date(2026, 1, 28, 10, 0, 0).getTime();
     const { getByText } = await renderWithPaper(
-      <CustomDayIndicator customTime={customTime} />,
+      <CustomDayIndicator realTimeMs={realTimeMs} />,
     );
-    // formatCustomDay returns "Day {day}"
-    expect(getByText("Day 5")).toBeTruthy();
+    expect(getByText("2/28 (Sat)")).toBeTruthy();
   });
 
-  it("should update when day changes", async () => {
-    const customTime1: CustomTimeValue = {
-      day: 3,
-      hours: 10,
-      minutes: 0,
-      seconds: 0,
-    };
+  it("should update when date changes", async () => {
+    const realTimeMs1 = new Date(2026, 0, 15, 10, 0, 0).getTime();
     const { getByText, rerender } = await renderWithPaper(
-      <CustomDayIndicator customTime={customTime1} />,
+      <CustomDayIndicator realTimeMs={realTimeMs1} />,
     );
-    expect(getByText("Day 3")).toBeTruthy();
+    expect(getByText("1/15 (Thu)")).toBeTruthy();
 
-    const customTime2: CustomTimeValue = {
-      day: 42,
-      hours: 10,
-      minutes: 0,
-      seconds: 0,
-    };
+    const realTimeMs2 = new Date(2026, 11, 25, 10, 0, 0).getTime();
     await rerender(
       <PaperProvider>
-        <CustomDayIndicator customTime={customTime2} />
+        <CustomDayIndicator realTimeMs={realTimeMs2} />
       </PaperProvider>,
     );
-    expect(getByText("Day 42")).toBeTruthy();
+    expect(getByText("12/25 (Fri)")).toBeTruthy();
   });
 
-  it("should display day 0 correctly", async () => {
-    const customTime: CustomTimeValue = {
-      day: 0,
-      hours: 0,
-      minutes: 0,
-      seconds: 0,
-    };
+  it("should handle epoch zero (1970/1/1)", async () => {
     const { getByText } = await renderWithPaper(
-      <CustomDayIndicator customTime={customTime} />,
+      <CustomDayIndicator realTimeMs={0} />,
     );
-    expect(getByText("Day 0")).toBeTruthy();
+    // 1970-01-01 is a Thursday in UTC; local time display depends on timezone
+    // Use Date to get what the component would produce
+    const expected = "1/1 (Thu)";
+    expect(getByText(expected)).toBeTruthy();
   });
 
-  it("should display large day numbers", async () => {
-    const customTime: CustomTimeValue = {
-      day: 9999,
-      hours: 23,
-      minutes: 59,
-      seconds: 59,
-    };
+  it("should display date in Japanese format when language is ja", async () => {
+    mockLanguage = "ja";
+    // Saturday, February 28, 2026
+    const realTimeMs = new Date(2026, 1, 28, 10, 0, 0).getTime();
     const { getByText } = await renderWithPaper(
-      <CustomDayIndicator customTime={customTime} />,
+      <CustomDayIndicator realTimeMs={realTimeMs} />,
     );
-    expect(getByText("Day 9999")).toBeTruthy();
+    expect(getByText("2\u670828\u65e5 (\u571f)")).toBeTruthy();
+  });
+
+  it("should use English format for non-ja languages", async () => {
+    mockLanguage = "fr";
+    const realTimeMs = new Date(2026, 1, 28, 10, 0, 0).getTime();
+    const { getByText } = await renderWithPaper(
+      <CustomDayIndicator realTimeMs={realTimeMs} />,
+    );
+    // Non-ja languages default to English format
+    expect(getByText("2/28 (Sat)")).toBeTruthy();
   });
 });

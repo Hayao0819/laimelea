@@ -30,6 +30,9 @@ const CENTER_INNER_R = 2.5;
 const CARDINAL_FONT_SIZE = 14;
 const MINOR_FONT_SIZE = 10;
 
+const STANDARD_HOURS_PER_REVOLUTION = 12;
+const STANDARD_CARDINAL_INDICES = new Set([0, 3, 6, 9]);
+
 function taperedHandPath(
   cx: number,
   cy: number,
@@ -58,37 +61,47 @@ function taperedHandPath(
 interface Props {
   customTime: CustomTimeValue;
   cycleLengthMinutes: number;
+  mode: "custom" | "24h";
+  realTimeMs: number;
   size?: number;
 }
 
 export function AnalogClock({
   customTime,
   cycleLengthMinutes,
+  mode,
+  realTimeMs,
   size = 280,
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const totalHours = cycleLengthMinutes / 60;
   // One revolution = half cycle (e.g., 13h for 26h cycle, like 12h on a 24h clock)
-  const hoursPerRevolution = totalHours / 2;
+  const customHoursPerRevolution = totalHours / 2;
+
+  const hoursPerRevolution =
+    mode === "24h" ? STANDARD_HOURS_PER_REVOLUTION : customHoursPerRevolution;
+
   const center = size / 2;
   const radius = center - 10;
 
   const cardinalIndices = useMemo(() => {
-    const count = Math.ceil(hoursPerRevolution);
+    if (mode === "24h") return STANDARD_CARDINAL_INDICES;
+    const count = Math.ceil(customHoursPerRevolution);
     const indices = new Set<number>();
     for (let q = 0; q < 4; q++) {
-      const ideal = (q / 4) * hoursPerRevolution;
+      const ideal = (q / 4) * customHoursPerRevolution;
       const idx = Math.round(ideal) % count;
       indices.add(idx);
     }
     return indices;
-  }, [hoursPerRevolution]);
+  }, [mode, customHoursPerRevolution]);
+
+  const markerCount = Math.ceil(hoursPerRevolution);
 
   const markers = useMemo(() => {
-    const count = Math.ceil(hoursPerRevolution);
     const result = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < markerCount; i++) {
       const angle = (i / hoursPerRevolution) * 360 - 90;
       const rad = (angle * Math.PI) / 180;
       const isCardinal = cardinalIndices.has(i);
@@ -103,15 +116,30 @@ export function AnalogClock({
       });
     }
     return result;
-  }, [hoursPerRevolution, center, radius, cardinalIndices]);
+  }, [hoursPerRevolution, markerCount, center, radius, cardinalIndices]);
 
-  // Hour hand wraps around at half-cycle (2 revolutions per full cycle)
-  const wrappedHours =
-    (customTime.hours + customTime.minutes / 60) % hoursPerRevolution;
-  const hourAngle = (wrappedHours / hoursPerRevolution) * 360 - 90;
-  const minuteAngle =
-    ((customTime.minutes + customTime.seconds / 60) / 60) * 360 - 90;
-  const secondAngle = (customTime.seconds / 60) * 360 - 90;
+  let hourAngle: number;
+  let minuteAngle: number;
+  let secondAngle: number;
+
+  if (mode === "24h") {
+    const date = new Date(realTimeMs);
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const seconds = date.getSeconds();
+    hourAngle =
+      ((hours % 12) + minutes / 60) / 12 * 360 - 90;
+    minuteAngle = (minutes + seconds / 60) / 60 * 360 - 90;
+    secondAngle = (seconds / 60) * 360 - 90;
+  } else {
+    // Hour hand wraps around at half-cycle (2 revolutions per full cycle)
+    const wrappedHours =
+      (customTime.hours + customTime.minutes / 60) % hoursPerRevolution;
+    hourAngle = (wrappedHours / hoursPerRevolution) * 360 - 90;
+    minuteAngle =
+      ((customTime.minutes + customTime.seconds / 60) / 60) * 360 - 90;
+    secondAngle = (customTime.seconds / 60) * 360 - 90;
+  }
 
   const hourRad = (hourAngle * Math.PI) / 180;
   const minuteRad = (minuteAngle * Math.PI) / 180;

@@ -1,7 +1,9 @@
 import React, { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useAtomValue } from "jotai";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
+import { primaryTimeDisplayAtom } from "../../../atoms/settingsAtoms";
 import { CustomDayIndicator } from "../components/CustomDayIndicator";
 import { AnalogClock } from "../components/AnalogClock";
 import { DigitalClock } from "../components/DigitalClock";
@@ -11,6 +13,7 @@ type ClockMode = "analog" | "digital";
 
 export function ClockScreen() {
   const { realTimeMs, customTime, cycleLengthMinutes } = useCurrentTime();
+  const primaryTimeDisplay = useAtomValue(primaryTimeDisplayAtom);
   const [clockMode, setClockMode] = useState<ClockMode>("analog");
   const { t } = useTranslation();
 
@@ -20,7 +23,7 @@ export function ClockScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} testID="clock-screen">
-      <CustomDayIndicator customTime={customTime} />
+      <CustomDayIndicator realTimeMs={realTimeMs} />
       <Pressable
         onPress={toggleClockMode}
         accessibilityLabel={t("clock.toggleMode")}
@@ -32,6 +35,8 @@ export function ClockScreen() {
               <AnalogClock
                 customTime={customTime}
                 cycleLengthMinutes={cycleLengthMinutes}
+                mode={primaryTimeDisplay}
+                realTimeMs={realTimeMs}
               />
             </View>
           ) : null}
