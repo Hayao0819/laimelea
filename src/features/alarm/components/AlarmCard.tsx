@@ -53,43 +53,43 @@ export function AlarmCard({
       accessibilityLabel={`${alarm.label || t("alarm.title")}, ${timeDisplay}, ${alarm.enabled ? t("alarm.enabled") : t("alarm.disabled")}`}
       accessibilityHint={t("alarm.editAlarm")}
     >
-      <Card.Content style={styles.content}>
-        <Text
-          variant="headlineMedium"
-          style={[
-            styles.time,
-            !alarm.enabled && { color: theme.colors.onSurfaceDisabled },
-          ]}
-        >
-          {timeDisplay}
-        </Text>
-        <View style={styles.labelRow}>
+      <View style={styles.inner}>
+        <View style={styles.textArea}>
           <Text
-            variant="bodyMedium"
-            style={
-              !alarm.enabled
-                ? { color: theme.colors.onSurfaceDisabled }
-                : undefined
-            }
+            variant="headlineMedium"
+            style={[
+              styles.time,
+              !alarm.enabled && { color: theme.colors.onSurfaceDisabled },
+            ]}
           >
-            {alarm.label || t("alarm.title")}
+            {timeDisplay}
           </Text>
-          {alarm.linkedCalendarEventId != null && (
-            <Icon
-              source="calendar"
-              size={16}
-              color={theme.colors.primary}
-              testID={`alarm-calendar-badge-${alarm.id}`}
-            />
+          <View style={styles.labelRow}>
+            <Text
+              variant="bodyMedium"
+              style={
+                !alarm.enabled
+                  ? { color: theme.colors.onSurfaceDisabled }
+                  : undefined
+              }
+            >
+              {alarm.label || t("alarm.title")}
+            </Text>
+            {alarm.linkedCalendarEventId != null && (
+              <Icon
+                source="calendar"
+                size={16}
+                color={theme.colors.primary}
+                testID={`alarm-calendar-badge-${alarm.id}`}
+              />
+            )}
+          </View>
+          {repeatLabel && (
+            <Text variant="bodySmall" style={styles.repeat}>
+              {repeatLabel}
+            </Text>
           )}
         </View>
-        {repeatLabel && (
-          <Text variant="bodySmall" style={styles.repeat}>
-            {repeatLabel}
-          </Text>
-        )}
-      </Card.Content>
-      <Card.Actions style={styles.actions}>
         <Switch
           value={alarm.enabled}
           onValueChange={() => onToggle(alarm)}
@@ -97,7 +97,7 @@ export function AlarmCard({
           accessibilityLabel={`${alarm.label || t("alarm.title")} ${alarm.enabled ? t("alarm.enabled") : t("alarm.disabled")}`}
           accessibilityRole="switch"
         />
-      </Card.Actions>
+      </View>
     </Card>
   );
 }
@@ -110,8 +110,13 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.6,
   },
-  content: {
-    paddingRight: 64,
+  inner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.base,
+  },
+  textArea: {
+    flex: 1,
   },
   time: {
     fontVariant: ["tabular-nums"],
@@ -123,10 +128,5 @@ const styles = StyleSheet.create({
   },
   repeat: {
     marginTop: 2,
-  },
-  actions: {
-    position: "absolute",
-    right: spacing.sm,
-    top: spacing.sm,
   },
 });
