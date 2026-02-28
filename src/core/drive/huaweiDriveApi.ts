@@ -27,7 +27,8 @@ interface DriveFileListResponse {
 
 const BACKUP_FILE_NAME = "laimelea-backup.json";
 const DRIVE_API_BASE = "https://driveapis.cloud.huawei.com.cn/drive/v1";
-const DRIVE_UPLOAD_BASE = "https://driveapis.cloud.huawei.com.cn/upload/drive/v1";
+const DRIVE_UPLOAD_BASE =
+  "https://driveapis.cloud.huawei.com.cn/upload/drive/v1";
 
 function checkResponseStatus(status: number): void {
   if (status === 401) {
@@ -43,14 +44,8 @@ export async function findBackupFile(
 ): Promise<DriveFileResource | null> {
   const url = new URL(`${DRIVE_API_BASE}/files`);
   url.searchParams.set("containers", "applicationData");
-  url.searchParams.set(
-    "queryParam",
-    `fileName='${BACKUP_FILE_NAME}'`,
-  );
-  url.searchParams.set(
-    "fields",
-    "files(id,fileName,mimeType,size,editedTime)",
-  );
+  url.searchParams.set("queryParam", `fileName='${BACKUP_FILE_NAME}'`);
+  url.searchParams.set("fields", "files(id,fileName,mimeType,size,editedTime)");
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },

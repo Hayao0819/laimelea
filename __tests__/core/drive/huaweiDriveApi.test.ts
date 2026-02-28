@@ -100,7 +100,11 @@ describe("huaweiDriveApi", () => {
         json: () => Promise.resolve({ id: "existing-id" }),
       });
 
-      const result = await uploadBackup("token", '{"alarms":[]}', "existing-id");
+      const result = await uploadBackup(
+        "token",
+        '{"alarms":[]}',
+        "existing-id",
+      );
 
       expect(result).toBe("existing-id");
       const [url, options] = mockFetch.mock.calls[0];
