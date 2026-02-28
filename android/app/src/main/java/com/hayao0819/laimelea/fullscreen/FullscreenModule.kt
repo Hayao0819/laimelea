@@ -23,7 +23,7 @@ class FullscreenModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun activate() {
         UiThreadUtil.runOnUiThread {
-            currentActivity?.window?.addFlags(
+            reactApplicationContext.currentActivity?.window?.addFlags(
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             )
         }
@@ -32,7 +32,7 @@ class FullscreenModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun deactivate() {
         UiThreadUtil.runOnUiThread {
-            currentActivity?.window?.clearFlags(
+            reactApplicationContext.currentActivity?.window?.clearFlags(
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             )
         }
@@ -41,7 +41,7 @@ class FullscreenModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun enterImmersive() {
         UiThreadUtil.runOnUiThread {
-            currentActivity?.window?.let { window ->
+            reactApplicationContext.currentActivity?.window?.let { window ->
                 WindowCompat.setDecorFitsSystemWindows(window, false)
                 WindowInsetsControllerCompat(window, window.decorView).apply {
                     hide(WindowInsetsCompat.Type.systemBars())
@@ -55,7 +55,7 @@ class FullscreenModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun exitImmersive() {
         UiThreadUtil.runOnUiThread {
-            currentActivity?.window?.let { window ->
+            reactApplicationContext.currentActivity?.window?.let { window ->
                 WindowCompat.setDecorFitsSystemWindows(window, true)
                 WindowInsetsControllerCompat(window, window.decorView)
                     .show(WindowInsetsCompat.Type.systemBars())
