@@ -304,9 +304,19 @@ export function SettingsScreen() {
           >
             {t("settings.useCurrentTime")}
           </Button>
+        </List.Section>
+
+        <Divider />
+
+        {/* Section 2: General */}
+        <List.Section>
+          <List.Subheader>{t("settings.general")}</List.Subheader>
           <View style={styles.segmentContainer}>
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.primaryDisplay")}
+            </Text>
+            <Text variant="bodySmall" style={styles.segmentDescription}>
+              {t("settings.primaryDisplayDescription")}
             </Text>
             <SegmentedButtons
               value={settings.primaryTimeDisplay}
@@ -320,13 +330,6 @@ export function SettingsScreen() {
               testID="primary-display-segment"
             />
           </View>
-        </List.Section>
-
-        <Divider />
-
-        {/* Section 2: General */}
-        <List.Section>
-          <List.Subheader>{t("settings.general")}</List.Subheader>
           <View style={styles.segmentContainer}>
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.language")}
@@ -667,6 +670,10 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     marginBottom: 8,
+  },
+  segmentDescription: {
+    marginBottom: 8,
+    opacity: 0.7,
   },
   sectionButton: {
     alignSelf: "flex-start",
