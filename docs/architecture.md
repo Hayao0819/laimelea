@@ -978,20 +978,20 @@ RootNavigator (NativeStack)
 - RootNavigatorが`setupCompleteAtom`で初回起動を判定
 - **41テスト全パス**（既存32 + 派生atom 4 + SetupScreen 5）
 
-### Phase 4: ナビゲーションシェル
+### Phase 4: ナビゲーションシェル ✅ 完了
 
 - Bottom Tab Navigator（5タブ）
 - RootNavigator（条件付き初期ルート）
 - 全スクリーンのスタブ作成
 
-### Phase 5: 時計機能
+### Phase 5: 時計機能 ✅ 完了
 
 - `useCurrentTime`フック（毎秒更新）
 - DigitalClock（カスタム時間 / 24h切り替え）
 - AnalogClock（SVG描画、カスタム周期対応の時間マーカー）
 - CustomDayIndicator
 
-### Phase 6: アラーム基本機能
+### Phase 6: アラーム基本機能 ✅ 完了
 
 - Notifeeセットアップ（チャンネル、権限）
 - アラームスケジューラ
@@ -999,7 +999,7 @@ RootNavigator (NativeStack)
 - バックグラウンド・フォアグラウンドハンドラ
 - AlarmFullScreenActivity (Kotlin)
 
-### Phase 7: アラーム解除システム ✅
+### Phase 7: アラーム解除システム ✅ 完了
 
 - Strategy Pattern + Registry実装（`strategies/types.ts`, `registry.ts`, `index.ts`）
 - SimpleDismissal（タップ解除）/ ShakeDismissal（シェイク3回）/ MathDismissal（計算問題）
@@ -1010,19 +1010,19 @@ RootNavigator (NativeStack)
 - mathProblemGenerator（難易度別問題生成）
 - 38テスト追加（合計111テスト）
 
-### Phase 8: 一括アラーム作成
+### Phase 8: 一括アラーム作成 ✅ 完了
 
 - BulkAlarmForm（from/to/interval入力）
 - bulkAlarmCreator.ts
 - プレビュー付きBulkAlarmScreen
 
-### Phase 9: タイマー機能
+### Phase 9: タイマー機能 ✅ 完了
 
 - CountdownTimer + Stopwatch
 - ドリフト補正付きフック
 - 完了時の通知
 
-### Phase 10: プラットフォーム抽象化レイヤー
+### Phase 10: プラットフォーム抽象化レイヤー ✅ 完了
 
 - `PlatformAuthService`, `PlatformCalendarService`, `PlatformBackupService` インターフェース定義（Phase 1で型のみ作成済み）
 - プラットフォーム検出ロジック
@@ -1077,7 +1077,7 @@ RootNavigator (NativeStack)
 - アクセシビリティ対応: 27ファイルに accessibilityLabel/Role/State 追加
 - 残タスク: アプリアイコン・スプラッシュ画面、Android 12-15実機テスト
 
-### Phase 17: カレンダーデザイン改善
+### Phase 17: カレンダーデザイン改善 ✅ 完了
 
 現状のCalendarScreenは単一のリストビュー（DaySelector + FlatList）のみで、Chipベースの日付選択と基本的なEventCardで構成されている。2025-2026年のカレンダーUI/UXトレンドを反映し、モダンなデザインに刷新する。
 
@@ -1168,7 +1168,7 @@ src/atoms/
 - Timepage: ヒートマップ型月ビュー（忙しさの視覚化）
 - Material Design 3: Date Picker states、トーナルエレベーション、16dpグリッド
 
-### Phase 18: Terraform GCPプロジェクト管理
+### Phase 18: Terraform GCPプロジェクト管理 ✅ 完了
 
 Google Cloud上のプロジェクトをTerraformでIaC管理し、アプリのOAuth2認証を動作可能にする。現在のauthConfigにはプレースホルダ（`__GOOGLE_OAUTH_CLIENT_ID__`, `__GOOGLE_WEB_CLIENT_ID__`）が入っており、実際のGoogle Cloudプロジェクトが未設定。
 

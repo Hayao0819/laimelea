@@ -21,7 +21,6 @@ gcloud version
 
 ## 全体の流れ
 
-```
 1. gcloud 認証
 2. Billing Account ID の確認
 3. Terraform で GCP プロジェクト作成 + API 有効化
@@ -29,7 +28,6 @@ gcloud version
 5. OAuth Client ID を手動作成（Web + Android）
 6. .env に Client ID を記入
 7. アプリをビルドして認証テスト
-```
 
 ---
 
@@ -65,7 +63,7 @@ gcloud billing accounts list
 
 出力例:
 
-```
+```txt
 ACCOUNT_ID            NAME                OPEN  MASTER_ACCOUNT_ID
 0X0X0X-0X0X0X-0X0X0X  My Billing Account  True
 ```
@@ -109,7 +107,7 @@ terraform init
 
 出力例:
 
-```
+```txt
 Initializing the backend...
 Initializing provider plugins...
 - Finding hashicorp/google versions matching "~> 6.0"...
@@ -130,7 +128,7 @@ terraform plan
 
 作成されるリソースを確認:
 
-```
+```txt
 Plan: 7 to add, 0 to change, 0 to destroy.
 
   + google_project.laimelea
@@ -152,7 +150,7 @@ terraform apply
 
 成功すると以下が出力される:
 
-```
+```txt
 Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
 
 Outputs:
@@ -202,9 +200,7 @@ terraform output project_id
 
 ブラウザで以下を開く（`PROJECT_ID` は実際の値に置換）:
 
-```
-https://console.cloud.google.com/apis/credentials/consent?project=PROJECT_ID
-```
+<https://console.cloud.google.com/apis/credentials/consent?project=PROJECT_ID>
 
 または:
 
@@ -227,12 +223,12 @@ gcloud services list --project="$(terraform output -raw project_id)"
 
 「スコープを追加または削除」をクリックし、以下を追加:
 
-| スコープ                                            | 説明                                     |
-| --------------------------------------------------- | ---------------------------------------- |
-| `openid`                                            | OpenID Connect（自動選択される場合あり） |
-| `email`                                             | メールアドレス                           |
-| `profile`                                           | 基本プロフィール                         |
-| `https://www.googleapis.com/auth/calendar.readonly` | Google カレンダーの読み取り              |
+| スコープ                                            | 説明                                        |
+| --------------------------------------------------- | ------------------------------------------- |
+| `openid                                             | OpenID Connect（自動選択される場合あり）    |
+| `email`                                             | メールアドレス                              |
+| `profile`                                           | 基本プロフィール                            |
+| `https://www.googleapis.com/auth/calendar.readonly` | Google カレンダーの読み取り                 |
 | `https://www.googleapis.com/auth/drive.appdata`     | Google Drive アプリデータ（バックアップ用） |
 
 ### 4-4. テストユーザーの追加
@@ -247,9 +243,7 @@ gcloud services list --project="$(terraform output -raw project_id)"
 
 ### 5-1. 認証情報ページにアクセス
 
-```
-https://console.cloud.google.com/apis/credentials?project=PROJECT_ID
-```
+<https://console.cloud.google.com/apis/credentials?project=PROJECT_ID>
 
 ### 5-2. Web Client ID を作成
 
@@ -264,7 +258,7 @@ https://console.cloud.google.com/apis/credentials?project=PROJECT_ID
 
 作成後に表示されるクライアント IDをメモ:
 
-```
+```txt
 123456789-xxxxxxxxx.apps.googleusercontent.com
 ```
 
@@ -302,7 +296,7 @@ keytool -list -v \
 
 出力例:
 
-```
+```txt
 SHA1: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD
 ```
 
@@ -385,7 +379,7 @@ pnpm react-native run-android
 
 ### `terraform apply` で権限エラー
 
-```
+```txt
 Error: googleapi: Error 403: The caller does not have permission
 ```
 
@@ -393,7 +387,7 @@ Error: googleapi: Error 403: The caller does not have permission
 
 ### `terraform apply` で Billing Account エラー
 
-```
+```txt
 Error: Error setting billing account: ... PERMISSION_DENIED
 ```
 
@@ -401,7 +395,7 @@ Error: Error setting billing account: ... PERMISSION_DENIED
 
 ### OAuth ログインで `redirect_uri_mismatch`
 
-```
+```txt
 Error 400: redirect_uri_mismatch
 ```
 
@@ -429,7 +423,7 @@ cd android && ./gradlew assembleDebug && cd ..
 
 ### `terraform plan` で provider エラー
 
-```
+```txt
 Error: Failed to query available provider packages
 ```
 
@@ -437,7 +431,7 @@ Error: Failed to query available provider packages
 
 ## ファイル構成の全体像
 
-```
+```txt
 laimelea/
 ├── .env                          # ← Step 6 で作成（.gitignore 対象）
 ├── .env.example                  # テンプレート（リポジトリに含まれる）
