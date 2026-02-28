@@ -7,4 +7,5 @@ export const STORAGE_KEYS = {
   BACKUP_DATA: "@laimelea/backup_data",
   BACKUP_TIMESTAMP: "@laimelea/backup_timestamp",
   AOSP_AUTH_STATE: "@laimelea/aosp_auth_state",
+  HMS_AUTH_STATE: "@laimelea/hms_auth_state",
 } as const;

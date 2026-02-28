@@ -44,13 +44,29 @@ describe("createPlatformServices", () => {
     expect(services.sleep).toBeDefined();
   });
 
-  it('should create HMS services with type "hms" (uses AOSP stubs)', () => {
+  it('should create HMS services with type "hms"', () => {
     const services = createPlatformServices("hms");
     expect(services.type).toBe("hms");
     expect(services.auth).toBeDefined();
     expect(services.calendar).toBeDefined();
     expect(services.backup).toBeDefined();
     expect(services.sleep).toBeDefined();
+  });
+
+  it("should return different auth implementations for aosp vs hms", async () => {
+    const aosp = createPlatformServices("aosp");
+    const hms = createPlatformServices("hms");
+
+    // Both use react-native-app-auth but are separate service instances
+    expect(aosp.auth.signIn).not.toBe(hms.auth.signIn);
+  });
+
+  it("should return different backup implementations for aosp vs hms", async () => {
+    const aosp = createPlatformServices("aosp");
+    const hms = createPlatformServices("hms");
+
+    // HMS uses Huawei Drive backup, AOSP uses local backup
+    expect(aosp.backup.backup).not.toBe(hms.backup.backup);
   });
 
   it("should return different auth implementations for aosp vs gms", async () => {

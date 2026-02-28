@@ -10,6 +10,7 @@ import {
   createGmsBackupService,
   createGmsSleepService,
 } from "./gms";
+import { createHmsAuthService, createHmsBackupService } from "./hms";
 import type { PlatformServices, PlatformType } from "./types";
 
 export function createPlatformServices(type: PlatformType): PlatformServices {
@@ -24,15 +25,16 @@ export function createPlatformServices(type: PlatformType): PlatformServices {
         sleep: createGmsSleepService(),
       };
     }
-    case "hms":
-      // HMS uses AOSP stubs until dedicated HMS services are implemented
+    case "hms": {
+      const auth = createHmsAuthService();
       return {
         type: "hms",
-        auth: createAospAuthService(),
+        auth,
         calendar: createAospCalendarService(),
-        backup: createAospBackupService(),
+        backup: createHmsBackupService(auth),
         sleep: createAospSleepService(),
       };
+    }
     case "aosp":
       return {
         type: "aosp",

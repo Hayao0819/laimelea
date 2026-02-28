@@ -7,6 +7,7 @@ import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.hayao0819.laimelea.calendar.CalendarPackage
+import com.hayao0819.laimelea.deviceinfo.DeviceInfoPackage
 import com.hayao0819.laimelea.fullscreen.FullscreenPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -17,6 +18,7 @@ class MainApplication : Application(), ReactApplication {
       packageList =
         PackageList(this).packages.apply {
           add(CalendarPackage())
+          add(DeviceInfoPackage())
           add(FullscreenPackage())
         },
     )
