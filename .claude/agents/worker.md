@@ -58,7 +58,7 @@ All four gates must pass before committing. If a gate fails, fix the issue and r
 
 ### Directory Structure
 
-```
+```text
 src/
 ├── app/          # App entry, providers, navigation
 ├── atoms/        # Jotai atoms (state)

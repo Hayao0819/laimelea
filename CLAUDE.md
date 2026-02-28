@@ -68,11 +68,30 @@ rm -rf android/app/build android/build android/.gradle
 ## Formatting (treefmt)
 
 - **Configuration**: `treefmt.nix` (Nix module, NOT treefmt.toml). Managed by [treefmt-nix](https://github.com/numtide/treefmt-nix)
-- **Formatters included**: Prettier (JS/TS/JSX/TSX/JSON/MD/YAML) + nixfmt (Nix)
+- **Pipeline**: Prettier (priority 0) → markdownlint-cli2 --fix (priority 1) → nixfmt
+- **Prettier**: JS/TS/JSX/TSX/JSON/MD/YAML
+- **markdownlint-cli2**: `*.md` files — lint + auto-fix. Config: `.markdownlint.json`
+- **nixfmt**: Nix files
 - **ESLint**: NOT included in treefmt (linter, not formatter). Run separately with `pnpm eslint .`
 - **VSCode**: treefmt-vscode extension auto-formats on save via direnv environment
-- **CI check**: `nix flake check` validates all files are formatted
+- **CI check**: `nix flake check` validates all files are formatted and linted
 - **`nix fmt`**: Also runs treefmt (works outside `nix develop`)
+
+## Markdown Style Rules
+
+Markdownファイルを生成・編集する際は、以下のルールに従うこと。treefmt が markdownlint-cli2 を実行し、違反があるとCIが失敗する。
+
+- 見出しレベルは1つずつ増やす（h1→h2→h3、h1→h3は禁止）
+- 見出しの前後に空行を入れる
+- リストの前後に空行を入れる
+- コードブロック（fenced）の前後に空行を入れる
+- コードブロックには言語識別子を付ける（`bash,`ts, ```nix 等）
+- 連続する空行は1行まで
+- ファイル末尾は改行1つで終わる
+- 強調記号の内側にスペースを入れない（`** text **` → `**text**`）
+- リンクテキストの内側にスペースを入れない（`[ link ](url)` → `[link](url)`）
+- ベアURLは使わずリンク記法を使う（`https://...` → `[text](https://...)`）
+- 見出し末尾に句読点を付けない
 
 ## Nix Anti-Patterns to Avoid
 
@@ -85,7 +104,7 @@ rm -rf android/app/build android/build android/.gradle
 
 エミュレータの操作（スクリーンショット取得、UI要素のタップ、画面遷移の確認など）は**常にサブエージェント（`emulator-operator`）に委譲**すること。MCP toolの呼び出し（`mobile_take_screenshot`, `mobile_list_elements_on_screen` 等）は1回あたりのレスポンスが大きく、メインコンテキストを大量に消費するため、直接呼び出してはならない。
 
-```
+```text
 Task tool → subagent_type: "emulator-operator"
 ```
 

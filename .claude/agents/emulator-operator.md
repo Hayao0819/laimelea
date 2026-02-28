@@ -46,13 +46,14 @@ You are an expert Android emulator operator with deep knowledge of ADB commands,
 
 4. **Calculate the scale factor:**
 
-   ```
+   ```text
    scale_x = emulator_width / screenshot_width
    scale_y = emulator_height / screenshot_height
    ```
 
 5. **When tapping:** If you identify a target at pixel (sx, sy) in the screenshot, the actual tap coordinates are:
-   ```
+
+   ```text
    tap_x = sx * scale_x
    tap_y = sy * scale_y
    ```

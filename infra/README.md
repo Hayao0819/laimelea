@@ -19,10 +19,12 @@
 
 1. **gcloud CLI** がインストールされていること（`nix develop` 環境に含まれる）
 2. **gcloud認証** が完了していること:
+
    ```bash
    gcloud auth login
    gcloud auth application-default login
    ```
+
 3. **Billing Account** が有効であること（APIを有効化するにはbillingが必要）
 4. **Terraform** がインストールされていること（`nix develop` 環境に含まれる）
 

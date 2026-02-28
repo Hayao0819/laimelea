@@ -24,7 +24,7 @@ allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), 
 
 Explore サブエージェントを起動して、テストカバレッジのギャップを分析する。
 
-```
+```yaml
 Task tool:
   subagent_type: "Explore"
   description: "Analyze test coverage gaps"
@@ -103,7 +103,7 @@ git worktree add ".worktree/<task-name>" -b "claude/<conventional-prefix>/<task-
 
 各ワーカーの起動パラメータ:
 
-```
+```yaml
 Task tool:
   subagent_type: "worker"
   description: "<タスク名（3-5語）>"

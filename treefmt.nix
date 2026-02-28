@@ -1,3 +1,4 @@
+{ pkgs, ... }:
 {
   projectRootFile = "flake.nix";
 
@@ -11,5 +12,16 @@
       "infra/**"
       "pnpm-lock.yaml"
     ];
+  };
+
+  settings.formatter.markdownlint = {
+    command = "${pkgs.markdownlint-cli2}/bin/markdownlint-cli2";
+    options = [ "--fix" ];
+    includes = [ "*.md" ];
+    excludes = [
+      "node_modules/**"
+      "android/**"
+    ];
+    priority = 1; # run after prettier (default priority = 0)
   };
 }

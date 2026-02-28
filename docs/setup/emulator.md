@@ -52,7 +52,7 @@ sdkmanager --list 2>/dev/null | grep "system-images;android-36"
 
 flake.nix に `system-images-android-36-default-x86-64` が含まれているため、以下のイメージが使える:
 
-```
+```text
 system-images;android-36;default;x86_64
 ```
 

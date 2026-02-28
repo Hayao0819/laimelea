@@ -169,7 +169,7 @@ All timestamps are Unix milliseconds. Use unit suffixes consistently:
 
 Top-level namespaces:
 
-```
+```text
 tabs.*        — Tab bar labels
 clock.*       — Clock screen UI
 alarm.*       — Alarm feature UI
