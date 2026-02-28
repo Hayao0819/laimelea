@@ -29,3 +29,11 @@ resource "google_project_service" "resource_manager_api" {
 
   depends_on = [google_project.laimelea]
 }
+
+resource "google_project_service" "drive_api" {
+  project            = google_project.laimelea.project_id
+  service            = "drive.googleapis.com"
+  disable_on_destroy = false
+
+  depends_on = [google_project.laimelea]
+}
