@@ -16,6 +16,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 
+import { spacing } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
@@ -648,43 +649,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingBottom: 32,
+    paddingBottom: spacing.xl,
   },
   row: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 16,
-    marginTop: 8,
+    gap: spacing.md,
+    paddingHorizontal: spacing.base,
+    marginTop: spacing.sm,
   },
   input: {
     flex: 1,
   },
   warning: {
-    paddingHorizontal: 16,
-    marginTop: 4,
+    paddingHorizontal: spacing.base,
+    marginTop: spacing.xs,
     opacity: 0.7,
   },
   segmentContainer: {
-    paddingHorizontal: 16,
-    marginVertical: 8,
+    paddingHorizontal: spacing.base,
+    marginVertical: spacing.sm,
   },
   segmentLabel: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   segmentDescription: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     opacity: 0.7,
   },
   sectionButton: {
     alignSelf: "flex-start",
-    marginHorizontal: 16,
-    marginTop: 8,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.sm,
   },
   backupButtons: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    gap: spacing.md,
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.sm,
   },
   backupButton: {
     flex: 1,

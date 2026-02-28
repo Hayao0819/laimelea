@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Card, Text, Chip, Button, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { useAtom, useAtomValue } from "jotai";
+import { spacing } from "../../../app/spacing";
 import { cycleEstimationAtom } from "../../../atoms/sleepAtoms";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 
@@ -123,22 +124,22 @@ export function CycleEstimateCard() {
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.sm,
   },
   emptyText: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   statsRow: {
     flexDirection: "row",
-    gap: 24,
-    marginBottom: 8,
+    gap: spacing.lg,
+    marginBottom: spacing.sm,
   },
   stat: {
     flex: 1,
@@ -149,13 +150,13 @@ const styles = StyleSheet.create({
   },
   detailRow: {
     flexDirection: "row",
-    gap: 16,
-    marginTop: 4,
+    gap: spacing.base,
+    marginTop: spacing.xs,
   },
   detailText: {
     opacity: 0.6,
   },
   applyButton: {
-    marginTop: 12,
+    marginTop: spacing.md,
   },
 });

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
 import { useTheme } from "react-native-paper";
+import { spacing } from "../../../app/spacing";
 import type { SleepSession } from "../../../models/SleepSession";
 
 const CHART_HEIGHT = 200;
@@ -132,7 +133,7 @@ function startOfDay(ms: number): number {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    marginHorizontal: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.sm,
   },
 });

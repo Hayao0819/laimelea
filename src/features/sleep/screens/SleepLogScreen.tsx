@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { format } from "date-fns";
+import { spacing } from "../../../app/spacing";
 import { useSleepSync } from "../../../hooks/useSleepSync";
 import { CycleEstimateCard } from "../components/CycleEstimateCard";
 import { SleepDriftChart } from "../components/SleepDriftChart";
@@ -263,22 +264,22 @@ const styles = StyleSheet.create({
     paddingTop: 64,
   },
   sessionCard: {
-    marginHorizontal: 16,
-    marginVertical: 4,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.xs,
   },
   sessionContent: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   sessionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   sessionDetails: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: spacing.md,
   },
   timeBlock: {
     alignItems: "center",
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    right: 16,
-    bottom: 16,
+    right: spacing.base,
+    bottom: spacing.base,
   },
 });

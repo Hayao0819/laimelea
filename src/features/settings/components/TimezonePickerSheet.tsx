@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { FlatList, StyleSheet } from "react-native";
 import { List, Modal, Portal, Searchbar, useTheme } from "react-native-paper";
+import { spacing, radius } from "../../../app/spacing";
 
 const TIMEZONE_LIST = [
   "Asia/Tokyo",
@@ -134,13 +135,13 @@ export function TimezonePickerSheet({
 
 const styles = StyleSheet.create({
   modal: {
-    margin: 24,
-    borderRadius: 16,
+    margin: spacing.lg,
+    borderRadius: radius.lg,
     maxHeight: "80%",
     overflow: "hidden",
   },
   searchbar: {
-    margin: 12,
+    margin: spacing.md,
   },
   list: {
     flexGrow: 0,

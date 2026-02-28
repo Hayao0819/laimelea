@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { format } from "date-fns";
+import { spacing } from "../../../app/spacing";
 import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
 import type { RootStackParamList } from "../../../navigation/types";
 import type { SleepSession } from "../../../models/SleepSession";
@@ -269,20 +270,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: 16,
-    gap: 8,
+    padding: spacing.base,
+    gap: spacing.base,
   },
   sectionTitle: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   row: {
     flexDirection: "row",
-    gap: 12,
+    gap: spacing.md,
   },
   input: {
     flex: 1,
   },
   saveButton: {
-    marginTop: 24,
+    marginTop: spacing.lg,
   },
 });

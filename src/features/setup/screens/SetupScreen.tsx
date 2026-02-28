@@ -5,6 +5,7 @@ import { useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 
+import { spacing, radius } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../../models/Settings";
 import { realToCustom } from "../../../core/time/conversions";
@@ -147,42 +148,42 @@ export function SetupScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 24,
+    padding: spacing.base,
     paddingTop: 64,
   },
   title: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   description: {
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   card: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    padding: spacing.base,
+    borderRadius: radius.md,
+    marginBottom: spacing.base,
   },
   row: {
     flexDirection: "row",
-    gap: 12,
-    marginTop: 12,
+    gap: spacing.md,
+    marginTop: spacing.md,
   },
   input: {
     flex: 1,
   },
   hint: {
-    marginTop: 4,
-    marginBottom: 12,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   button: {
     alignSelf: "flex-start",
   },
   baseTimeDisplay: {
-    marginTop: 12,
+    marginTop: spacing.md,
   },
   previewText: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   doneButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });
