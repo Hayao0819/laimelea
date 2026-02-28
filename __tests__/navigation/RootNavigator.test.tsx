@@ -1,0 +1,203 @@
+import React from "react";
+import { render, act } from "@testing-library/react-native";
+import { Provider as JotaiProvider, createStore } from "jotai";
+import { settingsAtom } from "../../src/atoms/settingsAtoms";
+import { DEFAULT_SETTINGS } from "../../src/models/Settings";
+
+// Suppress act() warnings from Jotai's internal async storage resolution
+const originalConsoleError = console.error;
+beforeAll(() => {
+  console.error = (...args: unknown[]) => {
+    if (typeof args[0] === "string" && args[0].includes("not wrapped in act")) {
+      return;
+    }
+    originalConsoleError(...args);
+  };
+});
+afterAll(() => {
+  console.error = originalConsoleError;
+});
+
+jest.mock("@react-native-async-storage/async-storage", () => {
+  const store: Record<string, string> = {};
+  return {
+    __esModule: true,
+    default: {
+      getItem: jest.fn((key: string) => Promise.resolve(store[key] ?? null)),
+      setItem: jest.fn((key: string, value: string) => {
+        store[key] = value;
+        return Promise.resolve();
+      }),
+      removeItem: jest.fn((key: string) => {
+        delete store[key];
+        return Promise.resolve();
+      }),
+    },
+  };
+});
+
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en" },
+  }),
+}));
+
+// Mock @react-navigation/native-stack to provide a minimal navigator
+// that renders the first matching Screen's component.
+jest.mock("@react-navigation/native-stack", () => {
+  const ReactLib = require("react");
+  const { View } = require("react-native");
+
+  function MockScreen(_props: Record<string, unknown>) {
+    return null;
+  }
+
+  function MockNavigator({ children }: { children: React.ReactNode }) {
+    const screens: Array<{
+      name: string;
+      component?: React.ComponentType;
+      getComponent?: () => React.ComponentType;
+    }> = [];
+    ReactLib.Children.forEach(children, (child: React.ReactElement) => {
+      if (child && child.type === MockScreen) {
+        screens.push(child.props);
+      }
+    });
+    ReactLib.Children.forEach(children, (child: React.ReactElement) => {
+      if (child && child.type === ReactLib.Fragment) {
+        ReactLib.Children.forEach(
+          child.props.children,
+          (fragmentChild: React.ReactElement) => {
+            if (fragmentChild && fragmentChild.type === MockScreen) {
+              screens.push(fragmentChild.props);
+            }
+          },
+        );
+      }
+    });
+
+    if (screens.length === 0) return null;
+
+    const first = screens[0];
+    const Component = first.component ?? first.getComponent?.();
+    return (
+      <View testID="mock-navigator">{Component ? <Component /> : null}</View>
+    );
+  }
+
+  return {
+    createNativeStackNavigator: () => ({
+      Navigator: MockNavigator,
+      Screen: MockScreen,
+    }),
+  };
+});
+
+// Mock all screen components to avoid deep dependency trees.
+jest.mock("../../src/navigation/BottomTabNavigator", () => {
+  const { Text } = require("react-native");
+  return { BottomTabNavigator: () => <Text>MainTabs</Text> };
+});
+
+jest.mock("../../src/features/clock/screens/DeskClockScreen", () => {
+  const { Text } = require("react-native");
+  return { DeskClockScreen: () => <Text>DeskClock</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/SettingsScreen", () => {
+  const { Text } = require("react-native");
+  return { SettingsScreen: () => <Text>Settings</Text> };
+});
+
+jest.mock("../../src/features/alarm/screens/AlarmEditScreen", () => {
+  const { Text } = require("react-native");
+  return { AlarmEditScreen: () => <Text>AlarmEdit</Text> };
+});
+
+jest.mock("../../src/features/alarm/screens/AlarmFiringScreen", () => {
+  const { Text } = require("react-native");
+  return { AlarmFiringScreen: () => <Text>AlarmFiring</Text> };
+});
+
+jest.mock("../../src/features/alarm/screens/BulkAlarmScreen", () => {
+  const { Text } = require("react-native");
+  return { BulkAlarmScreen: () => <Text>BulkAlarm</Text> };
+});
+
+jest.mock("../../src/features/sleep/screens/ManualSleepEntryScreen", () => {
+  const { Text } = require("react-native");
+  return { ManualSleepEntryScreen: () => <Text>ManualSleepEntry</Text> };
+});
+
+jest.mock("../../src/features/calendar/screens/EventDetailScreen", () => {
+  const { Text } = require("react-native");
+  return { EventDetailScreen: () => <Text>EventDetail</Text> };
+});
+
+jest.mock("../../src/features/setup/screens/SetupScreen", () => {
+  const { Text } = require("react-native");
+  return { SetupScreen: () => <Text>SetupScreen</Text> };
+});
+
+function renderNavigator(store: ReturnType<typeof createStore>) {
+  // Import RootNavigator lazily so mocks are in place
+  const { RootNavigator } = require("../../src/navigation/RootNavigator");
+  return render(
+    <JotaiProvider store={store}>
+      <RootNavigator />
+    </JotaiProvider>,
+  );
+}
+
+describe("RootNavigator", () => {
+  describe("when settings are still loading", () => {
+    it("should render null (no screen)", async () => {
+      const store = createStore();
+      const { toJSON } = await renderNavigator(store);
+      expect(toJSON()).toBeNull();
+    });
+  });
+
+  describe("when settings are loaded", () => {
+    it("should render SetupScreen when setupComplete is false", async () => {
+      const store = createStore();
+      store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: false });
+
+      const { getByText } = await renderNavigator(store);
+      await act(async () => {});
+
+      expect(getByText("SetupScreen")).toBeTruthy();
+    });
+
+    it("should render MainTabs when setupComplete is true", async () => {
+      const store = createStore();
+      store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: true });
+
+      const { getByText } = await renderNavigator(store);
+      await act(async () => {});
+
+      expect(getByText("MainTabs")).toBeTruthy();
+    });
+
+    it("should not render SetupScreen when setupComplete is true", async () => {
+      const store = createStore();
+      store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: true });
+
+      const { queryByText } = await renderNavigator(store);
+      await act(async () => {});
+
+      expect(queryByText("SetupScreen")).toBeNull();
+    });
+
+    it("should not render MainTabs when setupComplete is false", async () => {
+      const store = createStore();
+      store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: false });
+
+      const { queryByText } = await renderNavigator(store);
+      await act(async () => {});
+
+      expect(queryByText("MainTabs")).toBeNull();
+    });
+  });
+});

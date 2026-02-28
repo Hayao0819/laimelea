@@ -1,6 +1,7 @@
 import { createStore } from "jotai";
 import {
   settingsAtom,
+  settingsLoadedAtom,
   cycleConfigAtom,
   setupCompleteAtom,
   primaryTimeDisplayAtom,
@@ -94,5 +95,28 @@ describe("primaryTimeDisplayAtom", () => {
     });
     const display = store.get(primaryTimeDisplayAtom);
     expect(display).toBe("24h");
+  });
+});
+
+describe("settingsLoadedAtom", () => {
+  it("should return true when settingsAtom is explicitly set", () => {
+    const store = createInitializedStore();
+    const loaded = store.get(settingsLoadedAtom);
+    expect(loaded).toBe(true);
+  });
+
+  it("should return false when settingsAtom has not been explicitly set", () => {
+    // A fresh store where settingsAtom has not been set via store.set().
+    // atomWithStorage + getOnInit starts an async read from AsyncStorage,
+    // so the unwrapped value is still the LOADING sentinel at this point.
+    const store = createStore();
+    const loaded = store.get(settingsLoadedAtom);
+    expect(loaded).toBe(false);
+  });
+
+  it("should return true after settingsAtom is explicitly set on a store", () => {
+    const store = createStore();
+    store.set(settingsAtom, DEFAULT_SETTINGS);
+    expect(store.get(settingsLoadedAtom)).toBe(true);
   });
 });
