@@ -269,9 +269,9 @@ describe("CalendarScreen", () => {
         selectedDate: TODAY,
       });
 
-      expect(getAllByText("Multi-day Conference").length).toBeGreaterThanOrEqual(
-        1,
-      );
+      expect(
+        getAllByText("Multi-day Conference").length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     it("should show all event titles in agenda", async () => {

@@ -68,10 +68,7 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-function renderWithProviders(
-  ui: React.ReactElement,
-  store = createStore(),
-) {
+function renderWithProviders(ui: React.ReactElement, store = createStore()) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   const utils = render(
     <JotaiProvider store={store}>
@@ -156,9 +153,7 @@ describe("MonthView", () => {
     const tree = toJSON();
 
     // Today (Aug 15) should have a container with backgroundColor = primary and borderRadius 14
-    function flattenStyles(
-      style: unknown,
-    ): Record<string, unknown> {
+    function flattenStyles(style: unknown): Record<string, unknown> {
       const result: Record<string, unknown> = {};
       if (Array.isArray(style)) {
         for (const s of style) {
@@ -170,12 +165,9 @@ describe("MonthView", () => {
       return result;
     }
 
-    function findTodayHighlight(
-      node: ReturnType<typeof toJSON>,
-    ): boolean {
+    function findTodayHighlight(node: ReturnType<typeof toJSON>): boolean {
       if (!node || typeof node === "string") return false;
-      if (Array.isArray(node))
-        return node.some((n) => findTodayHighlight(n));
+      if (Array.isArray(node)) return node.some((n) => findTodayHighlight(n));
       const merged = flattenStyles(node.props?.style);
       if (merged.backgroundColor && merged.borderRadius === 14) {
         if (node.children) {
@@ -220,9 +212,7 @@ describe("MonthView", () => {
     const tree = toJSON();
 
     // Selected date (Aug 20, not today) should have primaryContainer bg + borderRadius 14
-    function flattenStyles(
-      style: unknown,
-    ): Record<string, unknown> {
+    function flattenStyles(style: unknown): Record<string, unknown> {
       const result: Record<string, unknown> = {};
       if (Array.isArray(style)) {
         for (const s of style) {
@@ -234,9 +224,7 @@ describe("MonthView", () => {
       return result;
     }
 
-    function findSelectedHighlight(
-      node: ReturnType<typeof toJSON>,
-    ): boolean {
+    function findSelectedHighlight(node: ReturnType<typeof toJSON>): boolean {
       if (!node || typeof node === "string") return false;
       if (Array.isArray(node))
         return node.some((n) => findSelectedHighlight(n));
@@ -257,9 +245,7 @@ describe("MonthView", () => {
       }
       if (node.children) {
         for (const child of node.children) {
-          if (
-            findSelectedHighlight(child as ReturnType<typeof toJSON>)
-          ) {
+          if (findSelectedHighlight(child as ReturnType<typeof toJSON>)) {
             return true;
           }
         }
@@ -291,12 +277,9 @@ describe("MonthView", () => {
       return [];
     }
 
-    function findDimmedText(
-      node: ReturnType<typeof toJSON>,
-    ): boolean {
+    function findDimmedText(node: ReturnType<typeof toJSON>): boolean {
       if (!node || typeof node === "string") return false;
-      if (Array.isArray(node))
-        return node.some((n) => findDimmedText(n));
+      if (Array.isArray(node)) return node.some((n) => findDimmedText(n));
       const flatStyles = flattenStyles(node.props?.style);
       for (const s of flatStyles) {
         if (s.opacity === 0.5) {

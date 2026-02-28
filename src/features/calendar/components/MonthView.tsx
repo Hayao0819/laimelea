@@ -219,8 +219,7 @@ export function MonthView({
                       style={[
                         styles.dot,
                         {
-                          backgroundColor:
-                            ev.colorId ?? theme.colors.primary,
+                          backgroundColor: ev.colorId ?? theme.colors.primary,
                         },
                       ]}
                     />

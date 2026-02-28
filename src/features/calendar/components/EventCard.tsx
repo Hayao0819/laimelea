@@ -101,11 +101,7 @@ export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
 
   return (
     <Card
-      style={[
-        styles.card,
-        { borderLeftColor: eventColor },
-        allDayBg,
-      ]}
+      style={[styles.card, { borderLeftColor: eventColor }, allDayBg]}
       mode="outlined"
       onPress={onPress ? () => onPress(event) : undefined}
       accessibilityLabel={`${event.title}${event.allDay ? `, ${t("calendar.allDay")}` : `, ${formatRealTime(event.startTimestampMs)}`}`}

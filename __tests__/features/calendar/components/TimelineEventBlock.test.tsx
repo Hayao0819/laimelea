@@ -62,9 +62,10 @@ describe("TimelineEventBlock", () => {
     const startHour = String(
       new Date("2026-03-01T10:00:00").getHours(),
     ).padStart(2, "0");
-    const endHour = String(
-      new Date("2026-03-01T11:00:00").getHours(),
-    ).padStart(2, "0");
+    const endHour = String(new Date("2026-03-01T11:00:00").getHours()).padStart(
+      2,
+      "0",
+    );
     expect(getByText(`${startHour}:00 - ${endHour}:00`)).toBeTruthy();
   });
 
@@ -78,9 +79,10 @@ describe("TimelineEventBlock", () => {
     const startHour = String(
       new Date("2026-03-01T10:00:00").getHours(),
     ).padStart(2, "0");
-    const endHour = String(
-      new Date("2026-03-01T11:00:00").getHours(),
-    ).padStart(2, "0");
+    const endHour = String(new Date("2026-03-01T11:00:00").getHours()).padStart(
+      2,
+      "0",
+    );
     expect(queryByText(`${startHour}:00 - ${endHour}:00`)).toBeNull();
   });
 
@@ -125,10 +127,7 @@ describe("TimelineEventBlock", () => {
     // BG_OPACITY = 0.15 -> Math.round(0.15 * 255) = 38 -> hex "26"
     const expectedBg = "#4285F426";
 
-    function findBgColor(
-      node: ReturnType<typeof toJSON>,
-      bg: string,
-    ): boolean {
+    function findBgColor(node: ReturnType<typeof toJSON>, bg: string): boolean {
       if (!node || typeof node === "string") return false;
       if (Array.isArray(node)) return node.some((n) => findBgColor(n, bg));
       const styles = Array.isArray(node.props?.style)
@@ -199,8 +198,7 @@ describe("TimelineEventBlock", () => {
 
     function findPositioning(node: ReturnType<typeof toJSON>): boolean {
       if (!node || typeof node === "string") return false;
-      if (Array.isArray(node))
-        return node.some((n) => findPositioning(n));
+      if (Array.isArray(node)) return node.some((n) => findPositioning(n));
       const styles = Array.isArray(node.props?.style)
         ? node.props.style
         : [node.props?.style];
@@ -237,8 +235,7 @@ describe("TimelineEventBlock", () => {
     const tree = toJSON();
     function findButtonRole(node: ReturnType<typeof toJSON>): boolean {
       if (!node || typeof node === "string") return false;
-      if (Array.isArray(node))
-        return node.some((n) => findButtonRole(n));
+      if (Array.isArray(node)) return node.some((n) => findButtonRole(n));
       if (
         node.props?.testID === "timeline-event-event-1" &&
         node.props?.accessibilityRole === "button"
