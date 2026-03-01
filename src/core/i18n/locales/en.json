@@ -78,6 +78,8 @@
     "syncError": "Failed to sync calendar",
     "signInRequired": "Sign in to view calendar events",
     "signIn": "Sign In",
+    "signInBanner": "Sign in to sync your Google Calendar",
+    "dismiss": "Dismiss",
     "customTime": "Custom: {{time}}",
     "realTime": "{{time}}",
     "alarmCreated": "Alarm set for {{title}}",

@@ -381,11 +381,23 @@ describe("CalendarScreen", () => {
   });
 
   describe("unauthenticated state", () => {
-    it("should show sign-in card when not authenticated and no events", async () => {
-      const { getByText } = await renderWithProviders({
+    it("should show calendar view with segmented buttons when not authenticated", async () => {
+      const { getByText, getByTestId } = await renderWithProviders({
         authenticated: false,
       });
-      expect(getByText("calendar.signInRequired")).toBeTruthy();
+      expect(getByTestId("calendar-screen")).toBeTruthy();
+      expect(getByText("calendar.views.month")).toBeTruthy();
+      expect(getByText("calendar.views.week")).toBeTruthy();
+      expect(getByText("calendar.views.agenda")).toBeTruthy();
+      expect(getByTestId("agenda-view")).toBeTruthy();
+    });
+
+    it("should show sign-in banner when not authenticated", async () => {
+      const { getByTestId, getByText } = await renderWithProviders({
+        authenticated: false,
+      });
+      expect(getByTestId("sign-in-banner")).toBeTruthy();
+      expect(getByText("calendar.signInBanner")).toBeTruthy();
     });
 
     it('should show sign-in button with "calendar.signIn"', async () => {
@@ -406,6 +418,27 @@ describe("CalendarScreen", () => {
 
       expect(mockServices.auth.signIn).toHaveBeenCalled();
       expect(mockSync).toHaveBeenCalledWith(true);
+    });
+
+    it("should hide banner when dismiss button is pressed", async () => {
+      const { getByTestId, queryByTestId, getByLabelText } =
+        await renderWithProviders({
+          authenticated: false,
+        });
+      expect(getByTestId("sign-in-banner")).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.press(getByLabelText("calendar.dismiss"));
+      });
+
+      expect(queryByTestId("sign-in-banner")).toBeNull();
+    });
+
+    it("should not show banner when authenticated", async () => {
+      const { queryByTestId } = await renderWithProviders({
+        authenticated: true,
+      });
+      expect(queryByTestId("sign-in-banner")).toBeNull();
     });
   });
 

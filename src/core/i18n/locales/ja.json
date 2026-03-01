@@ -78,6 +78,8 @@
     "syncError": "カレンダーの同期に失敗しました",
     "signInRequired": "カレンダーを表示するにはサインインしてください",
     "signIn": "サインイン",
+    "signInBanner": "サインインしてGoogleカレンダーを同期",
+    "dismiss": "閉じる",
     "customTime": "カスタム: {{time}}",
     "realTime": "{{time}}",
     "alarmCreated": "{{title}}のアラームを設定しました",

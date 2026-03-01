@@ -20,7 +20,6 @@ import { useCalendarSync } from "../../../hooks/useCalendarSync";
 import { useCalendarView } from "../hooks/useCalendarView";
 import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
 import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
-import { DaySelector } from "../components/DaySelector";
 import { MonthView } from "../components/MonthView";
 import { WeekView } from "../components/WeekView";
 import { AgendaView } from "../components/AgendaView";
@@ -74,6 +73,7 @@ export function CalendarScreen() {
   const setAlarms = useSetAtom(alarmsAtom);
   const { events, error, sync, isStale } = useCalendarSync();
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Auto-sync when tab is focused and cache is stale
   useFocusEffect(
@@ -173,31 +173,7 @@ export function CalendarScreen() {
     services.auth.getAccessToken().then((token) => setIsAuthed(token != null));
   }, [services.auth]);
 
-  if (isAuthed === false && events.length === 0) {
-    return (
-      <View style={styles.container} testID="calendar-screen">
-        <DaySelector
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-        />
-        <View style={styles.signInContainer}>
-          <Card style={styles.signInCard} mode="outlined">
-            <Card.Content style={styles.signInContent}>
-              <Text variant="bodyLarge">{t("calendar.signInRequired")}</Text>
-              <Button
-                mode="contained"
-                onPress={handleSignIn}
-                style={styles.signInButton}
-                accessibilityLabel={t("calendar.signIn")}
-              >
-                {t("calendar.signIn")}
-              </Button>
-            </Card.Content>
-          </Card>
-        </View>
-      </View>
-    );
-  }
+  const showSignInBanner = isAuthed === false && !bannerDismissed;
 
   const renderViewContent = () => {
     switch (viewMode) {
@@ -246,6 +222,37 @@ export function CalendarScreen() {
           buttons={viewButtons}
         />
       </View>
+
+      {/* Sign-in banner for unauthenticated users */}
+      {showSignInBanner && (
+        <Card
+          style={styles.signInBanner}
+          mode="outlined"
+          testID="sign-in-banner"
+        >
+          <Card.Content style={styles.signInBannerContent}>
+            <Text variant="bodyMedium" style={styles.signInBannerText}>
+              {t("calendar.signInBanner")}
+            </Text>
+            <View style={styles.signInBannerActions}>
+              <Button
+                mode="contained"
+                compact
+                onPress={handleSignIn}
+                accessibilityLabel={t("calendar.signIn")}
+              >
+                {t("calendar.signIn")}
+              </Button>
+              <IconButton
+                icon="close"
+                size={20}
+                onPress={() => setBannerDismissed(true)}
+                accessibilityLabel={t("calendar.dismiss")}
+              />
+            </View>
+          </Card.Content>
+        </Card>
+      )}
 
       {/* Navigation header */}
       <View style={styles.navHeader}>
@@ -324,20 +331,20 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.base,
     marginVertical: spacing.sm,
   },
-  signInContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-  },
-  signInCard: {
-    width: "100%",
-  },
-  signInContent: {
-    alignItems: "center",
-    gap: spacing.base,
-  },
-  signInButton: {
+  signInBanner: {
+    marginHorizontal: spacing.base,
     marginTop: spacing.sm,
+  },
+  signInBannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  signInBannerText: {
+    flex: 1,
+  },
+  signInBannerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
 });
