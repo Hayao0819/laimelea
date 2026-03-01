@@ -7,16 +7,20 @@ interface GameOverlayProps {
   isGameOver: boolean;
   hasWon: boolean;
   wonAcknowledged: boolean;
+  canUndo: boolean;
   onKeepGoing: () => void;
   onTryAgain: () => void;
+  onUndo: () => void;
 }
 
 export function GameOverlay({
   isGameOver,
   hasWon,
   wonAcknowledged,
+  canUndo,
   onKeepGoing,
   onTryAgain,
+  onUndo,
 }: GameOverlayProps) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -54,6 +58,16 @@ export function GameOverlay({
             testID="keep-going-button"
           >
             {t("game2048.keepGoing")}
+          </Button>
+        )}
+        {isGameOver && canUndo && (
+          <Button
+            mode="contained"
+            onPress={onUndo}
+            icon="undo"
+            testID="undo-button-overlay"
+          >
+            {t("game2048.undo")}
           </Button>
         )}
         <Button mode="outlined" onPress={onTryAgain} testID="try-again-button">

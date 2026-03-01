@@ -150,8 +150,13 @@ export function Game2048Screen() {
           isGameOver={game.isGameOver}
           hasWon={game.hasWon}
           wonAcknowledged={game.wonAcknowledged}
+          canUndo={canUndo}
           onKeepGoing={handleKeepGoing}
           onTryAgain={handleTryAgain}
+          onUndo={() => {
+            setLastDirection(null);
+            undo();
+          }}
         />
       </View>
 
