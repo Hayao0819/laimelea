@@ -145,6 +145,45 @@ describe("createAccountManager", () => {
       expect(mockDecodeIdTokenPayload).not.toHaveBeenCalled();
       expect(account.email).toBe("");
       expect(account.displayName).toBe("");
+      expect(account.photoUrl).toBeNull();
+    });
+
+    it("should handle null idToken from authorize", async () => {
+      mockAuthorize.mockResolvedValue({
+        accessToken: "at",
+        refreshToken: "rt",
+        idToken: null,
+        accessTokenExpirationDate: "2099-01-01T00:00:00Z",
+      });
+
+      const manager = createAccountManager();
+      const account = await manager.addAccount();
+
+      expect(mockDecodeIdTokenPayload).not.toHaveBeenCalled();
+      expect(account.email).toBe("");
+      expect(account.displayName).toBe("");
+      expect(account.photoUrl).toBeNull();
+    });
+
+    it("should use email as displayName when name is missing from idToken", async () => {
+      mockAuthorize.mockResolvedValue({
+        accessToken: "at",
+        refreshToken: "rt",
+        idToken: "valid-id-token",
+        accessTokenExpirationDate: "2099-01-01T00:00:00Z",
+      });
+      mockDecodeIdTokenPayload.mockReturnValue({
+        email: "user@example.com",
+        // no name field
+        // no picture field
+      });
+
+      const manager = createAccountManager();
+      const account = await manager.addAccount();
+
+      expect(account.email).toBe("user@example.com");
+      expect(account.displayName).toBe("user@example.com");
+      expect(account.photoUrl).toBeNull();
     });
 
     it("should propagate authorize errors", async () => {
@@ -183,6 +222,26 @@ describe("createAccountManager", () => {
         "bob@example.com",
       ]);
       expect(accounts[0].provider).toBe("app-auth");
+    });
+
+    it("should set displayName to email and photoUrl to null", async () => {
+      setStoredAuthStates({
+        "alice@example.com": {
+          accessToken: "at",
+          refreshToken: "rt",
+          idToken: "it",
+          email: "alice@example.com",
+          expirationDate: "2099-01-01T00:00:00Z",
+        },
+      });
+
+      const manager = createAccountManager();
+      const accounts = await manager.getAccounts();
+
+      expect(accounts).toHaveLength(1);
+      expect(accounts[0].displayName).toBe("alice@example.com");
+      expect(accounts[0].photoUrl).toBeNull();
+      expect(accounts[0].addedAt).toBe(0);
     });
 
     it("should return empty array when no stored state", async () => {
@@ -263,6 +322,32 @@ describe("createAccountManager", () => {
       const token = await manager.getAccessToken("unknown@example.com");
 
       expect(token).toBeNull();
+    });
+
+    it("should update expirationDate in storage after refresh", async () => {
+      setStoredAuthStates({
+        "user@example.com": {
+          accessToken: "expired-token",
+          refreshToken: "rt",
+          idToken: "it",
+          email: "user@example.com",
+          expirationDate: "2000-01-01T00:00:00Z",
+        },
+      });
+      mockRefresh.mockResolvedValue({
+        accessToken: "new-token",
+        refreshToken: "new-rt",
+        idToken: "new-it",
+        accessTokenExpirationDate: "2099-06-15T12:00:00Z",
+      });
+
+      const manager = createAccountManager();
+      await manager.getAccessToken("user@example.com");
+
+      const stored = getStoredAuthStates();
+      expect(stored["user@example.com"].expirationDate).toBe(
+        "2099-06-15T12:00:00Z",
+      );
     });
 
     it("should preserve original refreshToken when refresh returns empty", async () => {
@@ -364,6 +449,25 @@ describe("createAccountManager", () => {
       expect(stored["bob@example.com"]).toBeDefined();
     });
 
+    it("should skip revocation when refreshToken is empty", async () => {
+      setStoredAuthStates({
+        "user@example.com": {
+          accessToken: "at",
+          refreshToken: "",
+          idToken: "it",
+          email: "user@example.com",
+          expirationDate: "2099-01-01T00:00:00Z",
+        },
+      });
+
+      const manager = createAccountManager();
+      await manager.removeAccount("user@example.com");
+
+      expect(mockRevoke).not.toHaveBeenCalled();
+      const stored = getStoredAuthStates();
+      expect(stored["user@example.com"]).toBeUndefined();
+    });
+
     it("should handle removing non-existent account gracefully", async () => {
       const manager = createAccountManager();
       await expect(
@@ -426,6 +530,38 @@ describe("createAccountManager", () => {
       expect(tokens.size).toBe(1);
       expect(tokens.get("valid@example.com")).toBe("at-valid");
       expect(tokens.has("expired@example.com")).toBe(false);
+    });
+
+    it("should refresh expired tokens and include them in result", async () => {
+      setStoredAuthStates({
+        "valid@example.com": {
+          accessToken: "at-valid",
+          refreshToken: "rt-valid",
+          idToken: "it-valid",
+          email: "valid@example.com",
+          expirationDate: "2099-01-01T00:00:00Z",
+        },
+        "expired@example.com": {
+          accessToken: "at-expired",
+          refreshToken: "rt-expired",
+          idToken: "it-expired",
+          email: "expired@example.com",
+          expirationDate: "2000-01-01T00:00:00Z",
+        },
+      });
+      mockRefresh.mockResolvedValue({
+        accessToken: "at-refreshed",
+        refreshToken: "rt-refreshed",
+        idToken: "",
+        accessTokenExpirationDate: "2099-01-01T00:00:00Z",
+      });
+
+      const manager = createAccountManager();
+      const tokens = await manager.getAllAccessTokens();
+
+      expect(tokens.size).toBe(2);
+      expect(tokens.get("valid@example.com")).toBe("at-valid");
+      expect(tokens.get("expired@example.com")).toBe("at-refreshed");
     });
 
     it("should return empty map when no accounts exist", async () => {
