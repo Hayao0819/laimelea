@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
   Button,
@@ -51,7 +51,10 @@ export function SettingsScreen() {
   const theme = useTheme();
   const [rawSettings, setSettings] = useAtom(settingsAtom);
   // Merge with defaults to handle settings saved before new fields were added
-  const settings: AppSettings = { ...DEFAULT_SETTINGS, ...rawSettings };
+  const settings: AppSettings = useMemo(
+    () => ({ ...DEFAULT_SETTINGS, ...rawSettings }),
+    [rawSettings],
+  );
   const alarms = useAtomValue(alarmsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
   const sleepSessions = useAtomValue(sleepSessionsAtom);
