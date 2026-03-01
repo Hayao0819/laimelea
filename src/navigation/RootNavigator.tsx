@@ -6,9 +6,17 @@ import { useTranslation } from "react-i18next";
 import { BottomTabNavigator } from "./BottomTabNavigator";
 import { DeskClockScreen } from "../features/clock/screens/DeskClockScreen";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
+import { CycleConfigScreen } from "../features/settings/screens/CycleConfigScreen";
+import { GeneralSettingsScreen } from "../features/settings/screens/GeneralSettingsScreen";
+import { TimezoneSettingsScreen } from "../features/settings/screens/TimezoneSettingsScreen";
+import { AlarmDefaultsScreen } from "../features/settings/screens/AlarmDefaultsScreen";
+import { CalendarSettingsScreen } from "../features/settings/screens/CalendarSettingsScreen";
+import { WidgetSettingsScreen } from "../features/settings/screens/WidgetSettingsScreen";
+import { BackupScreen } from "../features/settings/screens/BackupScreen";
 import { AboutScreen } from "../features/settings/screens/AboutScreen";
 import { LegalScreen } from "../features/settings/screens/LegalScreen";
 import { LicensesScreen } from "../features/settings/screens/LicensesScreen";
+import { Game2048Screen } from "../features/game2048/screens/Game2048Screen";
 import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";
@@ -48,6 +56,41 @@ export function RootNavigator() {
             name="Settings"
             component={SettingsScreen}
             options={{ title: t("settings.title") }}
+          />
+          <Stack.Screen
+            name="SettingsCycleConfig"
+            component={CycleConfigScreen}
+            options={{ title: t("settings.cycleConfig") }}
+          />
+          <Stack.Screen
+            name="SettingsGeneral"
+            component={GeneralSettingsScreen}
+            options={{ title: t("settings.general") }}
+          />
+          <Stack.Screen
+            name="SettingsTimezone"
+            component={TimezoneSettingsScreen}
+            options={{ title: t("settings.timezone") }}
+          />
+          <Stack.Screen
+            name="SettingsAlarmDefaults"
+            component={AlarmDefaultsScreen}
+            options={{ title: t("settings.alarmDefaults") }}
+          />
+          <Stack.Screen
+            name="SettingsCalendar"
+            component={CalendarSettingsScreen}
+            options={{ title: t("settings.calendarSection") }}
+          />
+          <Stack.Screen
+            name="SettingsWidget"
+            component={WidgetSettingsScreen}
+            options={{ title: t("settings.widget") }}
+          />
+          <Stack.Screen
+            name="SettingsBackup"
+            component={BackupScreen}
+            options={{ title: t("settings.backup") }}
           />
           <Stack.Screen
             name="SettingsAbout"
@@ -105,6 +148,11 @@ export function RootNavigator() {
               gestureEnabled: false,
               animation: "fade",
             }}
+          />
+          <Stack.Screen
+            name="Game2048"
+            component={Game2048Screen}
+            options={{ title: t("game2048.title") }}
           />
         </>
       )}

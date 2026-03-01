@@ -1,50 +1,15 @@
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
 import { SettingsScreen } from "../../../src/features/settings/screens/SettingsScreen";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
-import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
-import { sleepSessionsAtom } from "../../../src/atoms/sleepAtoms";
-import {
-  DEFAULT_SETTINGS,
-  DEFAULT_WIDGET_SETTINGS,
-} from "../../../src/models/Settings";
-import type { Alarm } from "../../../src/models/Alarm";
-import type { SleepSession } from "../../../src/models/SleepSession";
-import type { PlatformServices } from "../../../src/core/platform/types";
-import type { Account } from "../../../src/core/account/types";
+import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
-let mockServices: PlatformServices;
+const mockNavigate = jest.fn();
 
-jest.mock("../../../src/core/platform/factory", () => ({
-  createPlatformServices: () => mockServices,
-}));
-
-jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
-  requestClockWidgetUpdate: jest.fn(),
-}));
-
-jest.mock("../../../src/core/i18n", () => ({
-  __esModule: true,
-  default: { language: "en", changeLanguage: jest.fn() },
-  resolveLanguage: (setting: string) =>
-    setting === "auto" || !["en", "ja"].includes(setting) ? "en" : setting,
-  detectSystemLanguage: () => "en",
-  SUPPORTED_LANGUAGES: ["ja", "en"],
-}));
-
-const mockAddAccount = jest.fn();
-const mockRemoveAccount = jest.fn();
-
-jest.mock("../../../src/core/account/accountManager", () => ({
-  createAccountManager: () => ({
-    addAccount: (...args: unknown[]) => mockAddAccount(...args),
-    removeAccount: (...args: unknown[]) => mockRemoveAccount(...args),
-    getAccounts: jest.fn(),
-    getAccessToken: jest.fn(),
-    getAllAccessTokens: jest.fn(),
-  }),
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
 jest.mock("@react-native-async-storage/async-storage", () => {
@@ -65,16 +30,6 @@ jest.mock("@react-native-async-storage/async-storage", () => {
   };
 });
 
-jest.mock("@react-native-google-signin/google-signin", () => ({
-  GoogleSignin: {
-    hasPlayServices: jest.fn(),
-    signIn: jest.fn(),
-    signOut: jest.fn(),
-    getTokens: jest.fn(),
-    configure: jest.fn(),
-  },
-}));
-
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => {
@@ -87,94 +42,8 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-function createMockAccount(email: string): Account {
-  return {
-    email,
-    displayName: email.split("@")[0],
-    photoUrl: null,
-    provider: "app-auth",
-    addedAt: Date.now(),
-  };
-}
-
-const mockAlarm: Alarm = {
-  id: "alarm-1",
-  label: "Test Alarm",
-  enabled: true,
-  targetTimestampMs: 1700000000000,
-  setInTimeSystem: "custom",
-  repeat: null,
-  dismissalMethod: "simple",
-  gradualVolumeDurationSec: 30,
-  snoozeDurationMin: 5,
-  snoozeMaxCount: 3,
-  snoozeCount: 0,
-  autoSilenceMin: 10,
-  soundUri: null,
-  vibrationEnabled: true,
-  notifeeTriggerId: null,
-  skipNextOccurrence: false,
-  linkedCalendarEventId: null,
-  linkedEventOffsetMs: 0,
-  lastFiredAt: null,
-  createdAt: 1700000000000,
-  updatedAt: 1700000000000,
-};
-
-const mockSleepSession: SleepSession = {
-  id: "sleep-1",
-  source: "manual",
-  startTimestampMs: 1700000000000,
-  endTimestampMs: 1700028800000,
-  stages: [],
-  durationMs: 28800000,
-  createdAt: 1700000000000,
-  updatedAt: 1700000000000,
-};
-
-function createMockPlatformServices(
-  backupOverrides?: Partial<PlatformServices["backup"]>,
-): PlatformServices {
-  return {
-    type: "aosp",
-    auth: {
-      signIn: jest
-        .fn()
-        .mockResolvedValue({ email: "test@example.com", accessToken: "token" }),
-      signOut: jest.fn().mockResolvedValue(undefined),
-      getAccessToken: jest.fn().mockResolvedValue(null),
-      isAvailable: jest.fn().mockResolvedValue(true),
-    },
-    calendar: {
-      fetchEvents: jest.fn().mockResolvedValue([]),
-      getCalendarList: jest.fn().mockResolvedValue([]),
-      isAvailable: jest.fn().mockResolvedValue(true),
-    },
-    backup: {
-      backup: jest.fn().mockResolvedValue(undefined),
-      restore: jest.fn().mockResolvedValue(null),
-      getLastBackupTime: jest.fn().mockResolvedValue(null),
-      isAvailable: jest.fn().mockResolvedValue(true),
-      ...backupOverrides,
-    },
-    sleep: {
-      fetchSleepSessions: jest.fn().mockResolvedValue([]),
-      isAvailable: jest.fn().mockResolvedValue(true),
-    },
-    accountManager: {
-      getAccounts: jest.fn().mockResolvedValue([]),
-      addAccount: jest.fn().mockRejectedValue(new Error("not implemented")),
-      removeAccount: jest.fn().mockResolvedValue(undefined),
-      getAccessToken: jest.fn().mockResolvedValue(null),
-      getAllAccessTokens: jest.fn().mockResolvedValue(new Map()),
-    },
-  };
-}
-
 function renderWithProviders(store = createStore()) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
-  store.set(alarmsAtom, []);
-  store.set(sleepSessionsAtom, []);
   return {
     store,
     ...render(
@@ -188,837 +57,83 @@ function renderWithProviders(store = createStore()) {
 }
 
 beforeEach(() => {
-  mockServices = createMockPlatformServices();
   jest.clearAllMocks();
 });
 
-describe("SettingsScreen", () => {
+describe("SettingsScreen (hub)", () => {
   it("should render without crashing", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("settings-screen")).toBeTruthy();
   });
 
-  it("should display cycle config inputs", async () => {
-    const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("cycle-hours-input")).toBeTruthy();
-    expect(getByTestId("cycle-minutes-input")).toBeTruthy();
-  });
-
-  it("should display use current time button", async () => {
-    const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("use-current-time-button")).toBeTruthy();
-  });
-
-  it("should display timezone item", async () => {
-    const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("timezone-item")).toBeTruthy();
-  });
-
-  it("should display backup buttons", async () => {
-    const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("backup-now-button")).toBeTruthy();
-    expect(getByTestId("restore-button")).toBeTruthy();
-  });
-
-  it("should display alarm defaults section", async () => {
-    const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("vibration-item")).toBeTruthy();
-    expect(getByTestId("gradual-volume-item")).toBeTruthy();
-  });
-
-  it("should display default time display setting in general section", async () => {
+  it("should display category headers", async () => {
     const { getByText } = await renderWithProviders();
-    expect(getByText("settings.primaryDisplay")).toBeTruthy();
-    expect(getByText("settings.custom")).toBeTruthy();
-    expect(getByText("settings.standard24h")).toBeTruthy();
+    expect(getByText("settings.categoryApp")).toBeTruthy();
+    expect(getByText("settings.categoryFeatures")).toBeTruthy();
+    expect(getByText("settings.categoryInfo")).toBeTruthy();
   });
 
-  it("should display primary display description text", async () => {
-    const { getByText } = await renderWithProviders();
-    expect(getByText("settings.primaryDisplayDescription")).toBeTruthy();
+  it("should display all menu items", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("settings-cycle-config-item")).toBeTruthy();
+    expect(getByTestId("settings-general-item")).toBeTruthy();
+    expect(getByTestId("settings-timezone-item")).toBeTruthy();
+    expect(getByTestId("settings-alarm-defaults-item")).toBeTruthy();
+    expect(getByTestId("settings-calendar-item")).toBeTruthy();
+    expect(getByTestId("settings-widget-item")).toBeTruthy();
+    expect(getByTestId("settings-backup-item")).toBeTruthy();
+    expect(getByTestId("settings-about-item")).toBeTruthy();
+    expect(getByTestId("settings-legal-item")).toBeTruthy();
   });
 
-  describe("multi-account", () => {
-    it("should display two accounts when accounts array has 2 entries", async () => {
-      const store = createStore();
-      store.set(settingsAtom, {
-        ...DEFAULT_SETTINGS,
-        accounts: [
-          createMockAccount("user1@gmail.com"),
-          createMockAccount("user2@gmail.com"),
-        ],
-      });
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      expect(getByTestId("account-item-user1@gmail.com")).toBeTruthy();
-      expect(getByTestId("account-item-user2@gmail.com")).toBeTruthy();
+  it("should show cycle config description with hours and minutes", async () => {
+    const store = createStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      cycleConfig: {
+        ...DEFAULT_SETTINGS.cycleConfig,
+        cycleLengthMinutes: 26 * 60,
+      },
     });
-
-    it("should call addAccount on add account button tap", async () => {
-      const newAccount = createMockAccount("new@gmail.com");
-      mockAddAccount.mockResolvedValue(newAccount);
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("add-account-button"));
-
-      await waitFor(() => {
-        expect(mockAddAccount).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it("should add account to settings after successful addAccount", async () => {
-      const newAccount = createMockAccount("new@gmail.com");
-      mockAddAccount.mockResolvedValue(newAccount);
-
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      await fireEvent.press(getByTestId("add-account-button"));
-
-      await waitFor(async () => {
-        const settings = (await store.get(
-          settingsAtom,
-        )) as typeof DEFAULT_SETTINGS;
-        expect(settings.accounts).toHaveLength(1);
-        expect(settings.accounts[0].email).toBe("new@gmail.com");
-      });
-    });
-
-    it("should remove account on remove button tap", async () => {
-      mockRemoveAccount.mockResolvedValue(undefined);
-
-      const store = createStore();
-      store.set(settingsAtom, {
-        ...DEFAULT_SETTINGS,
-        accounts: [
-          createMockAccount("user1@gmail.com"),
-          createMockAccount("user2@gmail.com"),
-        ],
-      });
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      await fireEvent.press(getByTestId("remove-account-user1@gmail.com"));
-
-      await waitFor(async () => {
-        expect(mockRemoveAccount).toHaveBeenCalledWith("user1@gmail.com");
-        const settings = (await store.get(
-          settingsAtom,
-        )) as typeof DEFAULT_SETTINGS;
-        expect(settings.accounts).toHaveLength(1);
-        expect(settings.accounts[0].email).toBe("user2@gmail.com");
-      });
-    });
-
-    it("should show legacy account when accountEmail is set and accounts is empty", async () => {
-      const store = createStore();
-      store.set(settingsAtom, {
-        ...DEFAULT_SETTINGS,
-        accountEmail: "legacy@gmail.com",
-        accounts: [],
-      });
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      expect(getByTestId("legacy-account-item")).toBeTruthy();
-    });
-
-    it("should not show legacy account when accounts array is non-empty", async () => {
-      const store = createStore();
-      store.set(settingsAtom, {
-        ...DEFAULT_SETTINGS,
-        accountEmail: "legacy@gmail.com",
-        accounts: [createMockAccount("user@gmail.com")],
-      });
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { queryByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      expect(queryByTestId("legacy-account-item")).toBeNull();
-    });
-
-    it("should clear accountEmail when legacy account is removed", async () => {
-      const store = createStore();
-      store.set(settingsAtom, {
-        ...DEFAULT_SETTINGS,
-        accountEmail: "legacy@gmail.com",
-        accounts: [],
-      });
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      await fireEvent.press(getByTestId("remove-legacy-account-button"));
-
-      await waitFor(async () => {
-        const settings = (await store.get(
-          settingsAtom,
-        )) as typeof DEFAULT_SETTINGS;
-        expect(settings.accountEmail).toBeNull();
-      });
-    });
-
-    it("should show snackbar on add account failure", async () => {
-      mockAddAccount.mockRejectedValue(new Error("Auth failed"));
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("add-account-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.accountAddFailed",
-        );
-      });
-    });
-
-    it("should display add account button", async () => {
-      const { getByTestId } = await renderWithProviders();
-      expect(getByTestId("add-account-button")).toBeTruthy();
-    });
+    const { getByText } = await render(
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <SettingsScreen />
+        </PaperProvider>
+      </JotaiProvider>,
+    );
+    expect(getByText("26h 0m")).toBeTruthy();
   });
 
-  describe("backup", () => {
-    it("should call backup service with serialized data on backup button press", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, [mockAlarm]);
-      store.set(sleepSessionsAtom, [mockSleepSession]);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      await fireEvent.press(getByTestId("backup-now-button"));
-
-      await waitFor(() => {
-        expect(mockServices.backup.backup).toHaveBeenCalledTimes(1);
-      });
-
-      const calledWith = (mockServices.backup.backup as jest.Mock).mock
-        .calls[0][0];
-      const parsed = JSON.parse(calledWith);
-      expect(parsed.version).toBe(1);
-      expect(parsed.timestamp).toBeGreaterThan(0);
-      expect(parsed.alarms).toHaveLength(1);
-      expect(parsed.alarms[0].id).toBe("alarm-1");
-      expect(parsed.sleepSessions).toHaveLength(1);
-      expect(parsed.sleepSessions[0].id).toBe("sleep-1");
-      expect(parsed.settings).toBeDefined();
+  it("should show timezone description when not auto", async () => {
+    const store = createStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      timezone: "America/New_York",
     });
-
-    it("should update lastBackupTimestamp on successful backup", async () => {
-      const store = createStore();
-      store.set(settingsAtom, {
-        ...DEFAULT_SETTINGS,
-        lastBackupTimestamp: null,
-      });
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      await fireEvent.press(getByTestId("backup-now-button"));
-
-      await waitFor(async () => {
-        const updatedSettings = await store.get(settingsAtom);
-        expect(updatedSettings.lastBackupTimestamp).not.toBeNull();
-        expect(updatedSettings.lastBackupTimestamp).toBeGreaterThan(0);
-      });
-    });
-
-    it("should show success snackbar on successful backup", async () => {
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("backup-now-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.backupSuccess",
-        );
-      });
-    });
-
-    it("should show failure snackbar when backup throws", async () => {
-      mockServices = createMockPlatformServices({
-        backup: jest.fn().mockRejectedValue(new Error("disk full")),
-      });
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("backup-now-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.backupFailed",
-        );
-      });
-    });
+    const { getByText } = await render(
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <SettingsScreen />
+        </PaperProvider>
+      </JotaiProvider>,
+    );
+    expect(getByText("America/New_York")).toBeTruthy();
   });
 
-  describe("restore", () => {
-    it("should restore settings, alarms, and sleepSessions from backup", async () => {
-      const backupData = JSON.stringify({
-        version: 1,
-        timestamp: 1700000000000,
-        settings: { ...DEFAULT_SETTINGS, language: "ja" },
-        alarms: [mockAlarm],
-        sleepSessions: [mockSleepSession],
-      });
-      mockServices = createMockPlatformServices({
-        restore: jest.fn().mockResolvedValue(backupData),
-      });
-
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      await fireEvent.press(getByTestId("restore-button"));
-
-      await waitFor(async () => {
-        expect((await store.get(settingsAtom)).language).toBe("ja");
-        const restoredAlarms = await store.get(alarmsAtom);
-        expect(restoredAlarms).toHaveLength(1);
-        expect(restoredAlarms[0].id).toBe("alarm-1");
-        const restoredSleep = await store.get(sleepSessionsAtom);
-        expect(restoredSleep).toHaveLength(1);
-        expect(restoredSleep[0].id).toBe("sleep-1");
-      });
+  it("should not show timezone description when auto", async () => {
+    const store = createStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      timezone: "auto",
     });
-
-    it("should show success snackbar on successful restore", async () => {
-      const backupData = JSON.stringify({
-        version: 1,
-        timestamp: 1700000000000,
-        settings: DEFAULT_SETTINGS,
-        alarms: [],
-        sleepSessions: [],
-      });
-      mockServices = createMockPlatformServices({
-        restore: jest.fn().mockResolvedValue(backupData),
-      });
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("restore-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.restoreSuccess",
-        );
-      });
-    });
-
-    it("should show noBackupFound snackbar when restore returns null", async () => {
-      mockServices = createMockPlatformServices({
-        restore: jest.fn().mockResolvedValue(null),
-      });
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("restore-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.noBackupFound",
-        );
-      });
-    });
-
-    it("should show version error snackbar for incompatible backup version", async () => {
-      const backupData = JSON.stringify({
-        version: 99,
-        timestamp: 1700000000000,
-        settings: DEFAULT_SETTINGS,
-        alarms: [],
-        sleepSessions: [],
-      });
-      mockServices = createMockPlatformServices({
-        restore: jest.fn().mockResolvedValue(backupData),
-      });
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("restore-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.backupVersionError",
-        );
-      });
-    });
-
-    it("should show failure snackbar when restore throws", async () => {
-      mockServices = createMockPlatformServices({
-        restore: jest.fn().mockRejectedValue(new Error("network error")),
-      });
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("restore-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.restoreFailed",
-        );
-      });
-    });
-
-    it("should show failure snackbar when backup data is invalid JSON", async () => {
-      mockServices = createMockPlatformServices({
-        restore: jest.fn().mockResolvedValue("not valid json{{{"),
-      });
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("restore-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.restoreFailed",
-        );
-      });
-    });
-
-    it("should handle partial backup data gracefully", async () => {
-      const backupData = JSON.stringify({
-        version: 1,
-        timestamp: 1700000000000,
-        settings: { ...DEFAULT_SETTINGS, language: "ja" },
-      });
-      mockServices = createMockPlatformServices({
-        restore: jest.fn().mockResolvedValue(backupData),
-      });
-
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, [mockAlarm]);
-      store.set(sleepSessionsAtom, [mockSleepSession]);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      await fireEvent.press(getByTestId("restore-button"));
-
-      await waitFor(async () => {
-        expect((await store.get(settingsAtom)).language).toBe("ja");
-        expect(getByTestId("settings-snackbar")).toHaveTextContent(
-          "settings.restoreSuccess",
-        );
-      });
-    });
-  });
-
-  describe("Widget settings section", () => {
-    it("renders widget settings section with all inputs and switches", async () => {
-      const { getByTestId } = await renderWithProviders();
-      expect(getByTestId("widget-bg-color-input")).toBeTruthy();
-      expect(getByTestId("widget-text-color-input")).toBeTruthy();
-      expect(getByTestId("widget-secondary-color-input")).toBeTruthy();
-      expect(getByTestId("widget-accent-color-input")).toBeTruthy();
-      expect(getByTestId("widget-opacity-input")).toBeTruthy();
-      expect(getByTestId("widget-border-radius-switch")).toBeTruthy();
-      expect(getByTestId("widget-show-real-time-switch")).toBeTruthy();
-      expect(getByTestId("widget-show-next-alarm-switch")).toBeTruthy();
-    });
-
-    it("updates background color when valid hex is entered", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      const input = getByTestId("widget-bg-color-input");
-      await fireEvent.changeText(input, "#FF0000");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.backgroundColor).toBe("#FF0000");
-      });
-    });
-
-    it("resets invalid hex color to default on blur", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      let input = getByTestId("widget-bg-color-input");
-      await fireEvent.changeText(input, "invalid");
-
-      // Wait for component to re-render with the invalid value displayed
-      await waitFor(() => {
-        expect(getByTestId("widget-bg-color-input").props.value).toBe(
-          "invalid",
-        );
-      });
-
-      // Re-query after re-render to get fresh element with updated onBlur closure
-      input = getByTestId("widget-bg-color-input");
-      await fireEvent(input, "blur");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.backgroundColor).toBe(
-          DEFAULT_WIDGET_SETTINGS.backgroundColor,
-        );
-      });
-    });
-
-    it("updates text color input", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      const input = getByTestId("widget-text-color-input");
-      await fireEvent.changeText(input, "#00FF00");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.textColor).toBe("#00FF00");
-      });
-    });
-
-    it("updates secondary text color input", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      const input = getByTestId("widget-secondary-color-input");
-      await fireEvent.changeText(input, "#AABBCC");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.secondaryTextColor).toBe("#AABBCC");
-      });
-    });
-
-    it("updates accent color input", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      const input = getByTestId("widget-accent-color-input");
-      await fireEvent.changeText(input, "#112233");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.accentColor).toBe("#112233");
-      });
-    });
-
-    it('clamps opacity to 0-100 range (e.g. "150" -> 100)', async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      const input = getByTestId("widget-opacity-input");
-      await fireEvent.changeText(input, "150");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.opacity).toBe(100);
-      });
-    });
-
-    it('clamps negative opacity (e.g. "-5" -> 0)', async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      const input = getByTestId("widget-opacity-input");
-      await fireEvent.changeText(input, "-5");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.opacity).toBe(0);
-      });
-    });
-
-    it('handles non-numeric opacity input (e.g. "abc" -> 0)', async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      const input = getByTestId("widget-opacity-input");
-      await fireEvent.changeText(input, "abc");
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.opacity).toBe(0);
-      });
-    });
-
-    it("toggles border radius switch (ON=16, OFF=0)", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      // Default borderRadius is 16, toggle OFF
-      const switchEl = getByTestId("widget-border-radius-switch");
-      await fireEvent(switchEl, "valueChange", false);
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.borderRadius).toBe(0);
-      });
-
-      // Toggle back ON
-      await fireEvent(switchEl, "valueChange", true);
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.borderRadius).toBe(16);
-      });
-    });
-
-    it("toggles show real time switch", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      // Default showRealTime is true, toggle OFF
-      const switchEl = getByTestId("widget-show-real-time-switch");
-      await fireEvent(switchEl, "valueChange", false);
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.showRealTime).toBe(false);
-      });
-    });
-
-    it("toggles show next alarm switch", async () => {
-      const store = createStore();
-      store.set(settingsAtom, DEFAULT_SETTINGS);
-      store.set(alarmsAtom, []);
-      store.set(sleepSessionsAtom, []);
-
-      const { getByTestId } = await render(
-        <JotaiProvider store={store}>
-          <PaperProvider>
-            <SettingsScreen />
-          </PaperProvider>
-        </JotaiProvider>,
-      );
-
-      // Default showNextAlarm is true, toggle OFF
-      const switchEl = getByTestId("widget-show-next-alarm-switch");
-      await fireEvent(switchEl, "valueChange", false);
-
-      await waitFor(async () => {
-        const s = await store.get(settingsAtom);
-        expect(s.widgetSettings.showNextAlarm).toBe(false);
-      });
-    });
-
-    it("calls requestClockWidgetUpdate on color change", async () => {
-      const { requestClockWidgetUpdate } = jest.requireMock(
-        "../../../src/features/widget/services/widgetUpdater",
-      );
-      (requestClockWidgetUpdate as jest.Mock).mockClear();
-
-      const { getByTestId } = await renderWithProviders();
-
-      const input = getByTestId("widget-bg-color-input");
-      await fireEvent.changeText(input, "#ABCDEF");
-
-      await waitFor(() => {
-        expect(requestClockWidgetUpdate).toHaveBeenCalled();
-      });
-    });
-
-    it("calls requestClockWidgetUpdate on opacity change", async () => {
-      const { requestClockWidgetUpdate } = jest.requireMock(
-        "../../../src/features/widget/services/widgetUpdater",
-      );
-      (requestClockWidgetUpdate as jest.Mock).mockClear();
-
-      const { getByTestId } = await renderWithProviders();
-
-      const input = getByTestId("widget-opacity-input");
-      await fireEvent.changeText(input, "50");
-
-      await waitFor(() => {
-        expect(requestClockWidgetUpdate).toHaveBeenCalled();
-      });
-    });
-
-    it("calls requestClockWidgetUpdate on switch toggle", async () => {
-      const { requestClockWidgetUpdate } = jest.requireMock(
-        "../../../src/features/widget/services/widgetUpdater",
-      );
-      (requestClockWidgetUpdate as jest.Mock).mockClear();
-
-      const { getByTestId } = await renderWithProviders();
-
-      const switchEl = getByTestId("widget-border-radius-switch");
-      await fireEvent(switchEl, "valueChange", false);
-
-      await waitFor(() => {
-        expect(requestClockWidgetUpdate).toHaveBeenCalled();
-      });
-    });
+    const { queryByText } = await render(
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <SettingsScreen />
+        </PaperProvider>
+      </JotaiProvider>,
+    );
+    expect(queryByText("auto")).toBeNull();
   });
 });

@@ -116,6 +116,61 @@ jest.mock("../../src/features/settings/screens/SettingsScreen", () => {
   return { SettingsScreen: () => <Text>Settings</Text> };
 });
 
+jest.mock("../../src/features/settings/screens/CycleConfigScreen", () => {
+  const { Text } = require("react-native");
+  return { CycleConfigScreen: () => <Text>CycleConfig</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/GeneralSettingsScreen", () => {
+  const { Text } = require("react-native");
+  return { GeneralSettingsScreen: () => <Text>GeneralSettings</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/TimezoneSettingsScreen", () => {
+  const { Text } = require("react-native");
+  return { TimezoneSettingsScreen: () => <Text>TimezoneSettings</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/AlarmDefaultsScreen", () => {
+  const { Text } = require("react-native");
+  return { AlarmDefaultsScreen: () => <Text>AlarmDefaults</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/CalendarSettingsScreen", () => {
+  const { Text } = require("react-native");
+  return { CalendarSettingsScreen: () => <Text>CalendarSettings</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/WidgetSettingsScreen", () => {
+  const { Text } = require("react-native");
+  return { WidgetSettingsScreen: () => <Text>WidgetSettings</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/BackupScreen", () => {
+  const { Text } = require("react-native");
+  return { BackupScreen: () => <Text>Backup</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/AboutScreen", () => {
+  const { Text } = require("react-native");
+  return { AboutScreen: () => <Text>About</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/LegalScreen", () => {
+  const { Text } = require("react-native");
+  return { LegalScreen: () => <Text>Legal</Text> };
+});
+
+jest.mock("../../src/features/settings/screens/LicensesScreen", () => {
+  const { Text } = require("react-native");
+  return { LicensesScreen: () => <Text>Licenses</Text> };
+});
+
+jest.mock("../../src/features/game2048/screens/Game2048Screen", () => {
+  const { Text } = require("react-native");
+  return { Game2048Screen: () => <Text>Game2048</Text> };
+});
+
 jest.mock("../../src/features/alarm/screens/AlarmEditScreen", () => {
   const { Text } = require("react-native");
   return { AlarmEditScreen: () => <Text>AlarmEdit</Text> };

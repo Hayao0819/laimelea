@@ -9,6 +9,10 @@ import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
+import {
+  resolvedStoreAtom,
+  game2048StoreAtom,
+} from "../../game2048/atoms/game2048Atoms";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { useSnackbar } from "../hooks/useSnackbar";
 
@@ -19,6 +23,8 @@ export function BackupScreen() {
   const setAlarms = useSetAtom(alarmsAtom);
   const sleepSessions = useAtomValue(sleepSessionsAtom);
   const setSleepSessions = useSetAtom(sleepSessionsAtom);
+  const game2048Store = useAtomValue(resolvedStoreAtom);
+  const setGame2048Store = useSetAtom(game2048StoreAtom);
   const platformServices = useAtomValue(platformServicesAtom);
   const {
     visible: snackbarVisible,
@@ -35,6 +41,7 @@ export function BackupScreen() {
         settings,
         alarms,
         sleepSessions,
+        game2048: game2048Store,
       });
       await platformServices.backup.backup(data);
       const now = Date.now();
@@ -47,6 +54,7 @@ export function BackupScreen() {
     settings,
     alarms,
     sleepSessions,
+    game2048Store,
     platformServices.backup,
     update,
     showSnackbar,
@@ -68,6 +76,7 @@ export function BackupScreen() {
       if (data.settings) setSettings(data.settings);
       if (data.alarms) setAlarms(data.alarms);
       if (data.sleepSessions) setSleepSessions(data.sleepSessions);
+      if (data.game2048) setGame2048Store(data.game2048);
       showSnackbar(t("settings.restoreSuccess"));
     } catch {
       showSnackbar(t("settings.restoreFailed"));
@@ -77,6 +86,7 @@ export function BackupScreen() {
     setSettings,
     setAlarms,
     setSleepSessions,
+    setGame2048Store,
     showSnackbar,
     t,
   ]);
