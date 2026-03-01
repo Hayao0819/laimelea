@@ -7,13 +7,11 @@ AI assistant guidance for Laimelea project.
 ### Setup & Validation
 
 - [Architecture](docs/architecture.md) - Full design doc, data models, implementation phases
-- [Validation Guide](docs/setup/validation.md) - **ALWAYS validate after .nix changes**
+- [Nix Environment](docs/setup/nix-environment.md) - Dev setup, validation, troubleshooting
 
 ### Guides
 
-- [Nix Dev Environment](docs/guides/nix-dev-environment.md) - `nix develop` setup
 - [Nix Language](docs/llm/nix-language.md) - Language quick reference
-- [Nix Troubleshooting](docs/troubleshooting/nix-common-issues.md) - Debug commands & fixes
 
 ## Essential Rules
 
