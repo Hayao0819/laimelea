@@ -279,6 +279,23 @@
     "signInWithGoogle": "Googleでサインイン",
     "accountAdded": "アカウント追加済み"
   },
+  "game2048": {
+    "score": "スコア",
+    "best": "ベスト",
+    "undo": "戻す",
+    "newGame": "新しいゲーム",
+    "boardSize": "盤面サイズ",
+    "gameOver": "ゲームオーバー！",
+    "youWin": "クリア！",
+    "keepGoing": "続ける",
+    "tryAgain": "もう一度",
+    "save": "保存",
+    "load": "読込",
+    "snapshots": "セーブデータ",
+    "noSnapshots": "セーブデータがありません",
+    "saveName": "セーブ名",
+    "title": "2048"
+  },
   "common": {
     "save": "保存",
     "cancel": "キャンセル",

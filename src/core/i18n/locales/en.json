@@ -279,6 +279,23 @@
     "signInWithGoogle": "Sign in with Google",
     "accountAdded": "Account added"
   },
+  "game2048": {
+    "score": "Score",
+    "best": "Best",
+    "undo": "Undo",
+    "newGame": "New Game",
+    "boardSize": "Board Size",
+    "gameOver": "Game Over!",
+    "youWin": "You Win!",
+    "keepGoing": "Keep Going",
+    "tryAgain": "Try Again",
+    "save": "Save",
+    "load": "Load",
+    "snapshots": "Saved Games",
+    "noSnapshots": "No saved games",
+    "saveName": "Save Name",
+    "title": "2048"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
