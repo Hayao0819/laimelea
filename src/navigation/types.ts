@@ -15,6 +15,17 @@ export type RootStackParamList = {
   BulkAlarm: undefined;
   EventDetail: { eventId: string };
   Settings: undefined;
+  SettingsCycleConfig: undefined;
+  SettingsGeneral: undefined;
+  SettingsTimezone: undefined;
+  SettingsAlarmDefaults: undefined;
+  SettingsCalendar: undefined;
+  SettingsWidget: undefined;
+  SettingsBackup: undefined;
+  SettingsAbout: undefined;
+  SettingsLegal: undefined;
+  SettingsLicenses: undefined;
+  Game2048: undefined;
   AlarmFiring: { alarmId: string };
   ManualSleepEntry: { sessionId?: string };
   DeskClock: undefined;
