@@ -13,6 +13,17 @@ export interface AlarmDefaults {
   volumeButtonBehavior: "snooze" | "dismiss" | "volume";
 }
 
+export interface WidgetSettings {
+  backgroundColor: string;
+  textColor: string;
+  secondaryTextColor: string;
+  accentColor: string;
+  opacity: number;
+  borderRadius: number;
+  showRealTime: boolean;
+  showNextAlarm: boolean;
+}
+
 export interface AppSettings {
   cycleConfig: CycleConfig;
   setupComplete: boolean;
@@ -32,6 +43,7 @@ export interface AppSettings {
   defaultEventReminderMin: number;
   visibleCalendarIds: string[];
   lastBackupTimestamp: number | null;
+  widgetSettings: WidgetSettings;
 }
 
 export const DEFAULT_ALARM_DEFAULTS: AlarmDefaults = {
@@ -41,6 +53,17 @@ export const DEFAULT_ALARM_DEFAULTS: AlarmDefaults = {
   snoozeMaxCount: 3,
   vibrationEnabled: true,
   volumeButtonBehavior: "snooze",
+};
+
+export const DEFAULT_WIDGET_SETTINGS: WidgetSettings = {
+  backgroundColor: "#1C1B1F",
+  textColor: "#E6E1E5",
+  secondaryTextColor: "#CAC4D0",
+  accentColor: "#D0BCFF",
+  opacity: 100,
+  borderRadius: 16,
+  showRealTime: true,
+  showNextAlarm: true,
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -64,4 +87,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultEventReminderMin: 15,
   visibleCalendarIds: [],
   lastBackupTimestamp: null,
+  widgetSettings: DEFAULT_WIDGET_SETTINGS,
 };
