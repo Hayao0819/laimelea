@@ -35,8 +35,10 @@ describe("GameOverlay", () => {
     isGameOver: false,
     hasWon: false,
     wonAcknowledged: false,
+    canUndo: false,
     onKeepGoing: jest.fn(),
     onTryAgain: jest.fn(),
+    onUndo: jest.fn(),
   };
 
   it("should not render when game is ongoing", async () => {
