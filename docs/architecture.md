@@ -92,18 +92,21 @@ devDependencies:
 | 4     | ナビゲーションシェル           | **完了** | Phase 1で実装済み（Bottom Tabs + Stack）                              |
 | 5     | 時計機能                       | **完了** | AnalogClock(SVG), DigitalClock, TimeToggle, useCurrentTime, 51テスト  |
 | 6     | アラーム基本機能               | **完了** | Notifeeスケジューラ, AlarmList/Edit/Firing画面, 73テスト              |
-| 7     | アラーム解除システム           | 未着手   |                                                                       |
-| 8     | 一括アラーム作成               | 未着手   |                                                                       |
-| 9     | タイマー機能                   | 未着手   |                                                                       |
-| 10    | プラットフォーム抽象化レイヤー | 未着手   | CalendarContract用Turbo Moduleの自前実装を含む                        |
-| 11    | カレンダー連携                 | 未着手   |                                                                       |
-| 12    | カレンダー予定連動アラーム     | 未着手   |                                                                       |
-| 13    | 設定画面                       | 未着手   |                                                                       |
-| 14    | 睡眠ログ・周期自動検出         | 未着手   |                                                                       |
-| 15    | ホーム画面ウィジェット         | 未着手   |                                                                       |
-| 16    | テスト・仕上げ                 | 未着手   |                                                                       |
-| 17    | カレンダーデザイン改善         | 未着手   | M3 Expressive対応、複数ビュー、タイムライン、アニメーション           |
-| 18    | Terraform GCPプロジェクト管理  | 未着手   | API有効化、OAuth設定、Nix統合、CI対応                                 |
+| 7     | アラーム解除システム           | **完了** | Strategy Pattern + Registry、Shake/Math/Simple解除                    |
+| 8     | 一括アラーム作成               | **完了** | BulkAlarmForm、BulkAlarmScreen、プレビュー付き                        |
+| 9     | タイマー機能                   | **完了** | CountdownTimer + Stopwatch、ドリフト補正、完了通知                    |
+| 10    | プラットフォーム抽象化レイヤー | **完了** | GMS/HMS/AOSP実装、CalendarContract Turbo Module自前実装               |
+| 11    | カレンダー連携                 | **完了** | Google Calendar API、CalendarScreen、DaySelector、EventDetailScreen   |
+| 12    | カレンダー予定連動アラーム     | **完了** | calendarAlarmSync、EventCardアラームボタン                            |
+| 13    | 設定画面                       | **完了** | 全設定1画面、バックアップ/復元（JSON serialize）                      |
+| 14    | 睡眠ログ・周期自動検出         | **完了** | cycleDetector、Health Connect、手動入力、SleepLogScreen               |
+| 15    | ホーム画面ウィジェット         | **完了** | ClockWidget、WidgetTaskHandler、設定/アラーム変更時更新               |
+| 16    | テスト・仕上げ                 | **完了** | 78 suites / 707 tests、a11yラベル27ファイル、E2Eテスト                |
+| 17    | カレンダーデザイン改善         | **完了** | MonthView/WeekView/AgendaView、CustomDayTimeline、NowIndicator       |
+| 18    | Terraform GCPプロジェクト管理  | **完了** | infra/ディレクトリ、react-native-config、.env管理                     |
+| -     | Google Drive Backup            | **完了** | GMS Drive appDataFolder API、drive.appdataスコープ                   |
+| -     | アプリアイコン/スプラッシュ    | **完了** | Adaptive Icon、Android 12+ SplashScreen API                          |
+| -     | デスククロック                 | **完了** | DeskClockScreen、FullscreenModule（keep-awake + immersive）           |
 
 ### Phase 1で作成済みのファイル
 

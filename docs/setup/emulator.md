@@ -150,21 +150,22 @@ groups | grep kvm
 
 ### `ANDROID_AVD_HOME` 関連エラー
 
-Nix 環境では `$HOME/.android/avd` がデフォルトの AVD 保存先。環境変数で変更可能:
+`nix develop` の shellHook が `ANDROID_USER_HOME` と `ANDROID_AVD_HOME` を自動設定するため、通常は手動設定不要。AVD が見つからない場合は環境変数を確認:
 
 ```bash
-export ANDROID_AVD_HOME="$HOME/.android/avd"
+echo $ANDROID_AVD_HOME
+# → ~/.android/avd (shellHook で設定済み)
 ```
 
 ### GPU レンダリングエラー
 
-エミュレータは SwiftShader（ソフトウェアレンダラー）を内蔵しており、ホストの GPU ドライバに依存せず動作する。ハードウェアアクセラレーションを試す場合は `-gpu host` を指定する。
+`nix develop` の shellHook が `emu()` ラッパー関数を定義しており、ホスト GPU ドライバのパススルーを自動処理する:
 
 ```bash
-# ハードウェアアクセラレーション (ホストの GPU ドライバが必要)
-emulator -avd Pixel_API_36 -gpu host
+# emu ラッパーを使用 (GPU パススルー自動設定)
+emu -avd Pixel_API_36
 
-# ソフトウェアレンダリング (確実に動作する)
+# ソフトウェアレンダリング (GPU パススルーが使えない環境)
 emulator -avd Pixel_API_36 -gpu swiftshader_indirect
 ```
 
