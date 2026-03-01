@@ -1,6 +1,7 @@
 import type {
   BoardSize,
   Direction,
+  Game2048Settings,
   Game2048Store,
   GameState,
 } from "./gameTypes";
@@ -48,6 +49,42 @@ export function spawnTile(
   const [row, col] = emptyCells[idx];
   newBoard[row][col] = random() < 0.9 ? 2 : 4;
   return newBoard;
+}
+
+export function spawnTileLucky(
+  board: number[][],
+  random: () => number = Math.random,
+): number[][] {
+  const emptyCells: [number, number][] = [];
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[r].length; c++) {
+      if (board[r][c] === 0) {
+        emptyCells.push([r, c]);
+      }
+    }
+  }
+
+  if (emptyCells.length === 0) return board;
+  if (emptyCells.length > 1) return spawnTile(board, random);
+
+  // Exactly one empty cell
+  const [row, col] = emptyCells[0];
+
+  const boardWith2 = board.map((r) => [...r]);
+  boardWith2[row][col] = 2;
+  const gameOverWith2 = !canMoveBoard(boardWith2);
+
+  const boardWith4 = board.map((r) => [...r]);
+  boardWith4[row][col] = 4;
+  const gameOverWith4 = !canMoveBoard(boardWith4);
+
+  // 2 causes game over but 4 allows continuation -> spawn 4
+  if (gameOverWith2 && !gameOverWith4) {
+    return boardWith4;
+  }
+
+  // Otherwise normal spawn
+  return spawnTile(board, random);
 }
 
 export function createNewGame(size: BoardSize): GameState {
@@ -122,6 +159,7 @@ function reverseRows(board: number[][]): number[][] {
 export function move(
   state: GameState,
   direction: Direction,
+  options?: { luckyMode?: boolean },
 ): { state: GameState; moved: boolean } {
   let board = state.board.map((row) => [...row]);
   let totalScore = 0;
@@ -163,7 +201,7 @@ export function move(
     return { state, moved: false };
   }
 
-  board = spawnTile(board);
+  board = options?.luckyMode ? spawnTileLucky(board) : spawnTile(board);
 
   const newScore = state.score + totalScore;
 
@@ -190,8 +228,7 @@ export function move(
   return { state: newState, moved: true };
 }
 
-export function canMove(state: GameState): boolean {
-  const { board } = state;
+export function canMoveBoard(board: number[][]): boolean {
   const size = board.length;
 
   for (let r = 0; r < size; r++) {
@@ -214,6 +251,10 @@ export function canMove(state: GameState): boolean {
   return false;
 }
 
+export function canMove(state: GameState): boolean {
+  return canMoveBoard(state.board);
+}
+
 export function hasReachedWinTarget(state: GameState): boolean {
   const target = getWinTarget(state.boardSize);
   for (const row of state.board) {
@@ -226,6 +267,19 @@ export function hasReachedWinTarget(state: GameState): boolean {
   return false;
 }
 
+export function generateSnapshotName(
+  state: GameState,
+  isAutoSave: boolean,
+  index: number,
+): string {
+  const prefix = isAutoSave ? "Game Over" : "Save";
+  return `${prefix} #${index} · ${state.score}pt · ${state.boardSize}×${state.boardSize}`;
+}
+
+export function createDefaultSettings(): Game2048Settings {
+  return { luckyMode: false };
+}
+
 export function createDefaultStore(): Game2048Store {
   return {
     currentGame: createNewGame(4),
@@ -233,5 +287,8 @@ export function createDefaultStore(): Game2048Store {
     history: [],
     snapshots: [],
     unlockedAt: null,
+    perSizeGames: {},
+    settings: createDefaultSettings(),
+    activeSnapshotId: null,
   };
 }

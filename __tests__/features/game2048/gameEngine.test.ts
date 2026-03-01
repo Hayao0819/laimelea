@@ -2,12 +2,16 @@ import {
   getWinTarget,
   createEmptyBoard,
   spawnTile,
+  spawnTileLucky,
   createNewGame,
   slideRow,
   move,
   canMove,
+  canMoveBoard,
   hasReachedWinTarget,
   createDefaultStore,
+  createDefaultSettings,
+  generateSnapshotName,
   MAX_HISTORY_SIZE,
 } from "../../../src/features/game2048/logic/gameEngine";
 import type {
@@ -760,6 +764,349 @@ describe("createDefaultStore", () => {
   it("has zero best scores for all sizes", () => {
     const store = createDefaultStore();
     expect(store.bestScores).toEqual({ 3: 0, 4: 0, 5: 0, 6: 0 });
+  });
+});
+
+describe("canMoveBoard", () => {
+  it("returns true when there are empty cells", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 0, 4096],
+      [8192, 2, 4, 8],
+    ];
+    expect(canMoveBoard(board)).toBe(true);
+  });
+
+  it("returns true when adjacent equal tiles exist horizontally", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4096],
+      [8192, 2, 4, 4],
+    ];
+    expect(canMoveBoard(board)).toBe(true);
+  });
+
+  it("returns true when adjacent equal tiles exist vertically", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4096],
+      [8192, 2, 2048, 8],
+    ];
+    expect(canMoveBoard(board)).toBe(true);
+  });
+
+  it("returns false when board is full and no adjacent equal tiles", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4096],
+      [8192, 2, 4, 8],
+    ];
+    expect(canMoveBoard(board)).toBe(false);
+  });
+
+  it("returns true for an empty board", () => {
+    expect(canMoveBoard(createEmptyBoard(4))).toBe(true);
+  });
+
+  it("works with size 3 board", () => {
+    const board = [
+      [2, 4, 8],
+      [16, 32, 64],
+      [128, 256, 512],
+    ];
+    expect(canMoveBoard(board)).toBe(false);
+  });
+
+  it("is consistent with canMove for a GameState", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4096],
+      [8192, 2, 4, 8],
+    ];
+    const state = makeState(board);
+    expect(canMoveBoard(board)).toBe(canMove(state));
+  });
+});
+
+describe("spawnTileLucky", () => {
+  it("delegates to spawnTile when multiple empty cells exist", () => {
+    const board = [
+      [2, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    // random=0.0 -> index 0 -> cell (0,1), random=0.5 -> value 2
+    const random = deterministicRandom([0.0, 0.5]);
+    const result = spawnTileLucky(board, random);
+    expect(result[0][1]).toBe(2);
+  });
+
+  it("spawns 4 when only one empty cell and 2 causes game over but 4 allows continuation", () => {
+    // Board where last cell at (3,3) is empty
+    // With 2 at (3,3): no adjacent matches -> game over
+    // With 4 at (3,3): 4 matches with (2,3)=4 -> can continue
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4],
+      [8192, 2, 8, 0],
+    ];
+    const result = spawnTileLucky(board);
+    expect(result[3][3]).toBe(4);
+  });
+
+  it("returns board unchanged when no empty cells", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4096],
+      [8192, 2, 4, 8],
+    ];
+    const result = spawnTileLucky(board);
+    expect(result).toBe(board);
+  });
+
+  it("uses normal spawn when both 2 and 4 cause game over", () => {
+    // Board where last cell is empty, and no adjacent equal tiles
+    // regardless of whether 2 or 4 is placed
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4096],
+      [8192, 16, 32, 0],
+    ];
+    // random=0.0 -> index 0 -> cell (3,3), random=0.5 -> value 2
+    const random = deterministicRandom([0.0, 0.5]);
+    const result = spawnTileLucky(board, random);
+    // Normal spawn: 2 (since 0.5 < 0.9)
+    expect(result[3][3]).toBe(2);
+  });
+
+  it("uses normal spawn when both 2 and 4 allow continuation", () => {
+    // One empty cell at (3,3).
+    // (2,3)=4 so placing 4 matches vertically. (3,2)=2 so placing 2 matches horizontally.
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4],
+      [8192, 16, 2, 0],
+    ];
+    // With 2 at (3,3): (3,2)=2 matches. Can continue.
+    // With 4 at (3,3): (2,3)=4 matches vertically. Can continue.
+    // Neither triggers lucky mode, so normal spawn.
+    const random = deterministicRandom([0.0, 0.5]);
+    const result = spawnTileLucky(board, random);
+    // Normal spawn with random=0.5 (<0.9) -> value 2
+    expect(result[3][3]).toBe(2);
+  });
+
+  it("does not mutate the original board", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4],
+      [8192, 2, 8, 0],
+    ];
+    const originalBoard = board.map((r) => [...r]);
+    spawnTileLucky(board);
+    expect(board).toEqual(originalBoard);
+  });
+});
+
+describe("move with luckyMode", () => {
+  let mathRandomSpy: jest.SpyInstance;
+
+  afterEach(() => {
+    if (mathRandomSpy) {
+      mathRandomSpy.mockRestore();
+    }
+  });
+
+  it("spawns 4 with luckyMode when last cell and 2 causes game over but 4 allows continuation", () => {
+    mathRandomSpy = jest.spyOn(Math, "random").mockReturnValue(0.0);
+
+    // After move left, row 3 becomes [4, 128, 256, 0] with one empty cell
+    // Actually let me construct this more carefully.
+    // We need a board that after one move has exactly 1 empty cell,
+    // and placing 2 in that cell creates game over but 4 allows continuation.
+
+    // Build a nearly-full board where sliding left merges in row 0
+    // and after merge + slide, exactly 1 cell is empty.
+    // Row 0: [2, 2, 8, 16] -> left -> [4, 8, 16, 0], one empty at (0,3)
+    // Other rows are full with no merges possible
+    // With 2 at (0,3): [4, 8, 16, 2]. Check adjacent: (0,2)=16, (1,3)=256. No match.
+    // With 4 at (0,3): [4, 8, 16, 4]. Check adjacent: (0,2)=16, (1,3)=256. No match.
+    // Hmm, both game over. Need the spawned cell to have a neighbor with value 4.
+
+    // Row 0: [2, 2, 4, 16] -> left -> [4, 4, 16, 0]. Two 4s adjacent! They'd merge on next move.
+    // Actually after slideRow([2,2,4,16]) = [4,4,16,0], so board[0] = [4,4,16,0]
+    // With 2 at (0,3): [4, 4, 16, 2]. Row has (0,0)=4,(0,1)=4 adjacent -> can move. Not game over.
+    // This won't trigger lucky mode.
+
+    // Let me think differently. We need the board AFTER the move to have exactly 1 empty cell,
+    // and placing 2 there = game over, 4 = can continue.
+    // This requires precise construction.
+
+    // Easier approach: construct a board with 1 empty cell where a merge fills everything
+    // except leaving 1 cell. Use a 3x3 board for simplicity.
+
+    // 3x3 board:
+    // [2, 2, 8]    -> left -> [4, 8, 0]  (one merge in row 0, row becomes [4,8,0])
+    // [16, 32, 64]           [16, 32, 64] (no change)
+    // [128, 256, 4]          [128, 256, 4] (no change)
+    // After slide: board[0] = [4, 8, 0], one empty cell at (0,2)
+    // With 2 at (0,2): [4, 8, 2], row 0 no adjacent matches.
+    //   Col 2: (0,2)=2, (1,2)=64 no match. Game over? Check all:
+    //   (0,0)=4,(0,1)=8 no. (0,1)=8,(0,2)=2 no. (1,0)=16,(1,1)=32 no. (1,1)=32,(1,2)=64 no.
+    //   (2,0)=128,(2,1)=256 no. (2,1)=256,(2,2)=4 no.
+    //   Vertical: (0,0)=4,(1,0)=16 no. (1,0)=16,(2,0)=128 no. (0,1)=8,(1,1)=32 no.
+    //   (1,1)=32,(2,1)=256 no. (0,2)=2,(1,2)=64 no. (1,2)=64,(2,2)=4 no.
+    //   -> Game over!
+    // With 4 at (0,2): [4, 8, 4], (0,2)=4,(2,2)=4? No, not adjacent.
+    //   Actually (1,2)=64, (0,2)=4. Hmm, (2,2)=4. (1,2)=64, (2,2)=4 -> no match.
+    //   Row: 4, 8, 4 -> (0,0)=4, (0,2)=4 not adjacent. No move possible. Still game over.
+    //   Hmm, need different values.
+
+    // Let me try: place 4 at (2,2) so that (0,2)=4 matches (1,2) or adjust.
+    // 3x3:
+    // [2, 2, 8]    -> left -> [4, 8, 0]
+    // [16, 32, 64]
+    // [128, 256, 8]
+    // With 2 at (0,2): 4,8,2 / 16,32,64 / 128,256,8 -> no adjacent equals. Game over.
+    // With 4 at (0,2): 4,8,4 / 16,32,64 / 128,256,8 -> no adjacent 4s (0,0)=4 not adj to (0,2).
+    // Still game over. Need the 4 to be adjacent to something.
+
+    // [2, 2, 8]    -> left -> [4, 8, 0]
+    // [16, 32, 4]
+    // [128, 256, 8]
+    // With 2 at (0,2): [4,8,2], (1,2)=4, no match with 2. All unique neighbors. Game over.
+    // With 4 at (0,2): [4,8,4], (0,2)=4, (1,2)=4 -> vertical match! Can continue!
+    // This works!
+
+    const state = makeState(
+      [
+        [2, 2, 8],
+        [16, 32, 4],
+        [128, 256, 8],
+      ],
+      { boardSize: 3 },
+    );
+    const result = move(state, "left", { luckyMode: true });
+    expect(result.moved).toBe(true);
+    // Lucky mode should spawn 4 at (0,2) since 2 -> game over, 4 -> continuation
+    expect(result.state.board[0][2]).toBe(4);
+    expect(result.state.isGameOver).toBe(false);
+  });
+
+  it("uses normal spawn without luckyMode option", () => {
+    mathRandomSpy = jest.spyOn(Math, "random").mockReturnValue(0.0);
+
+    const state = makeState(
+      [
+        [2, 2, 8],
+        [16, 32, 4],
+        [128, 256, 8],
+      ],
+      { boardSize: 3 },
+    );
+    const result = move(state, "left");
+    expect(result.moved).toBe(true);
+    // Without lucky mode, normal spawn: random=0.0 -> value 2
+    expect(result.state.board[0][2]).toBe(2);
+    expect(result.state.isGameOver).toBe(true);
+  });
+
+  it("uses normal spawn with luckyMode=false", () => {
+    mathRandomSpy = jest.spyOn(Math, "random").mockReturnValue(0.0);
+
+    const state = makeState(
+      [
+        [2, 2, 8],
+        [16, 32, 4],
+        [128, 256, 8],
+      ],
+      { boardSize: 3 },
+    );
+    const result = move(state, "left", { luckyMode: false });
+    expect(result.moved).toBe(true);
+    expect(result.state.board[0][2]).toBe(2);
+    expect(result.state.isGameOver).toBe(true);
+  });
+});
+
+describe("generateSnapshotName", () => {
+  it("generates auto-save name with Game Over prefix", () => {
+    const state = makeState(createEmptyBoard(4), { score: 1234 });
+    const name = generateSnapshotName(state, true, 1);
+    expect(name).toBe("Game Over #1 · 1234pt · 4×4");
+  });
+
+  it("generates manual save name with Save prefix", () => {
+    const state = makeState(createEmptyBoard(4), { score: 1234 });
+    const name = generateSnapshotName(state, false, 1);
+    expect(name).toBe("Save #1 · 1234pt · 4×4");
+  });
+
+  it("includes correct index number", () => {
+    const state = makeState(createEmptyBoard(4), { score: 500 });
+    expect(generateSnapshotName(state, false, 5)).toBe("Save #5 · 500pt · 4×4");
+    expect(generateSnapshotName(state, true, 3)).toBe(
+      "Game Over #3 · 500pt · 4×4",
+    );
+  });
+
+  it("reflects different board sizes", () => {
+    const state3 = makeState(
+      [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+      ],
+      { boardSize: 3, score: 100 },
+    );
+    expect(generateSnapshotName(state3, false, 1)).toBe(
+      "Save #1 · 100pt · 3×3",
+    );
+
+    const state6 = makeState(createEmptyBoard(6), { boardSize: 6, score: 0 });
+    expect(generateSnapshotName(state6, true, 2)).toBe(
+      "Game Over #2 · 0pt · 6×6",
+    );
+  });
+
+  it("handles zero score", () => {
+    const state = makeState(createEmptyBoard(4), { score: 0 });
+    expect(generateSnapshotName(state, false, 1)).toBe("Save #1 · 0pt · 4×4");
+  });
+});
+
+describe("createDefaultSettings", () => {
+  it("returns luckyMode=false", () => {
+    const settings = createDefaultSettings();
+    expect(settings).toEqual({ luckyMode: false });
+  });
+});
+
+describe("createDefaultStore new fields", () => {
+  it("has empty perSizeGames", () => {
+    const store = createDefaultStore();
+    expect(store.perSizeGames).toEqual({});
+  });
+
+  it("has default settings with luckyMode=false", () => {
+    const store = createDefaultStore();
+    expect(store.settings).toEqual({ luckyMode: false });
+  });
+
+  it("has null activeSnapshotId", () => {
+    const store = createDefaultStore();
+    expect(store.activeSnapshotId).toBeNull();
   });
 });
 

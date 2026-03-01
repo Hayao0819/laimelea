@@ -20,10 +20,19 @@ export interface GameSnapshot {
   parentSnapshotId: string | null;
 }
 
+export interface Game2048Settings {
+  luckyMode: boolean;
+}
+
 export interface Game2048Store {
   currentGame: GameState;
   bestScores: Record<BoardSize, number>;
   history: GameState[];
   snapshots: GameSnapshot[];
   unlockedAt: number | null;
+  perSizeGames: Partial<
+    Record<BoardSize, { game: GameState; history: GameState[] }>
+  >;
+  settings: Game2048Settings;
+  activeSnapshotId: string | null;
 }

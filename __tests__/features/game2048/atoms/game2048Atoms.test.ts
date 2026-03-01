@@ -10,6 +10,13 @@ import {
   pushHistoryAtom,
   undoAtom,
   newGameAtom,
+  settingsAtom,
+  hasGameStartedAtom,
+  activeSnapshotIdAtom,
+  updateSettingsAtom,
+  switchBoardSizeAtom,
+  saveSnapshotAtom,
+  loadSnapshotAtom,
 } from "../../../../src/features/game2048/atoms/game2048Atoms";
 import {
   createDefaultStore,
@@ -18,6 +25,7 @@ import {
 import type {
   BoardSize,
   Game2048Store,
+  GameSnapshot,
   GameState,
 } from "../../../../src/features/game2048/logic/gameTypes";
 
@@ -356,6 +364,352 @@ describe("game2048Atoms", () => {
       store.set(newGameAtom, 3);
 
       expect(store.get(snapshotsAtom)).toEqual(snapshots);
+    });
+
+    it("should reset activeSnapshotId to null", () => {
+      const store = createInitializedStore({
+        activeSnapshotId: "some-snapshot-id",
+      });
+
+      store.set(newGameAtom, 4);
+
+      expect(store.get(activeSnapshotIdAtom)).toBeNull();
+    });
+  });
+
+  describe("settingsAtom", () => {
+    it("should return default settings", () => {
+      const store = createInitializedStore();
+      expect(store.get(settingsAtom)).toEqual({ luckyMode: false });
+    });
+
+    it("should return stored settings", () => {
+      const store = createInitializedStore({
+        settings: { luckyMode: true },
+      });
+      expect(store.get(settingsAtom)).toEqual({ luckyMode: true });
+    });
+  });
+
+  describe("hasGameStartedAtom", () => {
+    it("should be false when moveCount is 0", () => {
+      const store = createInitializedStore({
+        currentGame: makeGameState({ moveCount: 0 }),
+      });
+      expect(store.get(hasGameStartedAtom)).toBe(false);
+    });
+
+    it("should be true when moveCount > 0", () => {
+      const store = createInitializedStore({
+        currentGame: makeGameState({ moveCount: 1 }),
+      });
+      expect(store.get(hasGameStartedAtom)).toBe(true);
+    });
+
+    it("should be true when moveCount is large", () => {
+      const store = createInitializedStore({
+        currentGame: makeGameState({ moveCount: 100 }),
+      });
+      expect(store.get(hasGameStartedAtom)).toBe(true);
+    });
+  });
+
+  describe("activeSnapshotIdAtom", () => {
+    it("should be null by default", () => {
+      const store = createInitializedStore();
+      expect(store.get(activeSnapshotIdAtom)).toBeNull();
+    });
+
+    it("should return stored activeSnapshotId", () => {
+      const store = createInitializedStore({
+        activeSnapshotId: "snap-123",
+      });
+      expect(store.get(activeSnapshotIdAtom)).toBe("snap-123");
+    });
+  });
+
+  describe("updateSettingsAtom", () => {
+    it("should update luckyMode to true", () => {
+      const store = createInitializedStore();
+      expect(store.get(settingsAtom).luckyMode).toBe(false);
+
+      store.set(updateSettingsAtom, { luckyMode: true });
+
+      expect(store.get(settingsAtom).luckyMode).toBe(true);
+    });
+
+    it("should update luckyMode back to false", () => {
+      const store = createInitializedStore({
+        settings: { luckyMode: true },
+      });
+
+      store.set(updateSettingsAtom, { luckyMode: false });
+
+      expect(store.get(settingsAtom).luckyMode).toBe(false);
+    });
+
+    it("should not affect other store fields", () => {
+      const store = createInitializedStore({
+        bestScores: { 3: 100, 4: 200, 5: 0, 6: 0 },
+      });
+
+      store.set(updateSettingsAtom, { luckyMode: true });
+
+      expect(store.get(bestScoresAtom)).toEqual({
+        3: 100,
+        4: 200,
+        5: 0,
+        6: 0,
+      });
+    });
+  });
+
+  describe("switchBoardSizeAtom", () => {
+    it("should save current game to perSizeGames and create new game for new size", () => {
+      const game4 = makeGameState({ score: 42, moveCount: 5, boardSize: 4 });
+      const history4 = [makeGameState({ score: 10, moveCount: 1 })];
+      const store = createInitializedStore({
+        currentGame: game4,
+        history: history4,
+      });
+
+      store.set(switchBoardSizeAtom, 5);
+
+      const resolved = store.get(resolvedStoreAtom);
+      // New game should be size 5
+      expect(resolved.currentGame.boardSize).toBe(5);
+      expect(resolved.currentGame.score).toBe(0);
+      expect(resolved.currentGame.moveCount).toBe(0);
+      // History should be empty for new game
+      expect(resolved.history).toEqual([]);
+      // Previous game should be saved in perSizeGames
+      expect(resolved.perSizeGames[4]).toBeDefined();
+      expect(resolved.perSizeGames[4]!.game).toEqual(game4);
+      expect(resolved.perSizeGames[4]!.history).toEqual(history4);
+    });
+
+    it("should restore saved game when switching back to a previous size", () => {
+      const game4 = makeGameState({ score: 42, moveCount: 5, boardSize: 4 });
+      const history4 = [makeGameState({ score: 10, moveCount: 1 })];
+      const store = createInitializedStore({
+        currentGame: game4,
+        history: history4,
+      });
+
+      // Switch to 5
+      store.set(switchBoardSizeAtom, 5);
+      // Switch back to 4
+      store.set(switchBoardSizeAtom, 4);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.currentGame).toEqual(game4);
+      expect(resolved.history).toEqual(history4);
+      // Size 4 should no longer be in perSizeGames (loaded out)
+      expect(resolved.perSizeGames[4]).toBeUndefined();
+      // Size 5 game should be saved
+      expect(resolved.perSizeGames[5]).toBeDefined();
+    });
+
+    it("should do nothing when switching to the same size", () => {
+      const game4 = makeGameState({ score: 42, moveCount: 5, boardSize: 4 });
+      const store = createInitializedStore({
+        currentGame: game4,
+        history: [],
+      });
+
+      store.set(switchBoardSizeAtom, 4);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.currentGame).toEqual(game4);
+      expect(resolved.perSizeGames).toEqual({});
+    });
+
+    it("should reset activeSnapshotId to null", () => {
+      const store = createInitializedStore({
+        activeSnapshotId: "snap-123",
+      });
+
+      store.set(switchBoardSizeAtom, 5);
+
+      expect(store.get(activeSnapshotIdAtom)).toBeNull();
+    });
+
+    it("should preserve bestScores and snapshots when switching", () => {
+      const scores = { 3: 100, 4: 500, 5: 200, 6: 0 } as Record<
+        BoardSize,
+        number
+      >;
+      const snapshots: GameSnapshot[] = [
+        {
+          id: "s1",
+          name: "Save 1",
+          state: makeGameState(),
+          timestamp: 1000,
+          parentSnapshotId: null,
+        },
+      ];
+      const store = createInitializedStore({
+        bestScores: scores,
+        snapshots,
+      });
+
+      store.set(switchBoardSizeAtom, 5);
+
+      expect(store.get(bestScoresAtom)).toEqual(scores);
+      expect(store.get(snapshotsAtom)).toEqual(snapshots);
+    });
+  });
+
+  describe("saveSnapshotAtom", () => {
+    it("should create a manual save snapshot with correct name", () => {
+      const game = makeGameState({ score: 100, boardSize: 4 });
+      const store = createInitializedStore({ currentGame: game });
+
+      store.set(saveSnapshotAtom, false);
+
+      const snapshots = store.get(snapshotsAtom);
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].name).toBe("Save #1 · 100pt · 4×4");
+      expect(snapshots[0].state).toEqual(game);
+    });
+
+    it("should create an auto-save snapshot with Game Over prefix", () => {
+      const game = makeGameState({
+        score: 500,
+        boardSize: 4,
+        isGameOver: true,
+      });
+      const store = createInitializedStore({ currentGame: game });
+
+      store.set(saveSnapshotAtom, true);
+
+      const snapshots = store.get(snapshotsAtom);
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].name).toBe("Game Over #1 · 500pt · 4×4");
+    });
+
+    it("should increment index for same type of snapshots", () => {
+      const game = makeGameState({ score: 200, boardSize: 4 });
+      const store = createInitializedStore({
+        currentGame: game,
+        snapshots: [
+          {
+            id: "existing-1",
+            name: "Save #1 · 100pt · 4×4",
+            state: makeGameState({ score: 100 }),
+            timestamp: 1000,
+            parentSnapshotId: null,
+          },
+        ],
+      });
+
+      store.set(saveSnapshotAtom, false);
+
+      const snapshots = store.get(snapshotsAtom);
+      expect(snapshots).toHaveLength(2);
+      expect(snapshots[1].name).toBe("Save #2 · 200pt · 4×4");
+    });
+
+    it("should set parentSnapshotId to current activeSnapshotId", () => {
+      const store = createInitializedStore({
+        activeSnapshotId: "parent-snap",
+      });
+
+      store.set(saveSnapshotAtom, false);
+
+      const snapshots = store.get(snapshotsAtom);
+      expect(snapshots[0].parentSnapshotId).toBe("parent-snap");
+    });
+
+    it("should set parentSnapshotId to null when no active snapshot", () => {
+      const store = createInitializedStore({
+        activeSnapshotId: null,
+      });
+
+      store.set(saveSnapshotAtom, false);
+
+      const snapshots = store.get(snapshotsAtom);
+      expect(snapshots[0].parentSnapshotId).toBeNull();
+    });
+
+    it("should update activeSnapshotId to the new snapshot ID", () => {
+      const store = createInitializedStore();
+
+      store.set(saveSnapshotAtom, false);
+
+      const snapshots = store.get(snapshotsAtom);
+      const newId = snapshots[0].id;
+      expect(store.get(activeSnapshotIdAtom)).toBe(newId);
+    });
+  });
+
+  describe("loadSnapshotAtom", () => {
+    it("should restore snapshot state as currentGame", () => {
+      const savedGame = makeGameState({ score: 999, moveCount: 50 });
+      const snapshot: GameSnapshot = {
+        id: "snap-load",
+        name: "Save #1 · 999pt · 4×4",
+        state: savedGame,
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore();
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      const game = store.get(currentGameAtom);
+      expect(game).toEqual(savedGame);
+    });
+
+    it("should clear history when loading a snapshot", () => {
+      const snapshot: GameSnapshot = {
+        id: "snap-load",
+        name: "Save #1",
+        state: makeGameState(),
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore({
+        history: [makeGameState({ score: 10 }), makeGameState({ score: 20 })],
+      });
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      expect(store.get(resolvedStoreAtom).history).toEqual([]);
+    });
+
+    it("should set activeSnapshotId to the loaded snapshot ID", () => {
+      const snapshot: GameSnapshot = {
+        id: "snap-load-42",
+        name: "Save #1",
+        state: makeGameState(),
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore();
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      expect(store.get(activeSnapshotIdAtom)).toBe("snap-load-42");
+    });
+
+    it("should not affect bestScores or other store fields", () => {
+      const scores = { 3: 100, 4: 500, 5: 200, 6: 0 } as Record<
+        BoardSize,
+        number
+      >;
+      const snapshot: GameSnapshot = {
+        id: "snap-1",
+        name: "Save #1",
+        state: makeGameState(),
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore({ bestScores: scores });
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      expect(store.get(bestScoresAtom)).toEqual(scores);
     });
   });
 });
