@@ -22,6 +22,36 @@ const accountManager = createAccountManager();
 
 const REMINDER_OPTIONS = [0, 5, 10, 15, 30, 60];
 
+function AccountListItem({
+  email,
+  onRemove,
+  accessibilityLabel,
+}: {
+  email: string;
+  onRemove: (email: string) => void;
+  accessibilityLabel: string;
+}) {
+  const handlePress = useCallback(() => onRemove(email), [onRemove, email]);
+  const renderRight = useCallback(
+    () => (
+      <IconButton
+        icon="close"
+        onPress={handlePress}
+        testID={`remove-account-${email}`}
+        accessibilityLabel={accessibilityLabel}
+      />
+    ),
+    [handlePress, email, accessibilityLabel],
+  );
+  return (
+    <List.Item
+      title={email}
+      right={renderRight}
+      testID={`account-item-${email}`}
+    />
+  );
+}
+
 const dayMap = { "0": 0, "1": 1, "6": 6 } as const;
 
 function cycleNext<T>(options: T[], current: T): T {
@@ -76,6 +106,18 @@ export function CalendarSettingsScreen() {
     showSnackbar(t("settings.accountRemoved"));
   }, [update, showSnackbar, t]);
 
+  const renderRemoveLegacy = useCallback(
+    () => (
+      <IconButton
+        icon="close"
+        onPress={handleRemoveLegacyAccount}
+        testID="remove-legacy-account-button"
+        accessibilityLabel={t("settings.removeAccount")}
+      />
+    ),
+    [handleRemoveLegacyAccount, t],
+  );
+
   const toggleCalendarVisibility = useCallback(
     (calId: string) => {
       const current = settings.visibleCalendarIds;
@@ -101,30 +143,16 @@ export function CalendarSettingsScreen() {
             <List.Item
               title={settings.accountEmail!}
               description={t("settings.legacyAccount")}
-              right={() => (
-                <IconButton
-                  icon="close"
-                  onPress={handleRemoveLegacyAccount}
-                  testID="remove-legacy-account-button"
-                  accessibilityLabel={t("settings.removeAccount")}
-                />
-              )}
+              right={renderRemoveLegacy}
               testID="legacy-account-item"
             />
           )}
           {settings.accounts.map((account) => (
-            <List.Item
+            <AccountListItem
               key={account.email}
-              title={account.email}
-              right={() => (
-                <IconButton
-                  icon="close"
-                  onPress={() => handleRemoveAccount(account.email)}
-                  testID={`remove-account-${account.email}`}
-                  accessibilityLabel={t("settings.removeAccount")}
-                />
-              )}
-              testID={`account-item-${account.email}`}
+              email={account.email}
+              onRemove={handleRemoveAccount}
+              accessibilityLabel={t("settings.removeAccount")}
             />
           ))}
           <Button

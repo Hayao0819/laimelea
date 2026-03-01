@@ -99,56 +99,48 @@ export function ClockWidget({
   const showRealTime = widgetSize !== "small" && ws.showRealTime;
   const showNextAlarm = widgetSize !== "small" && ws.showNextAlarm;
 
+  const containerStyle = {
+    height: "match_parent" as const,
+    width: "match_parent" as const,
+    flexDirection: "column" as const,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    backgroundColor: applyOpacity(ws.backgroundColor, ws.opacity),
+    borderRadius: ws.borderRadius,
+    padding: sizeConfig.padding,
+  };
+  const timeStyle = {
+    fontSize: sizeConfig.customTimeFontSize,
+    fontWeight: "bold" as const,
+    color: toColor(ws.textColor),
+  };
+  const dayStyle = {
+    fontSize: sizeConfig.dayFontSize,
+    color: toColor(ws.secondaryTextColor),
+    marginTop: 2,
+  };
+  const realTimeStyle = {
+    fontSize: sizeConfig.realTimeFontSize,
+    color: toColor(ws.secondaryTextColor),
+    marginTop: 4,
+  };
+  const alarmStyle = {
+    fontSize: sizeConfig.alarmFontSize,
+    color: toColor(ws.accentColor),
+    marginTop: 6,
+  };
+
   return (
-    <FlexWidget
-      style={{
-        height: "match_parent",
-        width: "match_parent",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: applyOpacity(ws.backgroundColor, ws.opacity),
-        borderRadius: ws.borderRadius,
-        padding: sizeConfig.padding,
-      }}
-      clickAction="OPEN_APP"
-    >
-      <TextWidget
-        text={customTimeStr}
-        style={{
-          fontSize: sizeConfig.customTimeFontSize,
-          fontWeight: "bold",
-          color: toColor(ws.textColor),
-        }}
-      />
-      {showDay ? (
-        <TextWidget
-          text={dayStr}
-          style={{
-            fontSize: sizeConfig.dayFontSize,
-            color: toColor(ws.secondaryTextColor),
-            marginTop: 2,
-          }}
-        />
-      ) : null}
+    <FlexWidget style={containerStyle} clickAction="OPEN_APP">
+      <TextWidget text={customTimeStr} style={timeStyle} />
+      {showDay ? <TextWidget text={dayStr} style={dayStyle} /> : null}
       {showRealTime ? (
-        <TextWidget
-          text={realTimeStr}
-          style={{
-            fontSize: sizeConfig.realTimeFontSize,
-            color: toColor(ws.secondaryTextColor),
-            marginTop: 4,
-          }}
-        />
+        <TextWidget text={realTimeStr} style={realTimeStyle} />
       ) : null}
       {showNextAlarm && nextAlarm ? (
         <TextWidget
           text={formatNextAlarmText(nextAlarm, cycleConfig)}
-          style={{
-            fontSize: sizeConfig.alarmFontSize,
-            color: toColor(ws.accentColor),
-            marginTop: 6,
-          }}
+          style={alarmStyle}
           maxLines={1}
           truncate="END"
         />
