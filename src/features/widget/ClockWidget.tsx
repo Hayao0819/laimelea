@@ -1,5 +1,6 @@
 import React from "react";
 import { FlexWidget, TextWidget } from "react-native-android-widget";
+import type { ColorProp } from "react-native-android-widget/lib/typescript/widgets/utils/style.props";
 import type { CycleConfig, CustomTimeValue } from "../../models/CustomTime";
 import type { Alarm } from "../../models/Alarm";
 import type { WidgetSettings } from "../../models/Settings";
@@ -20,11 +21,15 @@ export interface ClockWidgetData {
   widgetSize?: WidgetSize;
 }
 
-function applyOpacity(hexColor: string, opacity: number): string {
+function applyOpacity(hexColor: string, opacity: number): ColorProp {
   const clamped = Math.max(0, Math.min(100, opacity));
   const alpha = Math.round((clamped / 100) * 255);
   const alphaHex = alpha.toString(16).padStart(2, "0").toUpperCase();
-  return `${hexColor}${alphaHex}`;
+  return `${hexColor}${alphaHex}` as ColorProp;
+}
+
+function toColor(hex: string): ColorProp {
+  return hex as ColorProp;
 }
 
 const SIZE_CONFIG = {
@@ -95,7 +100,7 @@ export function ClockWidget({
         style={{
           fontSize: sizeConfig.customTimeFontSize,
           fontWeight: "bold",
-          color: ws.textColor,
+          color: toColor(ws.textColor),
         }}
       />
       {showDay ? (
@@ -103,7 +108,7 @@ export function ClockWidget({
           text={dayStr}
           style={{
             fontSize: sizeConfig.dayFontSize,
-            color: ws.secondaryTextColor,
+            color: toColor(ws.secondaryTextColor),
             marginTop: 2,
           }}
         />
@@ -113,7 +118,7 @@ export function ClockWidget({
           text={realTimeStr}
           style={{
             fontSize: sizeConfig.realTimeFontSize,
-            color: ws.secondaryTextColor,
+            color: toColor(ws.secondaryTextColor),
             marginTop: 4,
           }}
         />
@@ -123,7 +128,7 @@ export function ClockWidget({
           text={formatNextAlarmText(nextAlarm, cycleConfig)}
           style={{
             fontSize: sizeConfig.alarmFontSize,
-            color: ws.accentColor,
+            color: toColor(ws.accentColor),
             marginTop: 6,
           }}
           maxLines={1}
