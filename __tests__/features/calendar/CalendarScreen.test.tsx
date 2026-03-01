@@ -495,7 +495,7 @@ describe("CalendarScreen", () => {
         fireEvent.press(getByTestId("event-create-alarm-new-event"));
       });
 
-      const alarms = store.get(alarmsAtom);
+      const alarms = store.get(alarmsAtom) as Alarm[];
       expect(alarms).toHaveLength(1);
       expect(alarms[0].label).toBe("New Meeting");
       expect(alarms[0].linkedCalendarEventId).toBe("new-event");
@@ -525,7 +525,7 @@ describe("CalendarScreen", () => {
         fireEvent.press(getByTestId("event-create-alarm-event-append"));
       });
 
-      const alarms = store.get(alarmsAtom);
+      const alarms = store.get(alarmsAtom) as Alarm[];
       expect(alarms).toHaveLength(2);
       expect(alarms[0].id).toBe("existing-1");
       expect(alarms[0].label).toBe("Existing Alarm");
@@ -558,7 +558,7 @@ describe("CalendarScreen", () => {
       // The useEffect runs on mount with events, triggering syncCalendarAlarms
       await act(async () => {});
 
-      const alarms = store.get(alarmsAtom);
+      const alarms = store.get(alarmsAtom) as Alarm[];
       expect(alarms).toHaveLength(1);
       // targetTimestampMs should be updated: 12:00 - 15min = 11:45
       const expectedTarget = TODAY + 12 * 60 * 60 * 1000 - 15 * 60 * 1000;

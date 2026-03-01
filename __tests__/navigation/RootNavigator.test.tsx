@@ -53,24 +53,30 @@ jest.mock("@react-navigation/native-stack", () => {
     return null;
   }
 
-  function MockNavigator({ children }: { children: React.ReactNode }) {
-    const screens: Array<{
+  interface MockScreenProps {
       name: string;
       component?: React.ComponentType;
       getComponent?: () => React.ComponentType;
-    }> = [];
-    ReactLib.Children.forEach(children, (child: React.ReactElement) => {
-      if (child && child.type === MockScreen) {
-        screens.push(child.props);
+    }
+
+  function MockNavigator({ children }: { children: React.ReactNode }) {
+    const screens: MockScreenProps[] = [];
+    ReactLib.Children.forEach(children, (child: unknown) => {
+      const el = child as { type?: unknown; props?: unknown };
+      if (el && el.type === MockScreen) {
+        screens.push(el.props as MockScreenProps);
       }
     });
-    ReactLib.Children.forEach(children, (child: React.ReactElement) => {
-      if (child && child.type === ReactLib.Fragment) {
+    ReactLib.Children.forEach(children, (child: unknown) => {
+      const el = child as { type?: unknown; props?: unknown };
+      if (el && el.type === ReactLib.Fragment) {
+        const fragmentProps = el.props as { children?: React.ReactNode };
         ReactLib.Children.forEach(
-          child.props.children,
-          (fragmentChild: React.ReactElement) => {
-            if (fragmentChild && fragmentChild.type === MockScreen) {
-              screens.push(fragmentChild.props);
+          fragmentProps.children,
+          (fragmentChild: unknown) => {
+            const fc = fragmentChild as { type?: unknown; props?: unknown };
+            if (fc && fc.type === MockScreen) {
+              screens.push(fc.props as MockScreenProps);
             }
           },
         );
