@@ -74,10 +74,10 @@
           };
 
           terraform = pkgs.terraform.withPlugins (p: [
-            p.google
-            p.google-beta
-            p.null
-            p.local
+            p.hashicorp_google
+            p.hashicorp_google-beta
+            p.hashicorp_null
+            p.hashicorp_local
           ]);
 
           commonPackages = with pkgs; [
@@ -160,7 +160,7 @@
                 echo "  Node.js: $(node --version)"
                 echo "  pnpm:    $(pnpm --version)"
                 echo "  Java:    $(java -version 2>&1 | head -1)"
-                echo "  Terraform: $(terraform version -json | head -1 | grep -o '"[0-9][^"]*"' | head -1)"
+                echo "  Terraform: $(terraform version | head -1 | awk '{print $2}')"
                 echo "  gcloud: $(gcloud version 2>/dev/null | head -1 | awk '{print $NF}')"
                 echo "  ANDROID_HOME: $ANDROID_HOME"
               '';
@@ -176,7 +176,7 @@
               echo "Laimelea dev environment loaded (macOS/iOS)"
               echo "  Node.js: $(node --version)"
               echo "  pnpm:    $(pnpm --version)"
-              echo "  Terraform: $(terraform version -json | head -1 | grep -o '"[0-9][^"]*"' | head -1)"
+              echo "  Terraform: $(terraform version | head -1 | awk '{print $2}')"
               echo "  gcloud: $(gcloud version 2>/dev/null | head -1 | awk '{print $NF}')"
             '';
           };
@@ -196,7 +196,7 @@
                   echo "Laimelea dev environment loaded (Linux, no Android SDK)"
                   echo "  Node.js: $(node --version)"
                   echo "  pnpm:    $(pnpm --version)"
-                  echo "  Terraform: $(terraform version -json | head -1 | grep -o '"[0-9][^"]*"' | head -1)"
+                  echo "  Terraform: $(terraform version | head -1 | awk '{print $2}')"
                   echo "  gcloud: $(gcloud version 2>/dev/null | head -1 | awk '{print $NF}')"
                 '';
               };
