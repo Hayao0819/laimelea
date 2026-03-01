@@ -6,7 +6,10 @@ import { SettingsScreen } from "../../../src/features/settings/screens/SettingsS
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { sleepSessionsAtom } from "../../../src/atoms/sleepAtoms";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_WIDGET_SETTINGS,
+} from "../../../src/models/Settings";
 import type { Alarm } from "../../../src/models/Alarm";
 import type { SleepSession } from "../../../src/models/SleepSession";
 import type { PlatformServices } from "../../../src/core/platform/types";
@@ -676,6 +679,345 @@ describe("SettingsScreen", () => {
         expect(getByTestId("settings-snackbar")).toHaveTextContent(
           "settings.restoreSuccess",
         );
+      });
+    });
+  });
+
+  describe("Widget settings section", () => {
+    it("renders widget settings section with all inputs and switches", async () => {
+      const { getByTestId } = await renderWithProviders();
+      expect(getByTestId("widget-bg-color-input")).toBeTruthy();
+      expect(getByTestId("widget-text-color-input")).toBeTruthy();
+      expect(getByTestId("widget-secondary-color-input")).toBeTruthy();
+      expect(getByTestId("widget-accent-color-input")).toBeTruthy();
+      expect(getByTestId("widget-opacity-input")).toBeTruthy();
+      expect(getByTestId("widget-border-radius-switch")).toBeTruthy();
+      expect(getByTestId("widget-show-real-time-switch")).toBeTruthy();
+      expect(getByTestId("widget-show-next-alarm-switch")).toBeTruthy();
+    });
+
+    it("updates background color when valid hex is entered", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      const input = getByTestId("widget-bg-color-input");
+      await fireEvent.changeText(input, "#FF0000");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.backgroundColor).toBe("#FF0000");
+      });
+    });
+
+    it("resets invalid hex color to default on blur", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      let input = getByTestId("widget-bg-color-input");
+      await fireEvent.changeText(input, "invalid");
+
+      // Wait for component to re-render with the invalid value displayed
+      await waitFor(() => {
+        expect(getByTestId("widget-bg-color-input").props.value).toBe(
+          "invalid",
+        );
+      });
+
+      // Re-query after re-render to get fresh element with updated onBlur closure
+      input = getByTestId("widget-bg-color-input");
+      await fireEvent(input, "blur");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.backgroundColor).toBe(
+          DEFAULT_WIDGET_SETTINGS.backgroundColor,
+        );
+      });
+    });
+
+    it("updates text color input", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      const input = getByTestId("widget-text-color-input");
+      await fireEvent.changeText(input, "#00FF00");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.textColor).toBe("#00FF00");
+      });
+    });
+
+    it("updates secondary text color input", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      const input = getByTestId("widget-secondary-color-input");
+      await fireEvent.changeText(input, "#AABBCC");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.secondaryTextColor).toBe("#AABBCC");
+      });
+    });
+
+    it("updates accent color input", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      const input = getByTestId("widget-accent-color-input");
+      await fireEvent.changeText(input, "#112233");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.accentColor).toBe("#112233");
+      });
+    });
+
+    it('clamps opacity to 0-100 range (e.g. "150" -> 100)', async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      const input = getByTestId("widget-opacity-input");
+      await fireEvent.changeText(input, "150");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.opacity).toBe(100);
+      });
+    });
+
+    it('clamps negative opacity (e.g. "-5" -> 0)', async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      const input = getByTestId("widget-opacity-input");
+      await fireEvent.changeText(input, "-5");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.opacity).toBe(0);
+      });
+    });
+
+    it('handles non-numeric opacity input (e.g. "abc" -> 0)', async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      const input = getByTestId("widget-opacity-input");
+      await fireEvent.changeText(input, "abc");
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.opacity).toBe(0);
+      });
+    });
+
+    it("toggles border radius switch (ON=16, OFF=0)", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      // Default borderRadius is 16, toggle OFF
+      const switchEl = getByTestId("widget-border-radius-switch");
+      await fireEvent(switchEl, "valueChange", false);
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.borderRadius).toBe(0);
+      });
+
+      // Toggle back ON
+      await fireEvent(switchEl, "valueChange", true);
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.borderRadius).toBe(16);
+      });
+    });
+
+    it("toggles show real time switch", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      // Default showRealTime is true, toggle OFF
+      const switchEl = getByTestId("widget-show-real-time-switch");
+      await fireEvent(switchEl, "valueChange", false);
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.showRealTime).toBe(false);
+      });
+    });
+
+    it("toggles show next alarm switch", async () => {
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      // Default showNextAlarm is true, toggle OFF
+      const switchEl = getByTestId("widget-show-next-alarm-switch");
+      await fireEvent(switchEl, "valueChange", false);
+
+      await waitFor(async () => {
+        const s = await store.get(settingsAtom);
+        expect(s.widgetSettings.showNextAlarm).toBe(false);
+      });
+    });
+
+    it("calls requestClockWidgetUpdate on color change", async () => {
+      const { requestClockWidgetUpdate } = jest.requireMock(
+        "../../../src/features/widget/services/widgetUpdater",
+      );
+      (requestClockWidgetUpdate as jest.Mock).mockClear();
+
+      const { getByTestId } = await renderWithProviders();
+
+      const input = getByTestId("widget-bg-color-input");
+      await fireEvent.changeText(input, "#ABCDEF");
+
+      await waitFor(() => {
+        expect(requestClockWidgetUpdate).toHaveBeenCalled();
+      });
+    });
+
+    it("calls requestClockWidgetUpdate on opacity change", async () => {
+      const { requestClockWidgetUpdate } = jest.requireMock(
+        "../../../src/features/widget/services/widgetUpdater",
+      );
+      (requestClockWidgetUpdate as jest.Mock).mockClear();
+
+      const { getByTestId } = await renderWithProviders();
+
+      const input = getByTestId("widget-opacity-input");
+      await fireEvent.changeText(input, "50");
+
+      await waitFor(() => {
+        expect(requestClockWidgetUpdate).toHaveBeenCalled();
+      });
+    });
+
+    it("calls requestClockWidgetUpdate on switch toggle", async () => {
+      const { requestClockWidgetUpdate } = jest.requireMock(
+        "../../../src/features/widget/services/widgetUpdater",
+      );
+      (requestClockWidgetUpdate as jest.Mock).mockClear();
+
+      const { getByTestId } = await renderWithProviders();
+
+      const switchEl = getByTestId("widget-border-radius-switch");
+      await fireEvent(switchEl, "valueChange", false);
+
+      await waitFor(() => {
+        expect(requestClockWidgetUpdate).toHaveBeenCalled();
       });
     });
   });
