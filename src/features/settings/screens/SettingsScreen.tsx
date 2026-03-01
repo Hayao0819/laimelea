@@ -508,9 +508,7 @@ export function SettingsScreen() {
             </Text>
             <SegmentedButtons<DismissalMethod>
               value={settings.alarmDefaults.dismissalMethod}
-              onValueChange={(v) =>
-                updateAlarmDefaults({ dismissalMethod: v })
-              }
+              onValueChange={(v) => updateAlarmDefaults({ dismissalMethod: v })}
               buttons={[
                 { value: "simple", label: "Simple" },
                 { value: "shake", label: "Shake" },

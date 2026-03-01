@@ -35,7 +35,12 @@ const dummyWidgetInfo: WidgetInfo = {
   widgetId: 1,
   height: 100,
   width: 200,
-  screenInfo: { screenHeightDp: 800, screenWidthDp: 400, density: 2, densityDpi: 320 },
+  screenInfo: {
+    screenHeightDp: 800,
+    screenWidthDp: 400,
+    density: 2,
+    densityDpi: 320,
+  },
 };
 
 const sampleAlarms: Alarm[] = [
@@ -88,9 +93,13 @@ describe("requestClockWidgetUpdate", () => {
     // Verify each renderWidget produces a ClockWidget element with correct widgetSize
     const expectedSizes = ["small", "medium", "large"];
     calls.forEach((call, i) => {
-      const element = call[0].renderWidget(dummyWidgetInfo) as React.ReactElement;
+      const element = call[0].renderWidget(
+        dummyWidgetInfo,
+      ) as React.ReactElement;
       expect(element.type).toBe(ClockWidget);
-      expect((element.props as Record<string, unknown>).widgetSize).toBe(expectedSizes[i]);
+      expect((element.props as Record<string, unknown>).widgetSize).toBe(
+        expectedSizes[i],
+      );
     });
   });
 
@@ -101,15 +110,15 @@ describe("requestClockWidgetUpdate", () => {
 
     const calls = mockRequestWidgetUpdate.mock.calls;
     for (const call of calls) {
-      const element = call[0].renderWidget(dummyWidgetInfo) as React.ReactElement;
+      const element = call[0].renderWidget(
+        dummyWidgetInfo,
+      ) as React.ReactElement;
       const props = element.props as Record<string, unknown>;
       expect(props.cycleConfig).toEqual(DEFAULT_SETTINGS.cycleConfig);
       expect(props.alarms).toEqual(sampleAlarms);
       expect(props.nowMs).toBeGreaterThanOrEqual(beforeMs);
       expect(props.nowMs).toBeLessThanOrEqual(afterMs);
-      expect(props.widgetSettings).toEqual(
-        DEFAULT_SETTINGS.widgetSettings,
-      );
+      expect(props.widgetSettings).toEqual(DEFAULT_SETTINGS.widgetSettings);
     }
   });
 
@@ -123,8 +132,12 @@ describe("requestClockWidgetUpdate", () => {
 
     const calls = mockRequestWidgetUpdate.mock.calls;
     for (const call of calls) {
-      const element = call[0].renderWidget(dummyWidgetInfo) as React.ReactElement;
-      expect((element.props as Record<string, unknown>).widgetSettings).toEqual(DEFAULT_WIDGET_SETTINGS);
+      const element = call[0].renderWidget(
+        dummyWidgetInfo,
+      ) as React.ReactElement;
+      expect((element.props as Record<string, unknown>).widgetSettings).toEqual(
+        DEFAULT_WIDGET_SETTINGS,
+      );
     }
   });
 

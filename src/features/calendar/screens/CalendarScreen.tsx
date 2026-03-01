@@ -159,12 +159,11 @@ export function CalendarScreen() {
   const navTitle = formatNavigationTitle(viewMode, selectedDate, t);
 
   const viewButtons = useMemo(
-    () =>
-      [
-        { value: "month" as const, label: t("calendar.views.month") },
-        { value: "week" as const, label: t("calendar.views.week") },
-        { value: "agenda" as const, label: t("calendar.views.agenda") },
-      ],
+    () => [
+      { value: "month" as const, label: t("calendar.views.month") },
+      { value: "week" as const, label: t("calendar.views.week") },
+      { value: "agenda" as const, label: t("calendar.views.agenda") },
+    ],
     [t],
   );
 

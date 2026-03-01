@@ -54,10 +54,10 @@ jest.mock("@react-navigation/native-stack", () => {
   }
 
   interface MockScreenProps {
-      name: string;
-      component?: React.ComponentType;
-      getComponent?: () => React.ComponentType;
-    }
+    name: string;
+    component?: React.ComponentType;
+    getComponent?: () => React.ComponentType;
+  }
 
   function MockNavigator({ children }: { children: React.ReactNode }) {
     const screens: MockScreenProps[] = [];
