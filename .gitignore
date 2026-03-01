@@ -90,6 +90,10 @@ result-*
 *.apk
 *.aab
 
+# act (local CI runner)
+.secrets
+.vars
+
 # LLM
 .claude/settings.local.json
 .claude/agent-memory
