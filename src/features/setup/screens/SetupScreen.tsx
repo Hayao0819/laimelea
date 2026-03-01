@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Surface, Text, TextInput } from "react-native-paper";
+import { Button, Icon, Surface, Text, TextInput } from "react-native-paper";
 import { useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
@@ -14,6 +14,10 @@ import {
   formatCustomTime,
 } from "../../../core/time/formatting";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../../core/time/constants";
+import { createAccountManager } from "../../../core/account/accountManager";
+import type { Account } from "../../../core/account/types";
+
+const accountManager = createAccountManager();
 
 const DEFAULT_HOURS = Math.floor(DEFAULT_CYCLE_LENGTH_MINUTES / 60);
 const DEFAULT_MINUTES = DEFAULT_CYCLE_LENGTH_MINUTES % 60;
@@ -25,6 +29,8 @@ export function SetupScreen() {
   const [hours, setHours] = useState(String(DEFAULT_HOURS));
   const [minutes, setMinutes] = useState(String(DEFAULT_MINUTES));
   const [baseTimeMs, setBaseTimeMs] = useState<number | null>(null);
+  const [addedAccounts, setAddedAccounts] = useState<Account[]>([]);
+  const [signingIn, setSigningIn] = useState(false);
 
   const cycleLengthMinutes = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
   const isValid = cycleLengthMinutes > 0 && baseTimeMs !== null;
@@ -41,6 +47,23 @@ export function SetupScreen() {
     setBaseTimeMs(Date.now());
   }, []);
 
+  const handleGoogleSignIn = useCallback(async () => {
+    setSigningIn(true);
+    try {
+      const account = await accountManager.addAccount();
+      setAddedAccounts((prev) => {
+        const exists = prev.some((a) => a.email === account.email);
+        return exists
+          ? prev.map((a) => (a.email === account.email ? account : a))
+          : [...prev, account];
+      });
+    } catch {
+      // User cancelled or auth failed - sign in is optional
+    } finally {
+      setSigningIn(false);
+    }
+  }, []);
+
   const handleDone = useCallback(() => {
     if (!isValid) return;
     setSettings((prev) => ({
@@ -52,9 +75,10 @@ export function SetupScreen() {
         cycleLengthMinutes,
         baseTimeMs: baseTimeMs!,
       },
+      accounts: addedAccounts,
       setupComplete: true,
     }));
-  }, [isValid, cycleLengthMinutes, baseTimeMs, setSettings]);
+  }, [isValid, cycleLengthMinutes, baseTimeMs, addedAccounts, setSettings]);
 
   return (
     <ScrollView
@@ -131,6 +155,39 @@ export function SetupScreen() {
         </Surface>
       )}
 
+      <Surface style={styles.card} elevation={1}>
+        <Text variant="titleMedium" accessibilityRole="header">
+          {t("setup.googleAccount")}
+        </Text>
+        <Text variant="bodySmall" style={styles.hint}>
+          {t("setup.googleAccountDescription")}
+        </Text>
+        <Button
+          mode="outlined"
+          onPress={handleGoogleSignIn}
+          loading={signingIn}
+          disabled={signingIn}
+          style={styles.button}
+          testID="google-sign-in-button"
+          accessibilityLabel={t("setup.signInWithGoogle")}
+          icon="google"
+        >
+          {t("setup.signInWithGoogle")}
+        </Button>
+        {addedAccounts.map((account) => (
+          <View
+            key={account.email}
+            style={styles.accountRow}
+            testID={`added-account-${account.email}`}
+          >
+            <Icon source="check-circle" size={18} color="#4caf50" />
+            <Text variant="bodyMedium" style={styles.accountEmail}>
+              {account.email}
+            </Text>
+          </View>
+        ))}
+      </Surface>
+
       <Button
         mode="contained"
         onPress={handleDone}
@@ -182,6 +239,15 @@ const styles = StyleSheet.create({
   },
   previewText: {
     marginTop: spacing.sm,
+  },
+  accountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  accountEmail: {
+    flex: 1,
   },
   doneButton: {
     marginTop: spacing.sm,

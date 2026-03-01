@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import type { Alarm } from "../../../src/models/Alarm";
 import type { SleepSession } from "../../../src/models/SleepSession";
 import type { PlatformServices } from "../../../src/core/platform/types";
+import type { Account } from "../../../src/core/account/types";
 
 let mockServices: PlatformServices;
 
@@ -28,6 +29,19 @@ jest.mock("../../../src/core/i18n", () => ({
     setting === "auto" || !["en", "ja"].includes(setting) ? "en" : setting,
   detectSystemLanguage: () => "en",
   SUPPORTED_LANGUAGES: ["ja", "en"],
+}));
+
+const mockAddAccount = jest.fn();
+const mockRemoveAccount = jest.fn();
+
+jest.mock("../../../src/core/account/accountManager", () => ({
+  createAccountManager: () => ({
+    addAccount: (...args: unknown[]) => mockAddAccount(...args),
+    removeAccount: (...args: unknown[]) => mockRemoveAccount(...args),
+    getAccounts: jest.fn(),
+    getAccessToken: jest.fn(),
+    getAllAccessTokens: jest.fn(),
+  }),
 }));
 
 jest.mock("@react-native-async-storage/async-storage", () => {
@@ -69,6 +83,16 @@ jest.mock("react-i18next", () => ({
     i18n: { language: "en" },
   }),
 }));
+
+function createMockAccount(email: string): Account {
+  return {
+    email,
+    displayName: email.split("@")[0],
+    photoUrl: null,
+    provider: "app-auth",
+    addedAt: Date.now(),
+  };
+}
 
 const mockAlarm: Alarm = {
   id: "alarm-1",
@@ -162,6 +186,7 @@ function renderWithProviders(store = createStore()) {
 
 beforeEach(() => {
   mockServices = createMockPlatformServices();
+  jest.clearAllMocks();
 });
 
 describe("SettingsScreen", () => {
@@ -208,6 +233,196 @@ describe("SettingsScreen", () => {
   it("should display primary display description text", async () => {
     const { getByText } = await renderWithProviders();
     expect(getByText("settings.primaryDisplayDescription")).toBeTruthy();
+  });
+
+  describe("multi-account", () => {
+    it("should display two accounts when accounts array has 2 entries", async () => {
+      const store = createStore();
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        accounts: [
+          createMockAccount("user1@gmail.com"),
+          createMockAccount("user2@gmail.com"),
+        ],
+      });
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      expect(getByTestId("account-item-user1@gmail.com")).toBeTruthy();
+      expect(getByTestId("account-item-user2@gmail.com")).toBeTruthy();
+    });
+
+    it("should call addAccount on add account button tap", async () => {
+      const newAccount = createMockAccount("new@gmail.com");
+      mockAddAccount.mockResolvedValue(newAccount);
+
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("add-account-button"));
+
+      await waitFor(() => {
+        expect(mockAddAccount).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should add account to settings after successful addAccount", async () => {
+      const newAccount = createMockAccount("new@gmail.com");
+      mockAddAccount.mockResolvedValue(newAccount);
+
+      const store = createStore();
+      store.set(settingsAtom, DEFAULT_SETTINGS);
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      await fireEvent.press(getByTestId("add-account-button"));
+
+      await waitFor(async () => {
+        const settings = (await store.get(
+          settingsAtom,
+        )) as typeof DEFAULT_SETTINGS;
+        expect(settings.accounts).toHaveLength(1);
+        expect(settings.accounts[0].email).toBe("new@gmail.com");
+      });
+    });
+
+    it("should remove account on remove button tap", async () => {
+      mockRemoveAccount.mockResolvedValue(undefined);
+
+      const store = createStore();
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        accounts: [
+          createMockAccount("user1@gmail.com"),
+          createMockAccount("user2@gmail.com"),
+        ],
+      });
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      await fireEvent.press(getByTestId("remove-account-user1@gmail.com"));
+
+      await waitFor(async () => {
+        expect(mockRemoveAccount).toHaveBeenCalledWith("user1@gmail.com");
+        const settings = (await store.get(
+          settingsAtom,
+        )) as typeof DEFAULT_SETTINGS;
+        expect(settings.accounts).toHaveLength(1);
+        expect(settings.accounts[0].email).toBe("user2@gmail.com");
+      });
+    });
+
+    it("should show legacy account when accountEmail is set and accounts is empty", async () => {
+      const store = createStore();
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        accountEmail: "legacy@gmail.com",
+        accounts: [],
+      });
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      expect(getByTestId("legacy-account-item")).toBeTruthy();
+    });
+
+    it("should not show legacy account when accounts array is non-empty", async () => {
+      const store = createStore();
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        accountEmail: "legacy@gmail.com",
+        accounts: [createMockAccount("user@gmail.com")],
+      });
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { queryByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      expect(queryByTestId("legacy-account-item")).toBeNull();
+    });
+
+    it("should clear accountEmail when legacy account is removed", async () => {
+      const store = createStore();
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        accountEmail: "legacy@gmail.com",
+        accounts: [],
+      });
+      store.set(alarmsAtom, []);
+      store.set(sleepSessionsAtom, []);
+
+      const { getByTestId } = await render(
+        <JotaiProvider store={store}>
+          <PaperProvider>
+            <SettingsScreen />
+          </PaperProvider>
+        </JotaiProvider>,
+      );
+
+      await fireEvent.press(getByTestId("remove-legacy-account-button"));
+
+      await waitFor(async () => {
+        const settings = (await store.get(
+          settingsAtom,
+        )) as typeof DEFAULT_SETTINGS;
+        expect(settings.accountEmail).toBeNull();
+      });
+    });
+
+    it("should show snackbar on add account failure", async () => {
+      mockAddAccount.mockRejectedValue(new Error("Auth failed"));
+
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("add-account-button"));
+
+      await waitFor(() => {
+        expect(getByTestId("settings-snackbar")).toHaveTextContent(
+          "settings.accountAddFailed",
+        );
+      });
+    });
+
+    it("should display add account button", async () => {
+      const { getByTestId } = await renderWithProviders();
+      expect(getByTestId("add-account-button")).toBeTruthy();
+    });
   });
 
   describe("backup", () => {
@@ -457,9 +672,7 @@ describe("SettingsScreen", () => {
       await fireEvent.press(getByTestId("restore-button"));
 
       await waitFor(async () => {
-        // Settings should be updated from backup
         expect((await store.get(settingsAtom)).language).toBe("ja");
-        // Restore should succeed even without alarms/sleepSessions in backup
         expect(getByTestId("settings-snackbar")).toHaveTextContent(
           "settings.restoreSuccess",
         );

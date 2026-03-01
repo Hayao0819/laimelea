@@ -4,6 +4,7 @@ import {
   Button,
   Checkbox,
   Divider,
+  IconButton,
   List,
   SegmentedButtons,
   Snackbar,
@@ -25,7 +26,10 @@ import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { TimezonePickerSheet } from "../components/TimezonePickerSheet";
 import { resolveLanguage } from "../../../core/i18n";
+import { createAccountManager } from "../../../core/account/accountManager";
 import type { DismissalMethod } from "../../../models/Settings";
+
+const accountManager = createAccountManager();
 
 const GRADUAL_VOLUME_OPTIONS = [0, 15, 30, 60];
 const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
@@ -113,23 +117,43 @@ export function SettingsScreen() {
     requestClockWidgetUpdate();
   }, [settings.cycleConfig, update]);
 
-  const handleSignIn = useCallback(async () => {
+  const handleAddAccount = useCallback(async () => {
     try {
-      const result = await platformServices.auth.signIn();
-      update({ accountEmail: result.email });
+      const account = await accountManager.addAccount();
+      const currentAccounts = settings.accounts;
+      const exists = currentAccounts.some((a) => a.email === account.email);
+      const updatedAccounts = exists
+        ? currentAccounts.map((a) => (a.email === account.email ? account : a))
+        : [...currentAccounts, account];
+      update({ accounts: updatedAccounts });
+      showSnackbar(t("settings.accountAdded", { email: account.email }));
     } catch {
-      showSnackbar("Sign in failed");
+      showSnackbar(t("settings.accountAddFailed"));
     }
-  }, [platformServices.auth, update, showSnackbar]);
+  }, [settings.accounts, update, showSnackbar, t]);
 
-  const handleSignOut = useCallback(async () => {
-    try {
-      await platformServices.auth.signOut();
-      update({ accountEmail: null });
-    } catch {
-      showSnackbar("Sign out failed");
-    }
-  }, [platformServices.auth, update, showSnackbar]);
+  const handleRemoveAccount = useCallback(
+    async (email: string) => {
+      await accountManager.removeAccount(email);
+      const updatedAccounts = settings.accounts.filter(
+        (a) => a.email !== email,
+      );
+      const partialUpdate: Partial<typeof settings> = {
+        accounts: updatedAccounts,
+      };
+      if (settings.accountEmail === email) {
+        partialUpdate.accountEmail = null;
+      }
+      update(partialUpdate);
+      showSnackbar(t("settings.accountRemoved"));
+    },
+    [settings.accounts, settings.accountEmail, update, showSnackbar, t],
+  );
+
+  const handleRemoveLegacyAccount = useCallback(() => {
+    update({ accountEmail: null });
+    showSnackbar(t("settings.accountRemoved"));
+  }, [update, showSnackbar, t]);
 
   const handleBackup = useCallback(async () => {
     try {
@@ -236,19 +260,8 @@ export function SettingsScreen() {
     [settings.alarmDefaults.vibrationEnabled, updateAlarmDefaults],
   );
 
-  const renderAccountAction = useCallback(
-    () =>
-      settings.accountEmail ? (
-        <Button mode="text" onPress={handleSignOut} testID="sign-out-button">
-          {t("settings.signOut")}
-        </Button>
-      ) : (
-        <Button mode="text" onPress={handleSignIn} testID="sign-in-button">
-          {t("calendar.signIn")}
-        </Button>
-      ),
-    [settings.accountEmail, handleSignOut, handleSignIn, t],
-  );
+  const hasLegacyAccount =
+    settings.accountEmail != null && settings.accounts.length === 0;
 
   return (
     <View
@@ -516,12 +529,46 @@ export function SettingsScreen() {
         {/* Section 5: Calendar */}
         <List.Section>
           <List.Subheader>{t("settings.calendarSection")}</List.Subheader>
-          <List.Item
-            title={t("settings.account")}
-            description={settings.accountEmail ?? t("settings.notSignedIn")}
-            right={renderAccountAction}
-            testID="account-item"
-          />
+          <List.Subheader>{t("settings.account")}</List.Subheader>
+          {hasLegacyAccount && (
+            <List.Item
+              title={settings.accountEmail!}
+              description={t("settings.legacyAccount")}
+              right={() => (
+                <IconButton
+                  icon="close"
+                  onPress={handleRemoveLegacyAccount}
+                  testID="remove-legacy-account-button"
+                  accessibilityLabel={t("settings.removeAccount")}
+                />
+              )}
+              testID="legacy-account-item"
+            />
+          )}
+          {settings.accounts.map((account) => (
+            <List.Item
+              key={account.email}
+              title={account.email}
+              right={() => (
+                <IconButton
+                  icon="close"
+                  onPress={() => handleRemoveAccount(account.email)}
+                  testID={`remove-account-${account.email}`}
+                  accessibilityLabel={t("settings.removeAccount")}
+                />
+              )}
+              testID={`account-item-${account.email}`}
+            />
+          ))}
+          <Button
+            mode="outlined"
+            onPress={handleAddAccount}
+            style={styles.sectionButton}
+            testID="add-account-button"
+            icon="plus"
+          >
+            {t("settings.addAccount")}
+          </Button>
           <View style={styles.segmentContainer} testID="first-day-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.firstDayOfWeek")}

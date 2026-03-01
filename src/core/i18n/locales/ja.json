@@ -222,6 +222,12 @@
     "account": "アカウント連携",
     "signOut": "サインアウト",
     "notSignedIn": "未連携",
+    "addAccount": "アカウントを追加",
+    "removeAccount": "アカウントを削除",
+    "legacyAccount": "マルチアカウントには再サインインが必要です",
+    "accountAdded": "アカウント追加: {{email}}",
+    "accountRemoved": "アカウントを削除しました",
+    "accountAddFailed": "アカウントの追加に失敗しました",
     "firstDayOfWeek": "週の開始日",
     "sunday": "日",
     "monday": "月",
@@ -258,7 +264,11 @@
     "done": "完了",
     "useNow": "現在時刻を使用",
     "baseTimeDescription": "カスタムDay 0の00:00:00に対応する実時刻",
-    "preview": "現在のカスタム時間"
+    "preview": "現在のカスタム時間",
+    "googleAccount": "Googleアカウント連携",
+    "googleAccountDescription": "カレンダー同期に使います。後から設定画面でも追加できます。",
+    "signInWithGoogle": "Googleでサインイン",
+    "accountAdded": "アカウント追加済み"
   },
   "common": {
     "save": "保存",

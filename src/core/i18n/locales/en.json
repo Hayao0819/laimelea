@@ -222,6 +222,12 @@
     "account": "Account",
     "signOut": "Sign Out",
     "notSignedIn": "Not signed in",
+    "addAccount": "Add Account",
+    "removeAccount": "Remove account",
+    "legacyAccount": "Re-sign in required for multi-account",
+    "accountAdded": "Account added: {{email}}",
+    "accountRemoved": "Account removed",
+    "accountAddFailed": "Failed to add account",
     "firstDayOfWeek": "First Day of Week",
     "sunday": "Sun",
     "monday": "Mon",
@@ -258,7 +264,11 @@
     "done": "Done",
     "useNow": "Use Current Time",
     "baseTimeDescription": "Real-world time corresponding to Custom Day 0, 00:00:00",
-    "preview": "Current custom time"
+    "preview": "Current custom time",
+    "googleAccount": "Google Account",
+    "googleAccountDescription": "Used for calendar sync. You can also set this up later in Settings.",
+    "signInWithGoogle": "Sign in with Google",
+    "accountAdded": "Account added"
   },
   "common": {
     "save": "Save",
