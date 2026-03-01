@@ -3,6 +3,8 @@ import { render } from "@testing-library/react-native";
 import { ClockWidget } from "../../../src/features/widget/ClockWidget";
 import type { CycleConfig } from "../../../src/models/CustomTime";
 import type { Alarm } from "../../../src/models/Alarm";
+import type { WidgetSettings } from "../../../src/models/Settings";
+import { DEFAULT_WIDGET_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("react-native-android-widget", () => {
   // eslint-disable-next-line @typescript-eslint/no-shadow
@@ -75,6 +77,14 @@ function collectTextWidgets(
   }
   walk(tree);
   return results;
+}
+
+function getFlexWidgetProps(tree: TreeNode): Record<string, unknown> {
+  if (!tree || typeof tree === "string" || Array.isArray(tree)) return {};
+  if (tree.type === "FlexWidget") {
+    return (tree.props ?? {}) as Record<string, unknown>;
+  }
+  return {};
 }
 
 describe("ClockWidget", () => {
@@ -205,8 +215,6 @@ describe("ClockWidget", () => {
 
   describe("formatRealTime (indirect)", () => {
     it("should format timestamp as HH:MM with zero padding", async () => {
-      // We test through the rendered realTime TextWidget.
-      // Use a known timestamp and verify the output matches local time.
       const date = new Date(fixedNowMs);
       const expectedHours = String(date.getHours()).padStart(2, "0");
       const expectedMinutes = String(date.getMinutes()).padStart(2, "0");
@@ -221,7 +229,6 @@ describe("ClockWidget", () => {
       );
       const texts = collectTextWidgets(toJSON());
 
-      // The real time text should be in the rendered output
       const realTimeTexts = texts.filter((t) => t.text === expected);
       expect(realTimeTexts).toHaveLength(1);
     });
@@ -238,7 +245,6 @@ describe("ClockWidget", () => {
       );
       const texts = collectTextWidgets(toJSON());
 
-      // Custom time should be HH:MM format (from formatCustomTimeShort)
       const customTimeTexts = texts.filter((t) => /^\d{2}:\d{2}$/.test(t.text));
       expect(customTimeTexts.length).toBeGreaterThanOrEqual(1);
     });
@@ -253,7 +259,6 @@ describe("ClockWidget", () => {
       );
       const texts = collectTextWidgets(toJSON());
 
-      // Day text should match "Day N" format
       const dayTexts = texts.filter((t) => /^Day -?\d+$/.test(t.text));
       expect(dayTexts).toHaveLength(1);
     });
@@ -335,12 +340,10 @@ describe("ClockWidget", () => {
       const alarmTexts = texts.filter((t) => t.text.startsWith("\u23F0"));
 
       expect(alarmTexts).toHaveLength(1);
-      // Should be just the time without trailing space
       expect(alarmTexts[0].text).toMatch(/^\u23F0 \d{2}:\d{2}$/);
     });
 
     it("should render exactly 3 TextWidgets when no alarm, 4 when alarm exists", async () => {
-      // Without alarm: customTime, day, realTime
       const { toJSON: noAlarmTree } = await render(
         <ClockWidget
           cycleConfig={baseCycleConfig}
@@ -350,7 +353,6 @@ describe("ClockWidget", () => {
       );
       expect(collectTextWidgets(noAlarmTree())).toHaveLength(3);
 
-      // With alarm: customTime, day, realTime, alarm
       const alarms = [
         makeAlarm({
           id: "a1",
@@ -366,6 +368,328 @@ describe("ClockWidget", () => {
         />,
       );
       expect(collectTextWidgets(withAlarmTree())).toHaveLength(4);
+    });
+  });
+
+  describe("widgetSettings", () => {
+    const customSettings: WidgetSettings = {
+      backgroundColor: "#FF0000",
+      textColor: "#00FF00",
+      secondaryTextColor: "#0000FF",
+      accentColor: "#FFFF00",
+      opacity: 80,
+      borderRadius: 24,
+      showRealTime: true,
+      showNextAlarm: true,
+    };
+
+    it("should apply backgroundColor with opacity to container", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSettings={customSettings}
+        />,
+      );
+      const props = getFlexWidgetProps(toJSON());
+      const style = props.style as Record<string, unknown>;
+
+      // opacity 80 => alpha = Math.round((80/100)*255) = 204 = 0xCC
+      expect(style.backgroundColor).toBe("#FF0000CC");
+    });
+
+    it("should apply borderRadius from widgetSettings", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSettings={customSettings}
+        />,
+      );
+      const props = getFlexWidgetProps(toJSON());
+      const style = props.style as Record<string, unknown>;
+
+      expect(style.borderRadius).toBe(24);
+    });
+
+    it("should apply textColor to custom time", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSettings={customSettings}
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const customTimeTexts = texts.filter((t) => /^\d{2}:\d{2}$/.test(t.text));
+
+      expect(customTimeTexts.length).toBeGreaterThanOrEqual(1);
+      const style = customTimeTexts[0].props.style as Record<string, unknown>;
+      expect(style.color).toBe("#00FF00");
+    });
+
+    it("should apply secondaryTextColor to day and realTime", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSettings={customSettings}
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const dayTexts = texts.filter((t) => /^Day -?\d+$/.test(t.text));
+      const date = new Date(fixedNowMs);
+      const expectedTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+      const realTimeTexts = texts.filter((t) => t.text === expectedTime);
+
+      expect(dayTexts).toHaveLength(1);
+      expect(
+        (dayTexts[0].props.style as Record<string, unknown>).color,
+      ).toBe("#0000FF");
+      expect(realTimeTexts).toHaveLength(1);
+      expect(
+        (realTimeTexts[0].props.style as Record<string, unknown>).color,
+      ).toBe("#0000FF");
+    });
+
+    it("should apply accentColor to alarm text", async () => {
+      const alarms = [
+        makeAlarm({
+          id: "a1",
+          label: "Test",
+          enabled: true,
+          targetTimestampMs: fixedNowMs + 3600_000,
+        }),
+      ];
+
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={alarms}
+          nowMs={fixedNowMs}
+          widgetSettings={customSettings}
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const alarmTexts = texts.filter((t) => t.text.startsWith("\u23F0"));
+
+      expect(alarmTexts).toHaveLength(1);
+      expect(
+        (alarmTexts[0].props.style as Record<string, unknown>).color,
+      ).toBe("#FFFF00");
+    });
+
+    it("should use DEFAULT_WIDGET_SETTINGS when widgetSettings not provided", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+        />,
+      );
+      const props = getFlexWidgetProps(toJSON());
+      const style = props.style as Record<string, unknown>;
+
+      // DEFAULT opacity is 100 => alpha = 255 = 0xFF
+      expect(style.backgroundColor).toBe(
+        `${DEFAULT_WIDGET_SETTINGS.backgroundColor}FF`,
+      );
+      expect(style.borderRadius).toBe(DEFAULT_WIDGET_SETTINGS.borderRadius);
+    });
+
+    it("should hide realTime when showRealTime is false", async () => {
+      const date = new Date(fixedNowMs);
+      const expectedTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSettings={{ ...customSettings, showRealTime: false }}
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const realTimeTexts = texts.filter((t) => t.text === expectedTime);
+
+      expect(realTimeTexts).toHaveLength(0);
+    });
+
+    it("should hide alarm when showNextAlarm is false", async () => {
+      const alarms = [
+        makeAlarm({
+          id: "a1",
+          label: "Hidden",
+          enabled: true,
+          targetTimestampMs: fixedNowMs + 3600_000,
+        }),
+      ];
+
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={alarms}
+          nowMs={fixedNowMs}
+          widgetSettings={{ ...customSettings, showNextAlarm: false }}
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const alarmTexts = texts.filter((t) => t.text.startsWith("\u23F0"));
+
+      expect(alarmTexts).toHaveLength(0);
+    });
+
+    it("should clamp opacity to 0-100 range", async () => {
+      // Opacity > 100 should be clamped to 100 (0xFF)
+      const { toJSON: overTree } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSettings={{ ...customSettings, opacity: 150 }}
+        />,
+      );
+      const overProps = getFlexWidgetProps(overTree());
+      const overStyle = overProps.style as Record<string, unknown>;
+      expect(overStyle.backgroundColor).toBe("#FF0000FF");
+
+      // Opacity < 0 should be clamped to 0 (0x00)
+      const { toJSON: underTree } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSettings={{ ...customSettings, opacity: -10 }}
+        />,
+      );
+      const underProps = getFlexWidgetProps(underTree());
+      const underStyle = underProps.style as Record<string, unknown>;
+      expect(underStyle.backgroundColor).toBe("#FF000000");
+    });
+  });
+
+  describe("widgetSize", () => {
+    const alarms = [
+      makeAlarm({
+        id: "a1",
+        label: "Test",
+        enabled: true,
+        targetTimestampMs: fixedNowMs + 3600_000,
+      }),
+    ];
+
+    it("should show only customTime for small size", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={alarms}
+          nowMs={fixedNowMs}
+          widgetSize="small"
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+
+      // Small: only customTime (no day, realTime, or alarm)
+      expect(texts).toHaveLength(1);
+      expect(texts[0].text).toMatch(/^\d{2}:\d{2}$/);
+    });
+
+    it("should use small font size and padding for small size", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSize="small"
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const containerProps = getFlexWidgetProps(toJSON());
+      const containerStyle = containerProps.style as Record<string, unknown>;
+
+      expect(containerStyle.padding).toBe(8);
+      expect(
+        (texts[0].props.style as Record<string, unknown>).fontSize,
+      ).toBe(28);
+    });
+
+    it("should render all elements for medium size", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={alarms}
+          nowMs={fixedNowMs}
+          widgetSize="medium"
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+
+      // Medium: customTime + day + realTime + alarm = 4
+      expect(texts).toHaveLength(4);
+    });
+
+    it("should use medium font sizes for medium size", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={[]}
+          nowMs={fixedNowMs}
+          widgetSize="medium"
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const containerProps = getFlexWidgetProps(toJSON());
+      const containerStyle = containerProps.style as Record<string, unknown>;
+
+      expect(containerStyle.padding).toBe(12);
+      // customTime fontSize = 36
+      expect(
+        (texts[0].props.style as Record<string, unknown>).fontSize,
+      ).toBe(36);
+    });
+
+    it("should use large font sizes and padding for large size", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={alarms}
+          nowMs={fixedNowMs}
+          widgetSize="large"
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const containerProps = getFlexWidgetProps(toJSON());
+      const containerStyle = containerProps.style as Record<string, unknown>;
+
+      expect(containerStyle.padding).toBe(20);
+      // customTime fontSize = 48
+      expect(
+        (texts[0].props.style as Record<string, unknown>).fontSize,
+      ).toBe(48);
+      // day fontSize = 18
+      expect(
+        (texts[1].props.style as Record<string, unknown>).fontSize,
+      ).toBe(18);
+    });
+
+    it("should default to medium size when widgetSize is not provided", async () => {
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={alarms}
+          nowMs={fixedNowMs}
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const containerProps = getFlexWidgetProps(toJSON());
+      const containerStyle = containerProps.style as Record<string, unknown>;
+
+      expect(containerStyle.padding).toBe(12);
+      expect(texts).toHaveLength(4);
     });
   });
 });

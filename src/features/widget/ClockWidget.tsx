@@ -2,17 +2,36 @@ import React from "react";
 import { FlexWidget, TextWidget } from "react-native-android-widget";
 import type { CycleConfig, CustomTimeValue } from "../../models/CustomTime";
 import type { Alarm } from "../../models/Alarm";
+import type { WidgetSettings } from "../../models/Settings";
+import { DEFAULT_WIDGET_SETTINGS } from "../../models/Settings";
 import { realToCustom } from "../../core/time/conversions";
 import {
   formatCustomTimeShort,
   formatCustomDay,
 } from "../../core/time/formatting";
 
-interface ClockWidgetData {
+export type WidgetSize = "small" | "medium" | "large";
+
+export interface ClockWidgetData {
   cycleConfig: CycleConfig;
   alarms: Alarm[];
   nowMs: number;
+  widgetSettings?: WidgetSettings;
+  widgetSize?: WidgetSize;
 }
+
+function applyOpacity(hexColor: string, opacity: number): string {
+  const clamped = Math.max(0, Math.min(100, opacity));
+  const alpha = Math.round((clamped / 100) * 255);
+  const alphaHex = alpha.toString(16).padStart(2, "0").toUpperCase();
+  return `${hexColor}${alphaHex}`;
+}
+
+const SIZE_CONFIG = {
+  small: { customTimeFontSize: 28, dayFontSize: 12, realTimeFontSize: 10, alarmFontSize: 10, padding: 8 },
+  medium: { customTimeFontSize: 36, dayFontSize: 14, realTimeFontSize: 12, alarmFontSize: 12, padding: 12 },
+  large: { customTimeFontSize: 48, dayFontSize: 18, realTimeFontSize: 16, alarmFontSize: 16, padding: 20 },
+} as const;
 
 function formatRealTime(timestampMs: number): string {
   const date = new Date(timestampMs);
@@ -37,55 +56,76 @@ function formatNextAlarmText(alarm: Alarm, cycleConfig: CycleConfig): string {
   return `\u23F0 ${time}${label}`;
 }
 
-const widgetStyles = {
-  container: {
-    height: "match_parent",
-    width: "match_parent",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#1C1B1F",
-    borderRadius: 16,
-    padding: 12,
-  },
-  customTime: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#E6E1E5",
-  },
-  day: {
-    fontSize: 14,
-    color: "#CAC4D0",
-    marginTop: 2,
-  },
-  realTime: {
-    fontSize: 12,
-    color: "#938F99",
-    marginTop: 4,
-  },
-  alarm: {
-    fontSize: 12,
-    color: "#D0BCFF",
-    marginTop: 6,
-  },
-} as const;
+export function ClockWidget({
+  cycleConfig,
+  alarms,
+  nowMs,
+  widgetSettings,
+  widgetSize = "medium",
+}: ClockWidgetData) {
+  const ws = widgetSettings ?? DEFAULT_WIDGET_SETTINGS;
+  const sizeConfig = SIZE_CONFIG[widgetSize];
 
-export function ClockWidget({ cycleConfig, alarms, nowMs }: ClockWidgetData) {
   const customTime = realToCustom(nowMs, cycleConfig);
   const customTimeStr = formatCustomTimeShort(customTime);
   const dayStr = formatCustomDay(customTime);
   const realTimeStr = formatRealTime(nowMs);
   const nextAlarm = getNextAlarm(alarms, nowMs);
 
+  const showDay = widgetSize !== "small";
+  const showRealTime = widgetSize !== "small" && ws.showRealTime;
+  const showNextAlarm = widgetSize !== "small" && ws.showNextAlarm;
+
   return (
-    <FlexWidget style={widgetStyles.container} clickAction="OPEN_APP">
-      <TextWidget text={customTimeStr} style={widgetStyles.customTime} />
-      <TextWidget text={dayStr} style={widgetStyles.day} />
-      <TextWidget text={realTimeStr} style={widgetStyles.realTime} />
-      {nextAlarm ? (
+    <FlexWidget
+      style={{
+        height: "match_parent",
+        width: "match_parent",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: applyOpacity(ws.backgroundColor, ws.opacity),
+        borderRadius: ws.borderRadius,
+        padding: sizeConfig.padding,
+      }}
+      clickAction="OPEN_APP"
+    >
+      <TextWidget
+        text={customTimeStr}
+        style={{
+          fontSize: sizeConfig.customTimeFontSize,
+          fontWeight: "bold",
+          color: ws.textColor,
+        }}
+      />
+      {showDay ? (
+        <TextWidget
+          text={dayStr}
+          style={{
+            fontSize: sizeConfig.dayFontSize,
+            color: ws.secondaryTextColor,
+            marginTop: 2,
+          }}
+        />
+      ) : null}
+      {showRealTime ? (
+        <TextWidget
+          text={realTimeStr}
+          style={{
+            fontSize: sizeConfig.realTimeFontSize,
+            color: ws.secondaryTextColor,
+            marginTop: 4,
+          }}
+        />
+      ) : null}
+      {showNextAlarm && nextAlarm ? (
         <TextWidget
           text={formatNextAlarmText(nextAlarm, cycleConfig)}
-          style={widgetStyles.alarm}
+          style={{
+            fontSize: sizeConfig.alarmFontSize,
+            color: ws.accentColor,
+            marginTop: 6,
+          }}
           maxLines={1}
           truncate="END"
         />
