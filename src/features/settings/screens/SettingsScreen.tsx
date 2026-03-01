@@ -27,8 +27,15 @@ import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { TimezonePickerSheet } from "../components/TimezonePickerSheet";
 import { resolveLanguage } from "../../../core/i18n";
 import { createAccountManager } from "../../../core/account/accountManager";
-import type { DismissalMethod, WidgetSettings } from "../../../models/Settings";
-import { DEFAULT_WIDGET_SETTINGS } from "../../../models/Settings";
+import type {
+  AppSettings,
+  DismissalMethod,
+  WidgetSettings,
+} from "../../../models/Settings";
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_WIDGET_SETTINGS,
+} from "../../../models/Settings";
 
 const accountManager = createAccountManager();
 
@@ -42,7 +49,9 @@ const dayMap = { "0": 0, "1": 1, "6": 6 } as const;
 export function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const [settings, setSettings] = useAtom(settingsAtom);
+  const [rawSettings, setSettings] = useAtom(settingsAtom);
+  // Merge with defaults to handle settings saved before new fields were added
+  const settings: AppSettings = { ...DEFAULT_SETTINGS, ...rawSettings };
   const alarms = useAtomValue(alarmsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
   const sleepSessions = useAtomValue(sleepSessionsAtom);
