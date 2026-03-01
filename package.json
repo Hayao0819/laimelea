@@ -10,9 +10,7 @@
     "test": "jest",
     "e2e:build": "detox build --configuration android.emu.debug",
     "e2e:test": "detox test --configuration android.emu.debug",
-    "e2e:test:reuse": "detox test --configuration android.emu.debug --reuse",
     "android:test": "cd android && ./gradlew connectedAndroidTest",
-    "android:test:calendar": "cd android && ./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.hayao0819.laimelea.calendar.CalendarModuleTest",
     "build": "cd android && ./gradlew assembleDebug",
     "build:release": "cd android && ./gradlew assembleRelease",
     "install-apk": "adb install -r android/app/build/outputs/apk/debug/app-debug.apk"
