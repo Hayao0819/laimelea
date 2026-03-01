@@ -5,6 +5,7 @@ import {
   cycleConfigAtom,
   setupCompleteAtom,
   primaryTimeDisplayAtom,
+  accountsAtom,
 } from "../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 import type { AppSettings } from "../../src/models/Settings";
@@ -78,6 +79,27 @@ describe("primaryTimeDisplayAtom", () => {
     });
     const display = store.get(primaryTimeDisplayAtom);
     expect(display).toBe("24h");
+  });
+});
+
+describe("accountsAtom", () => {
+  it("should return empty array by default", () => {
+    const store = createInitializedStore();
+    const accounts = store.get(accountsAtom);
+    expect(accounts).toEqual([]);
+  });
+
+  it("should reflect accounts from settings", () => {
+    const store = createInitializedStore();
+    const testAccount = {
+      email: "test@example.com",
+      displayName: "Test User",
+      photoUrl: null,
+      provider: "app-auth" as const,
+      addedAt: 1000,
+    };
+    store.set(settingsAtom, { ...DEFAULT_SETTINGS, accounts: [testAccount] });
+    expect(store.get(accountsAtom)).toEqual([testAccount]);
   });
 });
 
