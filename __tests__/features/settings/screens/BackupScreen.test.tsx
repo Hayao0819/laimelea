@@ -96,6 +96,7 @@ function createMockServices(): PlatformServices {
     },
     sleep: {
       isAvailable: jest.fn().mockResolvedValue(true),
+      requestPermissions: jest.fn().mockResolvedValue(true),
       fetchSleepSessions: jest.fn().mockResolvedValue([]),
     },
     accountManager: {

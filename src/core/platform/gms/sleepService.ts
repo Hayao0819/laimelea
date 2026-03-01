@@ -1,6 +1,8 @@
 import {
   initialize,
   readRecords,
+  requestPermission,
+  getGrantedPermissions,
   SleepStageType,
 } from "react-native-health-connect";
 import type { SleepSession } from "../../../models/SleepSession";
@@ -17,8 +19,31 @@ const STAGE_MAP: Record<number, AppSleepStageType> = {
   [SleepStageType.REM]: "rem",
 };
 
+const REQUIRED_PERMISSIONS = [
+  { accessType: "read", recordType: "SleepSession" },
+] as const;
+
 function mapStageType(stage: number): AppSleepStageType {
   return STAGE_MAP[stage] ?? "unknown";
+}
+
+async function ensureSleepPermission(): Promise<boolean> {
+  const granted = await getGrantedPermissions();
+  const hasSleep = granted.some(
+    (p) =>
+      "recordType" in p &&
+      p.recordType === "SleepSession" &&
+      p.accessType === "read",
+  );
+  if (hasSleep) return true;
+
+  const result = await requestPermission([...REQUIRED_PERMISSIONS]);
+  return result.some(
+    (p) =>
+      "recordType" in p &&
+      p.recordType === "SleepSession" &&
+      p.accessType === "read",
+  );
 }
 
 export function createGmsSleepService(): PlatformSleepService {
@@ -31,41 +56,45 @@ export function createGmsSleepService(): PlatformSleepService {
       }
     },
 
+    async requestPermissions(): Promise<boolean> {
+      try {
+        return await ensureSleepPermission();
+      } catch {
+        return false;
+      }
+    },
+
     async fetchSleepSessions(
       startMs: number,
       endMs: number,
     ): Promise<SleepSession[]> {
-      try {
-        const result = await readRecords("SleepSession", {
-          timeRangeFilter: {
-            operator: "between",
-            startTime: new Date(startMs).toISOString(),
-            endTime: new Date(endMs).toISOString(),
-          },
-        });
+      const result = await readRecords("SleepSession", {
+        timeRangeFilter: {
+          operator: "between",
+          startTime: new Date(startMs).toISOString(),
+          endTime: new Date(endMs).toISOString(),
+        },
+      });
 
-        return result.records.map((record) => {
-          const startTimestampMs = new Date(record.startTime).getTime();
-          const endTimestampMs = new Date(record.endTime).getTime();
+      return result.records.map((record) => {
+        const startTimestampMs = new Date(record.startTime).getTime();
+        const endTimestampMs = new Date(record.endTime).getTime();
 
-          return {
-            id: `hc-${startTimestampMs}-${endTimestampMs}`,
-            source: "health_connect" as const,
-            startTimestampMs,
-            endTimestampMs,
-            stages: (record.stages ?? []).map((stage) => ({
-              startTimestampMs: new Date(stage.startTime).getTime(),
-              endTimestampMs: new Date(stage.endTime).getTime(),
-              stage: mapStageType(stage.stage),
-            })),
-            durationMs: endTimestampMs - startTimestampMs,
-            createdAt: startTimestampMs,
-            updatedAt: startTimestampMs,
-          };
-        });
-      } catch {
-        return [];
-      }
+        return {
+          id: `hc-${startTimestampMs}-${endTimestampMs}`,
+          source: "health_connect" as const,
+          startTimestampMs,
+          endTimestampMs,
+          stages: (record.stages ?? []).map((stage) => ({
+            startTimestampMs: new Date(stage.startTime).getTime(),
+            endTimestampMs: new Date(stage.endTime).getTime(),
+            stage: mapStageType(stage.stage),
+          })),
+          durationMs: endTimestampMs - startTimestampMs,
+          createdAt: startTimestampMs,
+          updatedAt: startTimestampMs,
+        };
+      });
     },
   };
 }

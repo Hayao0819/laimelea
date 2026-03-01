@@ -90,7 +90,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode = 1
         versionName = "0.1.0"
-        manifestPlaceholders = [appAuthRedirectScheme: "com.hayao0819.laimelea"]
+        def oauthClientId = project.env.get("GOOGLE_OAUTH_CLIENT_ID") ?: ""
+        def oauthClientGuid = oauthClientId.replace(".apps.googleusercontent.com", "")
+        manifestPlaceholders = [appAuthRedirectScheme: "com.googleusercontent.apps." + oauthClientGuid]
         testBuildType = System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
     }

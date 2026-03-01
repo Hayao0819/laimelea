@@ -56,6 +56,12 @@ export function useSleepSync(): SleepSyncResult {
           return;
         }
 
+        const permitted = await services.sleep.requestPermissions();
+        if (!permitted) {
+          setError("Health Connect permission denied");
+          return;
+        }
+
         const now = Date.now();
         const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
         const fetched = await services.sleep.fetchSleepSessions(

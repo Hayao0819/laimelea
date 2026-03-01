@@ -70,6 +70,7 @@ const mockEstimateCycle = estimateCycle as jest.Mock;
 function createMockSleep() {
   return {
     fetchSleepSessions: jest.fn().mockResolvedValue([]),
+    requestPermissions: jest.fn().mockResolvedValue(true),
     isAvailable: jest.fn().mockResolvedValue(true),
   };
 }

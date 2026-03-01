@@ -9,6 +9,10 @@ export function createAospSleepService(): PlatformSleepService {
       return true;
     },
 
+    async requestPermissions() {
+      return true;
+    },
+
     async fetchSleepSessions(
       startMs: number,
       endMs: number,

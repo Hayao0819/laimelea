@@ -22,10 +22,15 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
 
 const mockInitialize = jest.fn();
 const mockReadRecords = jest.fn();
+const mockRequestPermission = jest.fn();
+const mockGetGrantedPermissions = jest.fn();
 
 jest.mock("react-native-health-connect", () => ({
   initialize: (...args: unknown[]) => mockInitialize(...args),
   readRecords: (...args: unknown[]) => mockReadRecords(...args),
+  requestPermission: (...args: unknown[]) => mockRequestPermission(...args),
+  getGrantedPermissions: (...args: unknown[]) =>
+    mockGetGrantedPermissions(...args),
   SleepStageType: {
     UNKNOWN: 0,
     AWAKE: 1,
@@ -369,6 +374,34 @@ describe("GMS SleepService", () => {
     expect(await sleep.isAvailable()).toBe(false);
   });
 
+  it("requestPermissions should return true when already granted", async () => {
+    mockGetGrantedPermissions.mockResolvedValue([
+      { accessType: "read", recordType: "SleepSession" },
+    ]);
+    expect(await sleep.requestPermissions()).toBe(true);
+    expect(mockRequestPermission).not.toHaveBeenCalled();
+  });
+
+  it("requestPermissions should request and return true on grant", async () => {
+    mockGetGrantedPermissions.mockResolvedValue([]);
+    mockRequestPermission.mockResolvedValue([
+      { accessType: "read", recordType: "SleepSession" },
+    ]);
+    expect(await sleep.requestPermissions()).toBe(true);
+    expect(mockRequestPermission).toHaveBeenCalled();
+  });
+
+  it("requestPermissions should return false when denied", async () => {
+    mockGetGrantedPermissions.mockResolvedValue([]);
+    mockRequestPermission.mockResolvedValue([]);
+    expect(await sleep.requestPermissions()).toBe(false);
+  });
+
+  it("requestPermissions should return false on error", async () => {
+    mockGetGrantedPermissions.mockRejectedValue(new Error("HC unavailable"));
+    expect(await sleep.requestPermissions()).toBe(false);
+  });
+
   it("fetchSleepSessions should return mapped sessions", async () => {
     const startTime = "2025-01-15T23:00:00.000Z";
     const endTime = "2025-01-16T07:00:00.000Z";
@@ -408,9 +441,11 @@ describe("GMS SleepService", () => {
     );
   });
 
-  it("fetchSleepSessions should return empty array on error", async () => {
+  it("fetchSleepSessions should throw on error", async () => {
     mockReadRecords.mockRejectedValue(new Error("permission denied"));
-    expect(await sleep.fetchSleepSessions(0, 1000)).toEqual([]);
+    await expect(sleep.fetchSleepSessions(0, 1000)).rejects.toThrow(
+      "permission denied",
+    );
   });
 
   it("fetchSleepSessions should map unknown stage types to unknown", async () => {

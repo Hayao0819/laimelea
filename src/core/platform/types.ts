@@ -39,6 +39,7 @@ export interface PlatformBackupService {
 
 export interface PlatformSleepService {
   fetchSleepSessions(startMs: number, endMs: number): Promise<SleepSession[]>;
+  requestPermissions(): Promise<boolean>;
   isAvailable(): Promise<boolean>;
 }
 
