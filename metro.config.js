@@ -1,4 +1,12 @@
+const path = require("path");
+const {
+  default: exclusionList,
+} = require("metro-config/private/defaults/exclusionList");
 const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * Metro configuration
@@ -6,6 +14,14 @@ const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
-const config = {};
+const config = {
+  resolver: {
+    blockList: exclusionList([
+      new RegExp(
+        `^${escapeRegExp(path.resolve(__dirname, ".worktree"))}[\\\\/].*$`,
+      ),
+    ]),
+  },
+};
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);
