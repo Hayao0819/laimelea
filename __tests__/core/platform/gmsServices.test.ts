@@ -222,11 +222,70 @@ describe("GMS CalendarService", () => {
     expect(events).toEqual([]);
   });
 
-  it("fetchEvents should return empty on API error", async () => {
+  it("fetchEvents should throw on 401 after retry", async () => {
     const calendar = createGmsCalendarService(mockAuthService);
+    // First attempt returns 401 (AuthExpiredError)
     mockFetch.mockResolvedValueOnce(jsonResponse({}, 401));
-    const events = await calendar.fetchEvents(0, 1000);
-    expect(events).toEqual([]);
+    // Retry after token refresh also returns 401
+    mockFetch.mockResolvedValueOnce(jsonResponse({}, 401));
+
+    await expect(calendar.fetchEvents(0, 1000)).rejects.toThrow(
+      "Access token expired",
+    );
+  });
+
+  it("fetchEvents should succeed on retry after 401", async () => {
+    (mockAuthService.getAccessToken as jest.Mock)
+      .mockResolvedValueOnce("expired-token")
+      .mockResolvedValueOnce("refreshed-token");
+    const calendar = createGmsCalendarService(mockAuthService);
+
+    // First attempt returns 401
+    mockFetch.mockResolvedValueOnce(jsonResponse({}, 401));
+    // Retry: calendarList succeeds
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        items: [
+          {
+            id: "cal-1",
+            summary: "Work",
+            backgroundColor: "#0000ff",
+            primary: true,
+          },
+        ],
+      }),
+    );
+    // Retry: events succeeds
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        items: [
+          {
+            id: "ev-1",
+            summary: "Retried Meeting",
+            description: "",
+            status: "confirmed",
+            start: { dateTime: "2026-01-15T10:00:00Z" },
+            end: { dateTime: "2026-01-15T11:00:00Z" },
+          },
+        ],
+      }),
+    );
+
+    const events = await calendar.fetchEvents(
+      new Date("2026-01-01").getTime(),
+      new Date("2026-01-31").getTime(),
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].title).toBe("Retried Meeting");
+  });
+
+  it("fetchEvents should throw ScopeDeniedError on 403", async () => {
+    const calendar = createGmsCalendarService(mockAuthService);
+    mockFetch.mockResolvedValueOnce(jsonResponse({}, 403));
+
+    await expect(calendar.fetchEvents(0, 1000)).rejects.toThrow(
+      "Calendar scope not granted",
+    );
   });
 
   it("getCalendarList should return mapped calendars", async () => {

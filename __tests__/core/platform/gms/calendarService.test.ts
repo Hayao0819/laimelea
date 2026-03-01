@@ -1,12 +1,20 @@
 import { createGmsCalendarService } from "../../../../src/core/platform/gms/calendarService";
 import type { PlatformAuthService } from "../../../../src/core/platform/types";
 import {
+  AuthExpiredError,
+  ScopeDeniedError,
   fetchCalendarList,
   fetchEvents,
   parseEventTimestamp,
 } from "../../../../src/core/calendar/googleCalendarApi";
 
 jest.mock("../../../../src/core/calendar/googleCalendarApi", () => ({
+  AuthExpiredError: jest.requireActual(
+    "../../../../src/core/calendar/googleCalendarApi",
+  ).AuthExpiredError,
+  ScopeDeniedError: jest.requireActual(
+    "../../../../src/core/calendar/googleCalendarApi",
+  ).ScopeDeniedError,
   fetchCalendarList: jest.fn(),
   fetchEvents: jest.fn(),
   parseEventTimestamp: jest.fn(),
@@ -25,6 +33,62 @@ function createMockAuthService(
     signOut: jest.fn(),
     getAccessToken: jest.fn().mockResolvedValue(token),
   };
+}
+
+const sampleCalendars = [
+  {
+    id: "cal-1",
+    summary: "Work",
+    backgroundColor: "#0000ff",
+    primary: true,
+  },
+  {
+    id: "cal-2",
+    summary: "Personal",
+    backgroundColor: "#ff0000",
+    primary: false,
+  },
+];
+
+const workEvents = [
+  {
+    id: "ev-1",
+    summary: "Meeting",
+    description: "Standup",
+    status: "confirmed",
+    start: { dateTime: "2026-01-15T10:00:00Z" },
+    end: { dateTime: "2026-01-15T11:00:00Z" },
+    colorId: "#00ff00",
+  },
+];
+
+const personalEvents = [
+  {
+    id: "ev-2",
+    summary: "Lunch",
+    description: "",
+    status: "confirmed",
+    start: { dateTime: "2026-01-15T12:00:00Z" },
+    end: { dateTime: "2026-01-15T13:00:00Z" },
+  },
+];
+
+function setupSuccessfulFetch() {
+  mockFetchCalendarList.mockResolvedValue(sampleCalendars);
+  mockFetchEvents
+    .mockResolvedValueOnce(workEvents)
+    .mockResolvedValueOnce(personalEvents);
+  mockParseEventTimestamp
+    .mockReturnValueOnce({
+      startMs: 1737021600000,
+      endMs: 1737025200000,
+      allDay: false,
+    })
+    .mockReturnValueOnce({
+      startMs: 1737028800000,
+      endMs: 1737032400000,
+      allDay: false,
+    });
 }
 
 describe("createGmsCalendarService", () => {
@@ -51,60 +115,7 @@ describe("createGmsCalendarService", () => {
       const authService = createMockAuthService("test-token");
       const service = createGmsCalendarService(authService);
 
-      const calendars = [
-        {
-          id: "cal-1",
-          summary: "Work",
-          backgroundColor: "#0000ff",
-          primary: true,
-        },
-        {
-          id: "cal-2",
-          summary: "Personal",
-          backgroundColor: "#ff0000",
-          primary: false,
-        },
-      ];
-
-      const workEvents = [
-        {
-          id: "ev-1",
-          summary: "Meeting",
-          description: "Standup",
-          status: "confirmed",
-          start: { dateTime: "2026-01-15T10:00:00Z" },
-          end: { dateTime: "2026-01-15T11:00:00Z" },
-          colorId: "#00ff00",
-        },
-      ];
-
-      const personalEvents = [
-        {
-          id: "ev-2",
-          summary: "Lunch",
-          description: "",
-          status: "confirmed",
-          start: { dateTime: "2026-01-15T12:00:00Z" },
-          end: { dateTime: "2026-01-15T13:00:00Z" },
-        },
-      ];
-
-      mockFetchCalendarList.mockResolvedValue(calendars);
-      mockFetchEvents
-        .mockResolvedValueOnce(workEvents)
-        .mockResolvedValueOnce(personalEvents);
-
-      mockParseEventTimestamp
-        .mockReturnValueOnce({
-          startMs: 1737021600000,
-          endMs: 1737025200000,
-          allDay: false,
-        })
-        .mockReturnValueOnce({
-          startMs: 1737028800000,
-          endMs: 1737032400000,
-          allDay: false,
-        });
+      setupSuccessfulFetch();
 
       const startMs = new Date("2026-01-01").getTime();
       const endMs = new Date("2026-01-31").getTime();
@@ -162,13 +173,86 @@ describe("createGmsCalendarService", () => {
       expect(mockFetchCalendarList).not.toHaveBeenCalled();
     });
 
-    it("should return empty on error", async () => {
+    it("should retry once on AuthExpiredError and succeed", async () => {
       const authService = createMockAuthService("test-token");
+      (authService.getAccessToken as jest.Mock)
+        .mockResolvedValueOnce("expired-token")
+        .mockResolvedValueOnce("refreshed-token");
       const service = createGmsCalendarService(authService);
-      mockFetchCalendarList.mockRejectedValue(new Error("API error"));
+
+      mockFetchCalendarList
+        .mockRejectedValueOnce(new AuthExpiredError())
+        .mockResolvedValueOnce([sampleCalendars[0]]);
+      mockFetchEvents.mockResolvedValueOnce(workEvents);
+      mockParseEventTimestamp.mockReturnValueOnce({
+        startMs: 1737021600000,
+        endMs: 1737025200000,
+        allDay: false,
+      });
 
       const events = await service.fetchEvents(0, 1000);
-      expect(events).toEqual([]);
+
+      expect(authService.getAccessToken).toHaveBeenCalledTimes(2);
+      expect(mockFetchCalendarList).toHaveBeenCalledTimes(2);
+      expect(mockFetchCalendarList).toHaveBeenNthCalledWith(1, "expired-token");
+      expect(mockFetchCalendarList).toHaveBeenNthCalledWith(
+        2,
+        "refreshed-token",
+      );
+      expect(events).toHaveLength(1);
+      expect(events[0].title).toBe("Meeting");
+    });
+
+    it("should throw AuthExpiredError when retry also fails", async () => {
+      const authService = createMockAuthService("test-token");
+      (authService.getAccessToken as jest.Mock)
+        .mockResolvedValueOnce("expired-token")
+        .mockResolvedValueOnce("still-expired-token");
+      const service = createGmsCalendarService(authService);
+
+      mockFetchCalendarList
+        .mockRejectedValueOnce(new AuthExpiredError())
+        .mockRejectedValueOnce(new AuthExpiredError());
+
+      await expect(service.fetchEvents(0, 1000)).rejects.toThrow(
+        AuthExpiredError,
+      );
+    });
+
+    it("should throw AuthExpiredError when refreshed token is null", async () => {
+      const authService = createMockAuthService("test-token");
+      (authService.getAccessToken as jest.Mock)
+        .mockResolvedValueOnce("expired-token")
+        .mockResolvedValueOnce(null);
+      const service = createGmsCalendarService(authService);
+
+      mockFetchCalendarList.mockRejectedValueOnce(new AuthExpiredError());
+
+      await expect(service.fetchEvents(0, 1000)).rejects.toThrow(
+        AuthExpiredError,
+      );
+    });
+
+    it("should throw ScopeDeniedError without retry", async () => {
+      const authService = createMockAuthService("test-token");
+      const service = createGmsCalendarService(authService);
+      mockFetchCalendarList.mockRejectedValue(new ScopeDeniedError());
+
+      await expect(service.fetchEvents(0, 1000)).rejects.toThrow(
+        ScopeDeniedError,
+      );
+      expect(authService.getAccessToken).toHaveBeenCalledTimes(1);
+    });
+
+    it("should throw network errors without retry", async () => {
+      const authService = createMockAuthService("test-token");
+      const service = createGmsCalendarService(authService);
+      mockFetchCalendarList.mockRejectedValue(new Error("Network error"));
+
+      await expect(service.fetchEvents(0, 1000)).rejects.toThrow(
+        "Network error",
+      );
+      expect(authService.getAccessToken).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -206,13 +290,68 @@ describe("createGmsCalendarService", () => {
       expect(mockFetchCalendarList).not.toHaveBeenCalled();
     });
 
-    it("should return empty on error", async () => {
+    it("should retry once on AuthExpiredError and succeed", async () => {
+      const authService = createMockAuthService("test-token");
+      (authService.getAccessToken as jest.Mock)
+        .mockResolvedValueOnce("expired-token")
+        .mockResolvedValueOnce("refreshed-token");
+      const service = createGmsCalendarService(authService);
+
+      mockFetchCalendarList
+        .mockRejectedValueOnce(new AuthExpiredError())
+        .mockResolvedValueOnce([
+          {
+            id: "cal-1",
+            summary: "Work",
+            backgroundColor: "#0000ff",
+            primary: true,
+          },
+        ]);
+
+      const list = await service.getCalendarList();
+
+      expect(authService.getAccessToken).toHaveBeenCalledTimes(2);
+      expect(mockFetchCalendarList).toHaveBeenCalledTimes(2);
+      expect(mockFetchCalendarList).toHaveBeenNthCalledWith(1, "expired-token");
+      expect(mockFetchCalendarList).toHaveBeenNthCalledWith(
+        2,
+        "refreshed-token",
+      );
+      expect(list).toEqual([
+        { id: "cal-1", name: "Work", color: "#0000ff", isPrimary: true },
+      ]);
+    });
+
+    it("should throw AuthExpiredError when retry also fails", async () => {
+      const authService = createMockAuthService("test-token");
+      (authService.getAccessToken as jest.Mock)
+        .mockResolvedValueOnce("expired-token")
+        .mockResolvedValueOnce("still-expired-token");
+      const service = createGmsCalendarService(authService);
+
+      mockFetchCalendarList
+        .mockRejectedValueOnce(new AuthExpiredError())
+        .mockRejectedValueOnce(new AuthExpiredError());
+
+      await expect(service.getCalendarList()).rejects.toThrow(AuthExpiredError);
+    });
+
+    it("should throw ScopeDeniedError without retry", async () => {
+      const authService = createMockAuthService("test-token");
+      const service = createGmsCalendarService(authService);
+      mockFetchCalendarList.mockRejectedValue(new ScopeDeniedError());
+
+      await expect(service.getCalendarList()).rejects.toThrow(ScopeDeniedError);
+      expect(authService.getAccessToken).toHaveBeenCalledTimes(1);
+    });
+
+    it("should throw network errors without retry", async () => {
       const authService = createMockAuthService("test-token");
       const service = createGmsCalendarService(authService);
       mockFetchCalendarList.mockRejectedValue(new Error("Network error"));
 
-      const list = await service.getCalendarList();
-      expect(list).toEqual([]);
+      await expect(service.getCalendarList()).rejects.toThrow("Network error");
+      expect(authService.getAccessToken).toHaveBeenCalledTimes(1);
     });
   });
 });
