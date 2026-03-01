@@ -24,6 +24,16 @@ jobs:
 
       - uses: nicknovitski/nix-develop@v1
 
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "store-path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.store-path }}
+          key: pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

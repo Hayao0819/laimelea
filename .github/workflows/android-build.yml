@@ -16,6 +16,17 @@ jobs:
     name: Build APKs
     runs-on: ubuntu-latest
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+          tool-cache: false
+
       - uses: actions/checkout@v4
 
       - uses: DeterminateSystems/determinate-nix-action@v3
@@ -24,8 +35,23 @@ jobs:
 
       - uses: nicknovitski/nix-develop@v1
 
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "store-path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.store-path }}
+          key: pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
 
       - name: Decode release keystore
         id: decode-keystore
@@ -49,7 +75,7 @@ jobs:
       - name: Build debug APK
         id: debug-build
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a
 
       - name: Build release APK
         if: steps.decode-keystore.outputs.verified == 'true'
@@ -59,7 +85,7 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ vars.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease
 
       - name: Upload debug APK
         if: always() && steps.debug-build.outcome == 'success'
