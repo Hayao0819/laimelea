@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import {
   Button,
@@ -8,7 +8,6 @@ import {
   List,
   Portal,
   Text,
-  TextInput,
 } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
@@ -71,7 +70,7 @@ interface SaveSlotListProps {
   visible: boolean;
   onDismiss: () => void;
   snapshots: GameSnapshot[];
-  onSave: (name: string) => void;
+  onSave: () => void;
   onLoad: (snapshot: GameSnapshot) => void;
   onDelete: (snapshotId: string) => void;
 }
@@ -85,15 +84,6 @@ export function SaveSlotList({
   onDelete,
 }: SaveSlotListProps) {
   const { t } = useTranslation();
-  const [saveName, setSaveName] = useState("");
-  const [showSaveInput, setShowSaveInput] = useState(false);
-
-  const handleSave = useCallback(() => {
-    const name = saveName.trim() || `Save #${snapshots.length + 1}`;
-    onSave(name);
-    setSaveName("");
-    setShowSaveInput(false);
-  }, [saveName, snapshots.length, onSave]);
 
   const renderItem = useCallback(
     ({ item }: { item: GameSnapshot }) => (
@@ -118,35 +108,15 @@ export function SaveSlotList({
               style={styles.list}
             />
           )}
-          {showSaveInput ? (
-            <View style={styles.saveInput}>
-              <TextInput
-                mode="outlined"
-                label={t("game2048.saveName")}
-                value={saveName}
-                onChangeText={setSaveName}
-                style={styles.input}
-                testID="save-name-input"
-              />
-              <Button
-                mode="contained"
-                onPress={handleSave}
-                testID="confirm-save-button"
-              >
-                {t("game2048.save")}
-              </Button>
-            </View>
-          ) : (
-            <Button
-              mode="outlined"
-              onPress={() => setShowSaveInput(true)}
-              style={styles.saveButton}
-              icon="content-save"
-              testID="save-current-button"
-            >
-              {t("game2048.save")}
-            </Button>
-          )}
+          <Button
+            mode="outlined"
+            onPress={onSave}
+            style={styles.saveButton}
+            icon="content-save"
+            testID="save-current-button"
+          >
+            {t("game2048.save")}
+          </Button>
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={onDismiss}>{t("common.ok")}</Button>
@@ -163,15 +133,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  saveInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    flex: 1,
   },
   saveButton: {
     marginTop: spacing.md,

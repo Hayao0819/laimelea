@@ -297,7 +297,12 @@
     "deleteSnapshot": "Delete save",
     "branchFrom": "Branch from this save",
     "confirmNewGame": "Start a new game? Current progress will be added to history.",
-    "confirmDelete": "Delete this save?"
+    "confirmDelete": "Delete this save?",
+    "settings": "Settings",
+    "luckyMode": "Lucky Mode",
+    "luckyModeDesc": "Always spawn 4 when it would prevent game over on the last empty cell",
+    "boardSizeLocked": "Board size cannot be changed during an active game",
+    "snapshotTree": "Snapshot Tree"
   },
   "setup": {
     "welcome": "Welcome to Laimelea",
@@ -315,23 +320,6 @@
     "googleAccountDescription": "Used for calendar sync. You can also set this up later in Settings.",
     "signInWithGoogle": "Sign in with Google",
     "accountAdded": "Account added"
-  },
-  "game2048": {
-    "score": "Score",
-    "best": "Best",
-    "undo": "Undo",
-    "newGame": "New Game",
-    "boardSize": "Board Size",
-    "gameOver": "Game Over!",
-    "youWin": "You Win!",
-    "keepGoing": "Keep Going",
-    "tryAgain": "Try Again",
-    "save": "Save",
-    "load": "Load",
-    "snapshots": "Saved Games",
-    "noSnapshots": "No saved games",
-    "saveName": "Save Name",
-    "title": "2048"
   },
   "common": {
     "save": "Save",

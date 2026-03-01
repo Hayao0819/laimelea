@@ -297,7 +297,12 @@
     "deleteSnapshot": "セーブを削除",
     "branchFrom": "このセーブから分岐",
     "confirmNewGame": "新しいゲームを始めますか？現在の進行状況は履歴に追加されます。",
-    "confirmDelete": "このセーブを削除しますか？"
+    "confirmDelete": "このセーブを削除しますか？",
+    "settings": "設定",
+    "luckyMode": "ラッキーモード",
+    "luckyModeDesc": "最後の空マスで2を置くとゲームオーバーになる場合、常に4を出す",
+    "boardSizeLocked": "ゲーム進行中は盤面サイズを変更できません",
+    "snapshotTree": "セーブツリー"
   },
   "setup": {
     "welcome": "Laimeleaへようこそ",
@@ -315,23 +320,6 @@
     "googleAccountDescription": "カレンダー同期に使います。後から設定画面でも追加できます。",
     "signInWithGoogle": "Googleでサインイン",
     "accountAdded": "アカウント追加済み"
-  },
-  "game2048": {
-    "score": "スコア",
-    "best": "ベスト",
-    "undo": "戻す",
-    "newGame": "新しいゲーム",
-    "boardSize": "盤面サイズ",
-    "gameOver": "ゲームオーバー！",
-    "youWin": "クリア！",
-    "keepGoing": "続ける",
-    "tryAgain": "もう一度",
-    "save": "保存",
-    "load": "読込",
-    "snapshots": "セーブデータ",
-    "noSnapshots": "セーブデータがありません",
-    "saveName": "セーブ名",
-    "title": "2048"
   },
   "common": {
     "save": "保存",

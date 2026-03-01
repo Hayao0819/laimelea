@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, useTheme } from "react-native-paper";
+import { Button, IconButton, useTheme } from "react-native-paper";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
 
 import { spacing } from "../../../app/spacing";
 import {
@@ -15,57 +16,64 @@ import {
   pushHistoryAtom,
   undoAtom,
   newGameAtom,
+  settingsAtom,
+  saveSnapshotAtom,
+  loadSnapshotAtom,
 } from "../atoms/game2048Atoms";
 import { move } from "../logic/gameEngine";
-import type { Direction, BoardSize, GameSnapshot } from "../logic/gameTypes";
+import type { Direction, GameSnapshot } from "../logic/gameTypes";
 import { GameBoard } from "../components/GameBoard";
 import { GameHeader } from "../components/GameHeader";
 import { GameOverlay } from "../components/GameOverlay";
-import { BoardSizeSelector } from "../components/BoardSizeSelector";
 import { SaveSlotList } from "../components/SaveSlotList";
 
 export function Game2048Screen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const navigation = useNavigation();
   const store = useAtomValue(resolvedStoreAtom);
   const game = useAtomValue(currentGameAtom);
   const bestScores = useAtomValue(bestScoresAtom);
   const canUndo = useAtomValue(canUndoAtom);
   const snapshots = useAtomValue(snapshotsAtom);
+  const settings = useAtomValue(settingsAtom);
   const pushHistory = useSetAtom(pushHistoryAtom);
   const undo = useSetAtom(undoAtom);
   const startNewGame = useSetAtom(newGameAtom);
   const setStore = useSetAtom(game2048StoreAtom);
+  const saveSnapshot = useSetAtom(saveSnapshotAtom);
+  const loadSnapshot = useSetAtom(loadSnapshotAtom);
 
   const [saveListVisible, setSaveListVisible] = useState(false);
   const [lastDirection, setLastDirection] = useState<Direction | null>(null);
+
+  // Auto-save on game over
+  const prevGameOverRef = useRef(false);
+  useEffect(() => {
+    if (game.isGameOver && !prevGameOverRef.current) {
+      saveSnapshot(true);
+    }
+    prevGameOverRef.current = game.isGameOver;
+  }, [game.isGameOver, saveSnapshot]);
 
   const handleMove = useCallback(
     (direction: Direction) => {
       if (game.isGameOver) return;
       if (game.hasWon && !game.wonAcknowledged) return;
 
-      const result = move(game, direction);
+      const result = move(game, direction, { luckyMode: settings.luckyMode });
       if (result.moved) {
         setLastDirection(direction);
         pushHistory(result.state);
       }
     },
-    [game, pushHistory],
+    [game, pushHistory, settings.luckyMode],
   );
 
   const handleNewGame = useCallback(() => {
     setLastDirection(null);
     startNewGame(game.boardSize);
   }, [game.boardSize, startNewGame]);
-
-  const handleSizeChange = useCallback(
-    (size: BoardSize) => {
-      setLastDirection(null);
-      startNewGame(size);
-    },
-    [startNewGame],
-  );
 
   const handleKeepGoing = useCallback(() => {
     setStore({
@@ -78,34 +86,17 @@ export function Game2048Screen() {
     handleNewGame();
   }, [handleNewGame]);
 
-  const handleSave = useCallback(
-    (name: string) => {
-      const snapshot: GameSnapshot = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name,
-        state: { ...game },
-        timestamp: Date.now(),
-        parentSnapshotId: null,
-      };
-      setStore({
-        ...store,
-        snapshots: [...store.snapshots, snapshot],
-      });
-    },
-    [game, store, setStore],
-  );
+  const handleSave = useCallback(() => {
+    saveSnapshot(false);
+  }, [saveSnapshot]);
 
   const handleLoad = useCallback(
     (snapshot: GameSnapshot) => {
       setLastDirection(null);
-      setStore({
-        ...store,
-        currentGame: { ...snapshot.state },
-        history: [],
-      });
+      loadSnapshot(snapshot);
       setSaveListVisible(false);
     },
-    [store, setStore],
+    [loadSnapshot],
   );
 
   const handleDeleteSnapshot = useCallback(
@@ -134,10 +125,18 @@ export function Game2048Screen() {
         onNewGame={handleNewGame}
       />
 
-      <BoardSizeSelector
-        size={game.boardSize}
-        onSizeChange={handleSizeChange}
-      />
+      <View style={styles.topButtons}>
+        <IconButton
+          icon="file-tree"
+          onPress={() => navigation.navigate("Game2048Tree")}
+          testID="tree-button"
+        />
+        <IconButton
+          icon="cog"
+          onPress={() => navigation.navigate("Game2048Settings")}
+          testID="settings-button"
+        />
+      </View>
 
       <View style={styles.boardContainer}>
         <GameBoard
@@ -186,6 +185,11 @@ export function Game2048Screen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  topButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: spacing.sm,
   },
   boardContainer: {
     alignItems: "center",

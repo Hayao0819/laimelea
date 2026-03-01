@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react-native";
+import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
 import { SaveSlotList } from "../../../../src/features/game2048/components/SaveSlotList";
 import type { GameSnapshot } from "../../../../src/features/game2048/logic/gameTypes";
@@ -97,64 +97,15 @@ describe("SaveSlotList", () => {
     expect(getByTestId("snapshot-snap-2")).toBeTruthy();
   });
 
-  it("should show save input when save button pressed", async () => {
-    const { getByTestId, queryByTestId } = await renderWithPaper(
-      <SaveSlotList {...defaultProps} />,
-    );
-    // Initially no save input
-    expect(queryByTestId("save-name-input")).toBeNull();
-
-    await act(async () => {
-      fireEvent.press(getByTestId("save-current-button"));
-    });
-
-    expect(getByTestId("save-name-input")).toBeTruthy();
-    expect(getByTestId("confirm-save-button")).toBeTruthy();
-  });
-
-  it("should call onSave with name when confirmed", async () => {
+  it("should call onSave immediately when save button pressed", async () => {
     const onSave = jest.fn();
     const { getByTestId } = await renderWithPaper(
       <SaveSlotList {...defaultProps} onSave={onSave} />,
     );
 
-    // Open save input
-    await act(async () => {
-      fireEvent.press(getByTestId("save-current-button"));
-    });
-
-    // Type a name
-    await act(async () => {
-      fireEvent.changeText(getByTestId("save-name-input"), "My Save");
-    });
-
-    // Confirm save
-    await act(async () => {
-      fireEvent.press(getByTestId("confirm-save-button"));
-    });
-
-    expect(onSave).toHaveBeenCalledWith("My Save");
-  });
-
-  it("should call onSave with default name when empty", async () => {
-    const onSave = jest.fn();
-    const snapshots = [makeSnapshot()];
-    const { getByTestId } = await renderWithPaper(
-      <SaveSlotList {...defaultProps} onSave={onSave} snapshots={snapshots} />,
-    );
-
-    // Open save input
-    await act(async () => {
-      fireEvent.press(getByTestId("save-current-button"));
-    });
-
-    // Leave input empty and confirm
-    await act(async () => {
-      fireEvent.press(getByTestId("confirm-save-button"));
-    });
-
-    // Default name is "Save #N" where N = snapshots.length + 1
-    expect(onSave).toHaveBeenCalledWith("Save #2");
+    await fireEvent.press(getByTestId("save-current-button"));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith();
   });
 
   it("should call onLoad when load button pressed", async () => {

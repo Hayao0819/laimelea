@@ -17,6 +17,8 @@ import { AboutScreen } from "../features/settings/screens/AboutScreen";
 import { LegalScreen } from "../features/settings/screens/LegalScreen";
 import { LicensesScreen } from "../features/settings/screens/LicensesScreen";
 import { Game2048Screen } from "../features/game2048/screens/Game2048Screen";
+import { Game2048SettingsScreen } from "../features/game2048/screens/Game2048SettingsScreen";
+import { Game2048TreeScreen } from "../features/game2048/screens/Game2048TreeScreen";
 import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";
@@ -153,6 +155,16 @@ export function RootNavigator() {
             name="Game2048"
             component={Game2048Screen}
             options={{ title: t("game2048.title") }}
+          />
+          <Stack.Screen
+            name="Game2048Settings"
+            component={Game2048SettingsScreen}
+            options={{ title: t("game2048.settings") }}
+          />
+          <Stack.Screen
+            name="Game2048Tree"
+            component={Game2048TreeScreen}
+            options={{ title: t("game2048.snapshotTree") }}
           />
         </>
       )}

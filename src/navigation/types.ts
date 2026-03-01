@@ -26,6 +26,8 @@ export type RootStackParamList = {
   SettingsLegal: undefined;
   SettingsLicenses: undefined;
   Game2048: undefined;
+  Game2048Settings: undefined;
+  Game2048Tree: undefined;
   AlarmFiring: { alarmId: string };
   ManualSleepEntry: { sessionId?: string };
   DeskClock: undefined;

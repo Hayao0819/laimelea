@@ -8,8 +8,9 @@ import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 import { game2048StoreAtom } from "../../../../src/features/game2048/atoms/game2048Atoms";
 import { createDefaultStore } from "../../../../src/features/game2048/logic/gameEngine";
 
+const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({ navigate: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
 jest.mock("@react-native-async-storage/async-storage", () => {
@@ -80,9 +81,10 @@ describe("Game2048Screen", () => {
     expect(getByTestId("game-header")).toBeTruthy();
   });
 
-  it("should display board size selector", async () => {
+  it("should display settings and tree navigation buttons", async () => {
     const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("board-size-selector")).toBeTruthy();
+    expect(getByTestId("settings-button")).toBeTruthy();
+    expect(getByTestId("tree-button")).toBeTruthy();
   });
 
   it("should display save/load button", async () => {
