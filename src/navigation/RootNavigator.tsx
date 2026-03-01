@@ -6,6 +6,9 @@ import { useTranslation } from "react-i18next";
 import { BottomTabNavigator } from "./BottomTabNavigator";
 import { DeskClockScreen } from "../features/clock/screens/DeskClockScreen";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
+import { AboutScreen } from "../features/settings/screens/AboutScreen";
+import { LegalScreen } from "../features/settings/screens/LegalScreen";
+import { LicensesScreen } from "../features/settings/screens/LicensesScreen";
 import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";
@@ -45,6 +48,21 @@ export function RootNavigator() {
             name="Settings"
             component={SettingsScreen}
             options={{ title: t("settings.title") }}
+          />
+          <Stack.Screen
+            name="SettingsAbout"
+            component={AboutScreen}
+            options={{ title: t("settings.about") }}
+          />
+          <Stack.Screen
+            name="SettingsLegal"
+            component={LegalScreen}
+            options={{ title: t("settings.legal") }}
+          />
+          <Stack.Screen
+            name="SettingsLicenses"
+            component={LicensesScreen}
+            options={{ title: t("settings.openSourceLicenses") }}
           />
           <Stack.Screen
             name="AlarmEdit"

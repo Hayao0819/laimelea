@@ -275,7 +275,8 @@
     "game2048": "2048 Game",
     "legal": "Legal",
     "privacyPolicy": "Privacy Policy",
-    "openSourceLicenses": "Open Source Licenses"
+    "openSourceLicenses": "Open Source Licenses",
+    "noLicenses": "No license information available"
   },
   "game2048": {
     "title": "2048",

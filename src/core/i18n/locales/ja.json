@@ -275,7 +275,8 @@
     "game2048": "2048 ゲーム",
     "legal": "法的情報",
     "privacyPolicy": "プライバシーポリシー",
-    "openSourceLicenses": "オープンソースライセンス"
+    "openSourceLicenses": "オープンソースライセンス",
+    "noLicenses": "ライセンス情報がありません"
   },
   "game2048": {
     "title": "2048",
