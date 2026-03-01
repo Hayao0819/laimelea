@@ -410,13 +410,13 @@ import {
 
 ### ヘルパー関数
 
-| 関数 | 用途 |
-|------|------|
-| `launchAppFresh()` | AsyncStorage クリア + 新規起動 |
-| `launchApp()` | 既存状態を保持して起動 |
-| `completeSetup(hours, minutes)` | セットアップ画面を完了 |
-| `navigateToTab(label)` | BottomTab に遷移（`.atIndex(0)` 対応済み） |
-| `waitVisible(testID, timeout)` | 要素の表示を待機 |
+| 関数                            | 用途                                       |
+| ------------------------------- | ------------------------------------------ |
+| `launchAppFresh()`              | AsyncStorage クリア + 新規起動             |
+| `launchApp()`                   | 既存状態を保持して起動                     |
+| `completeSetup(hours, minutes)` | セットアップ画面を完了                     |
+| `navigateToTab(label)`          | BottomTab に遷移（`.atIndex(0)` 対応済み） |
+| `waitVisible(testID, timeout)`  | 要素の表示を待機                           |
 
 ### 要素選択の優先順位
 

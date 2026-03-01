@@ -45,10 +45,7 @@ export function AboutScreen() {
       tapTimer.current = null;
 
       if (!isUnlocked) {
-        await AsyncStorage.setItem(
-          UNLOCK_STORAGE_KEY,
-          String(Date.now()),
-        );
+        await AsyncStorage.setItem(UNLOCK_STORAGE_KEY, String(Date.now()));
         setIsUnlocked(true);
       }
 
@@ -94,7 +91,10 @@ export function AboutScreen() {
           </Text>
           <Text
             variant="bodyMedium"
-            style={[styles.appDescription, { color: theme.colors.onSurfaceVariant }]}
+            style={[
+              styles.appDescription,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
           >
             {t("settings.appDescription")}
           </Text>

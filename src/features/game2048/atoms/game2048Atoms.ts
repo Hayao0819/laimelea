@@ -34,39 +34,32 @@ export const resolvedStoreAtom = atom<Game2048Store>((get) => {
 export const currentGameAtom = atom(
   (get) => get(resolvedStoreAtom).currentGame,
 );
-export const bestScoresAtom = atom(
-  (get) => get(resolvedStoreAtom).bestScores,
-);
+export const bestScoresAtom = atom((get) => get(resolvedStoreAtom).bestScores);
 export const canUndoAtom = atom(
   (get) => get(resolvedStoreAtom).history.length > 0,
 );
-export const snapshotsAtom = atom(
-  (get) => get(resolvedStoreAtom).snapshots,
-);
+export const snapshotsAtom = atom((get) => get(resolvedStoreAtom).snapshots);
 export const isUnlockedAtom = atom(
   (get) => get(resolvedStoreAtom).unlockedAt !== null,
 );
 
 // Write atoms for game actions
-export const pushHistoryAtom = atom(
-  null,
-  (get, set, newState: GameState) => {
-    const store = get(resolvedStoreAtom);
-    const history = [...store.history, store.currentGame].slice(
-      -MAX_HISTORY_SIZE,
-    );
-    const bestScore = Math.max(
-      store.bestScores[newState.boardSize] ?? 0,
-      newState.score,
-    );
-    set(game2048StoreAtom, {
-      ...store,
-      currentGame: newState,
-      history,
-      bestScores: { ...store.bestScores, [newState.boardSize]: bestScore },
-    });
-  },
-);
+export const pushHistoryAtom = atom(null, (get, set, newState: GameState) => {
+  const store = get(resolvedStoreAtom);
+  const history = [...store.history, store.currentGame].slice(
+    -MAX_HISTORY_SIZE,
+  );
+  const bestScore = Math.max(
+    store.bestScores[newState.boardSize] ?? 0,
+    newState.score,
+  );
+  set(game2048StoreAtom, {
+    ...store,
+    currentGame: newState,
+    history,
+    bestScores: { ...store.bestScores, [newState.boardSize]: bestScore },
+  });
+});
 
 export const undoAtom = atom(null, (get, set) => {
   const store = get(resolvedStoreAtom);

@@ -47,12 +47,9 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-jest.mock(
-  "../../../../src/features/widget/services/widgetUpdater",
-  () => ({
-    requestClockWidgetUpdate: jest.fn(),
-  }),
-);
+jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
+}));
 
 jest.mock("@react-native-google-signin/google-signin", () => ({
   GoogleSignin: {
@@ -164,9 +161,7 @@ describe("BackupScreen", () => {
     });
 
     expect(mockServices.backup.backup).toHaveBeenCalledTimes(1);
-    expect(mockServices.backup.backup).toHaveBeenCalledWith(
-      expect.any(String),
-    );
+    expect(mockServices.backup.backup).toHaveBeenCalledWith(expect.any(String));
   });
 
   it("should call platformServices.backup.restore on restore button press", async () => {

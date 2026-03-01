@@ -33,13 +33,12 @@ for (const dep of deps) {
       license:
         typeof pkg.license === "string"
           ? pkg.license
-          : (pkg.license?.type || "Unknown"),
+          : pkg.license?.type || "Unknown",
       repository:
         typeof pkg.repository === "string"
           ? pkg.repository
-          : (pkg.repository?.url
-                ?.replace(/^git\+/, "")
-                .replace(/\.git$/, "") || null),
+          : pkg.repository?.url?.replace(/^git\+/, "").replace(/\.git$/, "") ||
+            null,
     });
   } catch {
     // skip unreadable packages

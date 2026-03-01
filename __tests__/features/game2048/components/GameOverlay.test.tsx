@@ -59,11 +59,7 @@ describe("GameOverlay", () => {
 
   it("should show win message when hasWon and not acknowledged", async () => {
     const { getByTestId, getByText } = await renderWithPaper(
-      <GameOverlay
-        {...defaultProps}
-        hasWon={true}
-        wonAcknowledged={false}
-      />,
+      <GameOverlay {...defaultProps} hasWon={true} wonAcknowledged={false} />,
     );
     expect(getByTestId("game-overlay")).toBeTruthy();
     expect(getByText("game2048.youWin")).toBeTruthy();
@@ -95,7 +91,11 @@ describe("GameOverlay", () => {
   it("should call onTryAgain when try again button pressed", async () => {
     const onTryAgain = jest.fn();
     const { getByTestId } = await renderWithPaper(
-      <GameOverlay {...defaultProps} isGameOver={true} onTryAgain={onTryAgain} />,
+      <GameOverlay
+        {...defaultProps}
+        isGameOver={true}
+        onTryAgain={onTryAgain}
+      />,
     );
     await fireEvent.press(getByTestId("try-again-button"));
     expect(onTryAgain).toHaveBeenCalledTimes(1);

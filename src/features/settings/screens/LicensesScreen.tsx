@@ -38,7 +38,9 @@ export function LicensesScreen() {
       <List.Item
         title={item.name}
         description={`${item.license} \u00b7 v${item.version}`}
-        onPress={item.repository ? () => handlePress(item.repository!) : undefined}
+        onPress={
+          item.repository ? () => handlePress(item.repository!) : undefined
+        }
         right={item.repository ? renderChevron : undefined}
       />
     ),

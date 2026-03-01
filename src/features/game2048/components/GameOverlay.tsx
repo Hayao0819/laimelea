@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Button, Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
 
 interface GameOverlayProps {
@@ -19,6 +19,7 @@ export function GameOverlay({
   onTryAgain,
 }: GameOverlayProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   // Show overlay only when:
   // 1. Game is over (lost)
@@ -28,8 +29,21 @@ export function GameOverlay({
   const isWin = hasWon && !wonAcknowledged;
 
   return (
-    <View style={styles.overlay} testID="game-overlay">
-      <Text variant="headlineMedium" style={styles.title}>
+    <View
+      style={[
+        styles.overlay,
+        {
+          backgroundColor: theme.dark
+            ? "rgba(26, 28, 25, 0.8)"
+            : "rgba(203, 232, 193, 0.8)",
+        },
+      ]}
+      testID="game-overlay"
+    >
+      <Text
+        variant="headlineMedium"
+        style={[styles.title, { color: theme.colors.onSurface }]}
+      >
         {isWin ? t("game2048.youWin") : t("game2048.gameOver")}
       </Text>
       <View style={styles.buttons}>
@@ -53,14 +67,12 @@ export function GameOverlay({
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(238, 228, 218, 0.73)",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
   },
   title: {
     fontWeight: "bold",
-    color: "#776e65",
     marginBottom: 16,
   },
   buttons: {

@@ -63,7 +63,12 @@ export function CalendarSettingsScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
   const calendars = useAtomValue(calendarListAtom);
-  const { visible: snackbarVisible, message: snackbarMessage, show: showSnackbar, dismiss: dismissSnackbar } = useSnackbar();
+  const {
+    visible: snackbarVisible,
+    message: snackbarMessage,
+    show: showSnackbar,
+    dismiss: dismissSnackbar,
+  } = useSnackbar();
 
   const hasLegacyAccount =
     settings.accountEmail != null && settings.accounts.length === 0;

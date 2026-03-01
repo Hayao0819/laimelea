@@ -61,14 +61,17 @@ describe("getWinTarget", () => {
 });
 
 describe("createEmptyBoard", () => {
-  it.each([3, 4, 5, 6] as BoardSize[])("creates a %dx%d board of zeros", (size) => {
-    const board = createEmptyBoard(size);
-    expect(board).toHaveLength(size);
-    for (const row of board) {
-      expect(row).toHaveLength(size);
-      expect(row.every((cell) => cell === 0)).toBe(true);
-    }
-  });
+  it.each([3, 4, 5, 6] as BoardSize[])(
+    "creates a %dx%d board of zeros",
+    (size) => {
+      const board = createEmptyBoard(size);
+      expect(board).toHaveLength(size);
+      for (const row of board) {
+        expect(row).toHaveLength(size);
+        expect(row.every((cell) => cell === 0)).toBe(true);
+      }
+    },
+  );
 
   it("returns independent rows (mutating one does not affect others)", () => {
     const board = createEmptyBoard(4);

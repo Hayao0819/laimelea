@@ -19,12 +19,9 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-jest.mock(
-  "../../../../src/features/widget/services/widgetUpdater",
-  () => ({
-    requestClockWidgetUpdate: jest.fn(),
-  }),
-);
+jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
+}));
 
 function createWrapper() {
   const store = createStore();
@@ -86,9 +83,7 @@ describe("useSettingsUpdate", () => {
     expect(stored.setupComplete).toBe(true);
     expect(stored.theme).toBe("dark");
     // Unchanged fields remain
-    expect(stored.primaryTimeDisplay).toBe(
-      DEFAULT_SETTINGS.primaryTimeDisplay,
-    );
+    expect(stored.primaryTimeDisplay).toBe(DEFAULT_SETTINGS.primaryTimeDisplay);
   });
 
   it("should update alarm defaults via updateAlarmDefaults()", () => {

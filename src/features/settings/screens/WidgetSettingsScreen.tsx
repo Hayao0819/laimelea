@@ -100,10 +100,7 @@ export function WidgetSettingsScreen() {
               updateWidgetSettings({ backgroundColor: text })
             }
             onBlur={() =>
-              handleColorBlur(
-                "backgroundColor",
-                widgetSettings.backgroundColor,
-              )
+              handleColorBlur("backgroundColor", widgetSettings.backgroundColor)
             }
             style={styles.colorInput}
             mode="outlined"
@@ -166,9 +163,7 @@ export function WidgetSettingsScreen() {
           <TextInput
             label={t("settings.widgetAccentColor")}
             value={widgetSettings.accentColor}
-            onChangeText={(text) =>
-              updateWidgetSettings({ accentColor: text })
-            }
+            onChangeText={(text) => updateWidgetSettings({ accentColor: text })}
             onBlur={() =>
               handleColorBlur("accentColor", widgetSettings.accentColor)
             }

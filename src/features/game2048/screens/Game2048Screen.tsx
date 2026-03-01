@@ -38,6 +38,7 @@ export function Game2048Screen() {
   const setStore = useSetAtom(game2048StoreAtom);
 
   const [saveListVisible, setSaveListVisible] = useState(false);
+  const [lastDirection, setLastDirection] = useState<Direction | null>(null);
 
   const handleMove = useCallback(
     (direction: Direction) => {
@@ -46,6 +47,7 @@ export function Game2048Screen() {
 
       const result = move(game, direction);
       if (result.moved) {
+        setLastDirection(direction);
         pushHistory(result.state);
       }
     },
@@ -53,11 +55,13 @@ export function Game2048Screen() {
   );
 
   const handleNewGame = useCallback(() => {
+    setLastDirection(null);
     startNewGame(game.boardSize);
   }, [game.boardSize, startNewGame]);
 
   const handleSizeChange = useCallback(
     (size: BoardSize) => {
+      setLastDirection(null);
       startNewGame(size);
     },
     [startNewGame],
@@ -93,6 +97,7 @@ export function Game2048Screen() {
 
   const handleLoad = useCallback(
     (snapshot: GameSnapshot) => {
+      setLastDirection(null);
       setStore({
         ...store,
         currentGame: { ...snapshot.state },
@@ -122,7 +127,10 @@ export function Game2048Screen() {
         score={game.score}
         bestScore={bestScores[game.boardSize] ?? 0}
         canUndo={canUndo}
-        onUndo={undo}
+        onUndo={() => {
+          setLastDirection(null);
+          undo();
+        }}
         onNewGame={handleNewGame}
       />
 
@@ -136,6 +144,7 @@ export function Game2048Screen() {
           board={game.board}
           boardSize={game.boardSize}
           onMove={handleMove}
+          direction={lastDirection}
         />
         <GameOverlay
           isGameOver={game.isGameOver}

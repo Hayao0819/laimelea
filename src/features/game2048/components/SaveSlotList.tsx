@@ -97,11 +97,7 @@ export function SaveSlotList({
 
   const renderItem = useCallback(
     ({ item }: { item: GameSnapshot }) => (
-      <SnapshotItem
-        snapshot={item}
-        onLoad={onLoad}
-        onDelete={onDelete}
-      />
+      <SnapshotItem snapshot={item} onLoad={onLoad} onDelete={onDelete} />
     ),
     [onLoad, onDelete],
   );

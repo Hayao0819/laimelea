@@ -161,11 +161,7 @@ describe("SaveSlotList", () => {
     const onLoad = jest.fn();
     const snapshot = makeSnapshot({ id: "snap-load" });
     const { getByTestId } = await renderWithPaper(
-      <SaveSlotList
-        {...defaultProps}
-        snapshots={[snapshot]}
-        onLoad={onLoad}
-      />,
+      <SaveSlotList {...defaultProps} snapshots={[snapshot]} onLoad={onLoad} />,
     );
 
     await fireEvent.press(getByTestId("load-snap-load"));
