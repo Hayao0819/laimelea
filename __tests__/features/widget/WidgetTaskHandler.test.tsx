@@ -1,5 +1,8 @@
 import { registerWidgetTaskHandler } from "react-native-android-widget";
-import { loadSettings, loadAlarms } from "../../../src/features/widget/services/widgetData";
+import {
+  loadSettings,
+  loadAlarms,
+} from "../../../src/features/widget/services/widgetData";
 import { registerClockWidgetHandler } from "../../../src/features/widget/WidgetTaskHandler";
 import {
   DEFAULT_SETTINGS,

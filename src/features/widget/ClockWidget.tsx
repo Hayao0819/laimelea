@@ -33,9 +33,27 @@ function toColor(hex: string): ColorProp {
 }
 
 const SIZE_CONFIG = {
-  small: { customTimeFontSize: 28, dayFontSize: 12, realTimeFontSize: 10, alarmFontSize: 10, padding: 8 },
-  medium: { customTimeFontSize: 36, dayFontSize: 14, realTimeFontSize: 12, alarmFontSize: 12, padding: 12 },
-  large: { customTimeFontSize: 48, dayFontSize: 18, realTimeFontSize: 16, alarmFontSize: 16, padding: 20 },
+  small: {
+    customTimeFontSize: 28,
+    dayFontSize: 12,
+    realTimeFontSize: 10,
+    alarmFontSize: 10,
+    padding: 8,
+  },
+  medium: {
+    customTimeFontSize: 36,
+    dayFontSize: 14,
+    realTimeFontSize: 12,
+    alarmFontSize: 12,
+    padding: 12,
+  },
+  large: {
+    customTimeFontSize: 48,
+    dayFontSize: 18,
+    realTimeFontSize: 16,
+    alarmFontSize: 16,
+    padding: 20,
+  },
 } as const;
 
 function formatRealTime(timestampMs: number): string {

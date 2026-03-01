@@ -741,9 +741,7 @@ export function SettingsScreen() {
             <TextInput
               label={t("settings.widgetTextColor")}
               value={widgetSettings.textColor}
-              onChangeText={(text) =>
-                updateWidgetSettings({ textColor: text })
-              }
+              onChangeText={(text) => updateWidgetSettings({ textColor: text })}
               onBlur={() =>
                 handleColorBlur("textColor", widgetSettings.textColor)
               }

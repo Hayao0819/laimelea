@@ -1,7 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "../../../../src/core/storage/keys";
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
-import { loadSettings, loadAlarms } from "../../../../src/features/widget/services/widgetData";
+import {
+  loadSettings,
+  loadAlarms,
+} from "../../../../src/features/widget/services/widgetData";
 import type { Alarm } from "../../../../src/models/Alarm";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({

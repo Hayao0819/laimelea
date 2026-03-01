@@ -447,9 +447,9 @@ describe("ClockWidget", () => {
       const realTimeTexts = texts.filter((t) => t.text === expectedTime);
 
       expect(dayTexts).toHaveLength(1);
-      expect(
-        (dayTexts[0].props.style as Record<string, unknown>).color,
-      ).toBe("#0000FF");
+      expect((dayTexts[0].props.style as Record<string, unknown>).color).toBe(
+        "#0000FF",
+      );
       expect(realTimeTexts).toHaveLength(1);
       expect(
         (realTimeTexts[0].props.style as Record<string, unknown>).color,
@@ -478,9 +478,9 @@ describe("ClockWidget", () => {
       const alarmTexts = texts.filter((t) => t.text.startsWith("\u23F0"));
 
       expect(alarmTexts).toHaveLength(1);
-      expect(
-        (alarmTexts[0].props.style as Record<string, unknown>).color,
-      ).toBe("#FFFF00");
+      expect((alarmTexts[0].props.style as Record<string, unknown>).color).toBe(
+        "#FFFF00",
+      );
     });
 
     it("should use DEFAULT_WIDGET_SETTINGS when widgetSettings not provided", async () => {
@@ -612,9 +612,9 @@ describe("ClockWidget", () => {
       const containerStyle = containerProps.style as Record<string, unknown>;
 
       expect(containerStyle.padding).toBe(8);
-      expect(
-        (texts[0].props.style as Record<string, unknown>).fontSize,
-      ).toBe(28);
+      expect((texts[0].props.style as Record<string, unknown>).fontSize).toBe(
+        28,
+      );
     });
 
     it("should render all elements for medium size", async () => {
@@ -647,9 +647,9 @@ describe("ClockWidget", () => {
 
       expect(containerStyle.padding).toBe(12);
       // customTime fontSize = 36
-      expect(
-        (texts[0].props.style as Record<string, unknown>).fontSize,
-      ).toBe(36);
+      expect((texts[0].props.style as Record<string, unknown>).fontSize).toBe(
+        36,
+      );
     });
 
     it("should use large font sizes and padding for large size", async () => {
@@ -667,13 +667,13 @@ describe("ClockWidget", () => {
 
       expect(containerStyle.padding).toBe(20);
       // customTime fontSize = 48
-      expect(
-        (texts[0].props.style as Record<string, unknown>).fontSize,
-      ).toBe(48);
+      expect((texts[0].props.style as Record<string, unknown>).fontSize).toBe(
+        48,
+      );
       // day fontSize = 18
-      expect(
-        (texts[1].props.style as Record<string, unknown>).fontSize,
-      ).toBe(18);
+      expect((texts[1].props.style as Record<string, unknown>).fontSize).toBe(
+        18,
+      );
     });
 
     it("should default to medium size when widgetSize is not provided", async () => {
