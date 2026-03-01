@@ -159,11 +159,12 @@ export function CalendarScreen() {
   const navTitle = formatNavigationTitle(viewMode, selectedDate, t);
 
   const viewButtons = useMemo(
-    () => [
-      { value: "month", label: t("calendar.views.month") },
-      { value: "week", label: t("calendar.views.week") },
-      { value: "agenda", label: t("calendar.views.agenda") },
-    ],
+    () =>
+      [
+        { value: "month" as const, label: t("calendar.views.month") },
+        { value: "week" as const, label: t("calendar.views.week") },
+        { value: "agenda" as const, label: t("calendar.views.agenda") },
+      ],
     [t],
   );
 
@@ -216,9 +217,9 @@ export function CalendarScreen() {
     <View style={styles.container} testID="calendar-screen">
       {/* View mode selector */}
       <View style={styles.segmentedContainer}>
-        <SegmentedButtons
+        <SegmentedButtons<CalendarViewMode>
           value={viewMode}
-          onValueChange={(v) => setViewMode(v as CalendarViewMode)}
+          onValueChange={(v) => setViewMode(v)}
           buttons={viewButtons}
         />
       </View>

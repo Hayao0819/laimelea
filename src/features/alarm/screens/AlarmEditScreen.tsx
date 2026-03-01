@@ -316,9 +316,9 @@ export function AlarmEditScreen() {
               ? t("alarm.settingInCustom")
               : t("alarm.settingIn24h")}
           </Text>
-          <SegmentedButtons
+          <SegmentedButtons<"custom" | "24h">
             value={timeSystem}
-            onValueChange={(v) => setTimeSystem(v as "custom" | "24h")}
+            onValueChange={(v) => setTimeSystem(v)}
             buttons={[
               { value: "custom", label: t("clock.customTime") },
               { value: "24h", label: t("clock.realTime") },

@@ -37,6 +37,8 @@ const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
 const SNOOZE_MAX_OPTIONS = [1, 2, 3, 5, 10];
 const REMINDER_OPTIONS = [0, 5, 10, 15, 30, 60];
 
+const dayMap = { "0": 0, "1": 1, "6": 6 } as const;
+
 export function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -410,11 +412,9 @@ export function SettingsScreen() {
             <Text variant="bodySmall" style={styles.segmentDescription}>
               {t("settings.primaryDisplayDescription")}
             </Text>
-            <SegmentedButtons
+            <SegmentedButtons<"custom" | "24h">
               value={settings.primaryTimeDisplay}
-              onValueChange={(v) =>
-                update({ primaryTimeDisplay: v as "custom" | "24h" })
-              }
+              onValueChange={(v) => update({ primaryTimeDisplay: v })}
               buttons={[
                 { value: "custom", label: t("settings.custom") },
                 { value: "24h", label: t("settings.standard24h") },
@@ -438,11 +438,9 @@ export function SettingsScreen() {
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.theme")}
             </Text>
-            <SegmentedButtons
+            <SegmentedButtons<"light" | "dark" | "system">
               value={settings.theme}
-              onValueChange={(v) =>
-                update({ theme: v as "light" | "dark" | "system" })
-              }
+              onValueChange={(v) => update({ theme: v })}
               buttons={[
                 { value: "light", label: t("settings.themeLight") },
                 { value: "dark", label: t("settings.themeDark") },
@@ -454,9 +452,9 @@ export function SettingsScreen() {
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.timeFormat")}
             </Text>
-            <SegmentedButtons
+            <SegmentedButtons<"12h" | "24h">
               value={settings.timeFormat}
-              onValueChange={(v) => update({ timeFormat: v as "12h" | "24h" })}
+              onValueChange={(v) => update({ timeFormat: v })}
               buttons={[
                 { value: "12h", label: "12h" },
                 { value: "24h", label: "24h" },
@@ -481,11 +479,9 @@ export function SettingsScreen() {
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.dst")}
             </Text>
-            <SegmentedButtons
+            <SegmentedButtons<"auto" | "ignore">
               value={settings.dstHandling}
-              onValueChange={(v) =>
-                update({ dstHandling: v as "auto" | "ignore" })
-              }
+              onValueChange={(v) => update({ dstHandling: v })}
               buttons={[
                 { value: "auto", label: t("settings.dstAuto") },
                 { value: "ignore", label: t("settings.dstIgnore") },
@@ -510,12 +506,10 @@ export function SettingsScreen() {
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.dismissalMethod")}
             </Text>
-            <SegmentedButtons
+            <SegmentedButtons<DismissalMethod>
               value={settings.alarmDefaults.dismissalMethod}
               onValueChange={(v) =>
-                updateAlarmDefaults({
-                  dismissalMethod: v as DismissalMethod,
-                })
+                updateAlarmDefaults({ dismissalMethod: v })
               }
               buttons={[
                 { value: "simple", label: "Simple" },
@@ -574,12 +568,10 @@ export function SettingsScreen() {
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.volumeButton")}
             </Text>
-            <SegmentedButtons
+            <SegmentedButtons<"snooze" | "dismiss" | "volume">
               value={settings.alarmDefaults.volumeButtonBehavior}
               onValueChange={(v) =>
-                updateAlarmDefaults({
-                  volumeButtonBehavior: v as "snooze" | "dismiss" | "volume",
-                })
+                updateAlarmDefaults({ volumeButtonBehavior: v })
               }
               buttons={[
                 {
@@ -648,12 +640,10 @@ export function SettingsScreen() {
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.firstDayOfWeek")}
             </Text>
-            <SegmentedButtons
-              value={String(settings.calendarFirstDayOfWeek)}
+            <SegmentedButtons<"0" | "1" | "6">
+              value={`${settings.calendarFirstDayOfWeek}`}
               onValueChange={(v) =>
-                update({
-                  calendarFirstDayOfWeek: Number(v) as 0 | 1 | 6,
-                })
+                update({ calendarFirstDayOfWeek: dayMap[v] })
               }
               buttons={[
                 { value: "0", label: t("settings.sunday") },

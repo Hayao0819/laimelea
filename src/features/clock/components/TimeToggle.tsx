@@ -11,9 +11,9 @@ export function TimeToggle() {
 
   return (
     <View testID="time-toggle">
-      <SegmentedButtons
+      <SegmentedButtons<"custom" | "24h">
         value={display}
-        onValueChange={(v) => setDisplay(v as "custom" | "24h")}
+        onValueChange={(v) => setDisplay(v)}
         buttons={[
           { value: "custom", label: t("clock.customTime") },
           { value: "24h", label: t("clock.realTime") },

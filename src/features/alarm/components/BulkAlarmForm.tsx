@@ -120,9 +120,9 @@ export function BulkAlarmForm({
           cycleLengthMinutes={cycleLengthMinutes}
           onChange={onToTimeChange}
         />
-        <SegmentedButtons
+        <SegmentedButtons<"custom" | "24h">
           value={timeSystem}
-          onValueChange={(v) => onTimeSystemChange(v as "custom" | "24h")}
+          onValueChange={(v) => onTimeSystemChange(v)}
           buttons={[
             { value: "custom", label: t("clock.customTime") },
             { value: "24h", label: t("clock.realTime") },

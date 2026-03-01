@@ -15,9 +15,9 @@ export function TimerScreen() {
   return (
     <View style={styles.container} testID="timer-screen">
       <View style={styles.toggle}>
-        <SegmentedButtons
+        <SegmentedButtons<TimerTab>
           value={tab}
-          onValueChange={(v) => setTab(v as TimerTab)}
+          onValueChange={(v) => setTab(v)}
           buttons={[
             { value: "countdown", label: t("timer.countdown") },
             { value: "stopwatch", label: t("timer.stopwatch") },
