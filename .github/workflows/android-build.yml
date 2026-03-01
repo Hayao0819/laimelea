@@ -13,8 +13,22 @@ permissions:
 
 jobs:
   build:
-    name: Build APKs
+    name: Build ${{ matrix.variant }} APK
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: debug
+            gradle-task: assembleDebug
+            gradle-flags: -PreactNativeArchitectures=arm64-v8a
+            apk-path: android/app/build/outputs/apk/debug/app-debug.apk
+            artifact-name: app-debug
+          - variant: release
+            gradle-task: assembleRelease
+            gradle-flags: ""
+            apk-path: android/app/build/outputs/apk/release/app-release.apk
+            artifact-name: app-release
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
@@ -55,7 +69,7 @@ jobs:
 
       - name: Decode release keystore
         id: decode-keystore
-        if: env.RELEASE_KEYSTORE_BASE64 != ''
+        if: matrix.variant == 'release' && env.RELEASE_KEYSTORE_BASE64 != ''
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
@@ -72,33 +86,21 @@ jobs:
             rm -f android/app/release.keystore
           fi
 
-      - name: Build debug APK
-        id: debug-build
-        working-directory: android
-        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a
-
-      - name: Build release APK
-        if: steps.decode-keystore.outputs.verified == 'true'
+      - name: Build APK
+        id: build
+        if: matrix.variant == 'debug' || steps.decode-keystore.outputs.verified == 'true'
         working-directory: android
         env:
           RELEASE_KEYSTORE_FILE: ${{ github.workspace }}/android/app/release.keystore
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ vars.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew ${{ matrix.gradle-task }} ${{ matrix.gradle-flags }}
 
-      - name: Upload debug APK
-        if: always() && steps.debug-build.outcome == 'success'
+      - name: Upload APK
+        if: always() && steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 7
-
-      - name: Upload release APK
-        if: steps.decode-keystore.outputs.verified == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.apk-path }}
           retention-days: 7
