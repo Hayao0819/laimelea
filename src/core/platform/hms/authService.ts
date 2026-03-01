@@ -19,7 +19,7 @@ async function loadAuthState(): Promise<StoredAuthState | null> {
   if (!json) {
     return null;
   }
-  return JSON.parse(json) as StoredAuthState;
+  return JSON.parse(json);
 }
 
 async function saveAuthState(state: StoredAuthState): Promise<void> {

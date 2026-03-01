@@ -149,8 +149,6 @@ export function AnalogClock({
   const secondLen = radius * SECOND_HAND_LENGTH;
   const tailLen = radius * SECOND_TAIL_LENGTH;
 
-  const elevationColors = theme.colors.elevation as Record<string, string>;
-
   return (
     <View
       style={styles.container}
@@ -164,7 +162,7 @@ export function AnalogClock({
           cx={center}
           cy={center}
           r={radius}
-          fill={elevationColors.level1 ?? theme.colors.surfaceVariant}
+          fill={theme.colors.elevation.level1 ?? theme.colors.surfaceVariant}
           stroke={theme.colors.outlineVariant}
           strokeWidth={1}
         />

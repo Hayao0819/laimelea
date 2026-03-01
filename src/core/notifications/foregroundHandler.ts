@@ -4,11 +4,11 @@ export function setupForegroundHandler(
   onAlarmFired: (alarmId: string) => void,
 ) {
   return notifee.onForegroundEvent(({ type, detail }) => {
-    if (
-      (type === EventType.PRESS || type === EventType.ACTION_PRESS) &&
-      detail.notification?.data?.alarmId
-    ) {
-      onAlarmFired(detail.notification.data.alarmId as string);
+    if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
+      const alarmId = detail.notification?.data?.alarmId;
+      if (typeof alarmId === "string") {
+        onAlarmFired(alarmId);
+      }
     }
   });
 }

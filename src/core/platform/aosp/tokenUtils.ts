@@ -15,7 +15,7 @@ export function decodeIdTokenPayload(idToken: string): Record<string, unknown> {
     "=",
   );
   const json = atob(padded);
-  return JSON.parse(json) as Record<string, unknown>;
+  return JSON.parse(json);
 }
 
 /**

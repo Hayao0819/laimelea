@@ -13,7 +13,7 @@ async function loadAllAuthStates(): Promise<AuthStateRecord> {
   if (!json) {
     return {};
   }
-  return JSON.parse(json) as AuthStateRecord;
+  return JSON.parse(json);
 }
 
 async function saveAllAuthStates(states: AuthStateRecord): Promise<void> {
