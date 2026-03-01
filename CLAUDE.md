@@ -30,20 +30,26 @@ AI assistant guidance for Laimelea project.
    pnpm eslint .
    ```
 
-4. **ALWAYS validate** after any `.nix` file change:
+4. **Type-check** with TypeScript compiler (catches type errors that ESLint misses):
+
+   ```bash
+   pnpm tsc --noEmit
+   ```
+
+5. **ALWAYS validate** after any `.nix` file change:
 
    ```bash
    nix flake check
    ```
 
-5. **Run tests** after code changes:
+6. **Run tests** after code changes:
 
    ```bash
    pnpm jest
    ```
 
-6. **Package manager**: pnpm (with `node-linker=hoisted` in `.npmrc` for Metro compatibility). Always use `pnpm` instead of `npm` or `npx`.
-7. **Test execution**: Use `pnpm jest <path>` directly, not `pnpm test -- --testPathPattern`
+7. **Package manager**: pnpm (with `node-linker=hoisted` in `.npmrc` for Metro compatibility). Always use `pnpm` instead of `npm` or `npx`.
+8. **Test execution**: Use `pnpm jest <path>` directly, not `pnpm test -- --testPathPattern`
 
 ## Project Overview
 

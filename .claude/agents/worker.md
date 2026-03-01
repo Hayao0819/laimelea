@@ -40,10 +40,11 @@ The task description is provided as the prompt when you are spawned. Read it car
 
 1. **Format**: Run `treefmt` (never run prettier or nixfmt directly)
 2. **Lint**: Run `pnpm eslint . --fix` to auto-fix, then `pnpm eslint .` to verify
-3. **Test**: Run `pnpm jest` (or `pnpm jest <specific-path>` for targeted tests)
-4. **Nix check**: If you modified any `.nix` file, run `nix flake check`
+3. **Type-check**: Run `pnpm tsc --noEmit` to catch type errors
+4. **Test**: Run `pnpm jest` (or `pnpm jest <specific-path>` for targeted tests)
+5. **Nix check**: If you modified any `.nix` file, run `nix flake check`
 
-All four gates must pass before committing. If a gate fails, fix the issue and re-run from that gate.
+All five gates must pass before committing. If a gate fails, fix the issue and re-run from that gate.
 
 ### Coding Standards
 
@@ -79,7 +80,7 @@ __tests__/        # Test files (mirrors src/ structure)
 1. **Understand deeply**: Read the task description. Then read ALL relevant existing files — not just the files you'll change, but neighboring files, related tests, shared types, and utilities. Understand the patterns and conventions before writing any code.
 2. **Implement thoroughly**: Write production-quality code. Handle error cases, add proper TypeScript types, and ensure the implementation integrates cleanly with existing code. Create new files only when necessary; prefer editing existing ones.
 3. **Test**: Write tests that cover normal paths, edge cases, and error scenarios. Run `pnpm jest` to verify.
-4. **Quality**: Run `treefmt` → `pnpm eslint .` → `pnpm jest` in order.
+4. **Quality**: Run `treefmt` → `pnpm eslint .` → `pnpm tsc --noEmit` → `pnpm jest` in order.
 5. **Review your own work**: Re-read your changes. Look for missing edge cases, incomplete error handling, or deviations from existing patterns. Fix any issues found.
 6. **Commit**: Stage your changes and commit with a concise message describing what was done. Use conventional commit prefixes (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`). Do NOT add `Co-Authored-By` headers.
 7. **Report**: Summarize what you implemented, which files were changed/created, and test results.

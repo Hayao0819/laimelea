@@ -2,7 +2,7 @@
 name: test
 description: Analyze test coverage gaps, create missing tests using worker subagents, then run and fix all tests. Uses Explore subagent for analysis and Worker subagents for parallel test creation.
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), Bash(pnpm eslint*), Bash(pnpm jest*)
+allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), Bash(pnpm eslint*), Bash(pnpm tsc*), Bash(pnpm jest*)
 ---
 
 # テスト追加・実行・修正オーケストレーター
@@ -136,7 +136,7 @@ Task tool:
     - [ ] テストが全てパスすること (`pnpm jest <テストファイルパス>`)
     - [ ] テスト対象の主要なロジック/分岐がカバーされていること
     - [ ] 既存テストのパターンに準拠していること
-    - [ ] treefmt + eslint がパスすること
+    - [ ] treefmt + eslint + tsc がパスすること
   model: "opus"
 ```
 
@@ -180,7 +180,10 @@ treefmt
 pnpm eslint . --fix
 pnpm eslint .
 
-# 3. 全テスト実行
+# 3. 型チェック
+pnpm tsc --noEmit
+
+# 4. 全テスト実行
 pnpm jest
 ```
 

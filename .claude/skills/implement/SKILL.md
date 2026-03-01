@@ -2,7 +2,7 @@
 name: implement
 description: Orchestrate parallel autonomous implementation using worker subagents in isolated worktrees. Reads the implementation plan from project docs/memory and dispatches workers.
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), Bash(pnpm eslint*), Bash(pnpm jest*)
+allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), Bash(pnpm eslint*), Bash(pnpm tsc*), Bash(pnpm jest*)
 ---
 
 # 自動並列実装オーケストレーター
@@ -151,7 +151,8 @@ git branch -d <branch-name>
 
 1. `treefmt` — フォーマット
 2. `pnpm eslint .` — リント
-3. `pnpm jest` — テスト
+3. `pnpm tsc --noEmit` — 型チェック
+4. `pnpm jest` — テスト
 
 問題があれば修正してコミットする。全ゲート通過後、最終結果をユーザーに報告:
 
