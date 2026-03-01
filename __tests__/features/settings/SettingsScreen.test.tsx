@@ -134,6 +134,13 @@ function createMockPlatformServices(
       fetchSleepSessions: jest.fn().mockResolvedValue([]),
       isAvailable: jest.fn().mockResolvedValue(true),
     },
+    accountManager: {
+      getAccounts: jest.fn().mockResolvedValue([]),
+      addAccount: jest.fn().mockRejectedValue(new Error("not implemented")),
+      removeAccount: jest.fn().mockResolvedValue(undefined),
+      getAccessToken: jest.fn().mockResolvedValue(null),
+      getAllAccessTokens: jest.fn().mockResolvedValue(new Map()),
+    },
   };
 }
 

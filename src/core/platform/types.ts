@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "../../models/CalendarEvent";
 import type { SleepSession } from "../../models/SleepSession";
+import type { AccountManager } from "../account/types";
 
 export type PlatformType = "gms" | "hms" | "aosp";
 
@@ -47,4 +48,5 @@ export interface PlatformServices {
   calendar: PlatformCalendarService;
   backup: PlatformBackupService;
   sleep: PlatformSleepService;
+  accountManager: AccountManager;
 }

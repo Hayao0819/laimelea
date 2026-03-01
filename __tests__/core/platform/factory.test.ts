@@ -33,6 +33,7 @@ describe("createPlatformServices", () => {
     expect(services.calendar).toBeDefined();
     expect(services.backup).toBeDefined();
     expect(services.sleep).toBeDefined();
+    expect(services.accountManager).toBeDefined();
   });
 
   it('should create GMS services with type "gms"', () => {
@@ -42,6 +43,7 @@ describe("createPlatformServices", () => {
     expect(services.calendar).toBeDefined();
     expect(services.backup).toBeDefined();
     expect(services.sleep).toBeDefined();
+    expect(services.accountManager).toBeDefined();
   });
 
   it('should create HMS services with type "hms"', () => {
@@ -51,6 +53,7 @@ describe("createPlatformServices", () => {
     expect(services.calendar).toBeDefined();
     expect(services.backup).toBeDefined();
     expect(services.sleep).toBeDefined();
+    expect(services.accountManager).toBeDefined();
   });
 
   it("should return different auth implementations for aosp vs hms", async () => {

@@ -11,12 +11,16 @@ import {
 } from "../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
-import { syncCalendarEvents } from "../../src/core/calendar/calendarSyncService";
+import {
+  syncCalendarEvents,
+  syncMultiAccountCalendarEvents,
+} from "../../src/core/calendar/calendarSyncService";
 import { createPlatformServices } from "../../src/core/platform/factory";
 import type { CalendarEvent } from "../../src/models/CalendarEvent";
 
 jest.mock("../../src/core/calendar/calendarSyncService", () => ({
   syncCalendarEvents: jest.fn(),
+  syncMultiAccountCalendarEvents: jest.fn(),
 }));
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -53,6 +57,11 @@ const mockSyncCalendarEvents = syncCalendarEvents as jest.MockedFunction<
   typeof syncCalendarEvents
 >;
 
+const mockSyncMultiAccountCalendarEvents =
+  syncMultiAccountCalendarEvents as jest.MockedFunction<
+    typeof syncMultiAccountCalendarEvents
+  >;
+
 const sampleEvent: CalendarEvent = {
   id: "ev1",
   sourceEventId: "src-ev1",
@@ -72,6 +81,16 @@ function createMockCalendar() {
     fetchEvents: jest.fn().mockResolvedValue([]),
     getCalendarList: jest.fn().mockResolvedValue([]),
     isAvailable: jest.fn().mockResolvedValue(true),
+  };
+}
+
+function createMockAccountManager() {
+  return {
+    getAccounts: jest.fn().mockResolvedValue([]),
+    addAccount: jest.fn().mockRejectedValue(new Error("not implemented")),
+    removeAccount: jest.fn().mockResolvedValue(undefined),
+    getAccessToken: jest.fn().mockResolvedValue(null),
+    getAllAccessTokens: jest.fn().mockResolvedValue(new Map()),
   };
 }
 
@@ -100,6 +119,7 @@ function createMockServicesResult(
       fetchSleepSessions: jest.fn().mockResolvedValue([]),
       isAvailable: jest.fn().mockResolvedValue(true),
     },
+    accountManager: createMockAccountManager(),
   };
 }
 
@@ -134,7 +154,7 @@ describe("useCalendarSync", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("should set calendarEventsAtom and calendarLastSyncAtom on successful sync", async () => {
+  it("should use legacy sync when accounts is empty and accountEmail is set", async () => {
     const syncTimestamp = 5000000;
     mockSyncCalendarEvents.mockResolvedValue({
       events: [sampleEvent],
@@ -142,7 +162,11 @@ describe("useCalendarSync", () => {
     });
 
     const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accountEmail: "legacy@example.com",
+      accounts: [],
+    });
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
@@ -153,16 +177,157 @@ describe("useCalendarSync", () => {
       await result.current.sync(true);
     });
 
+    expect(mockSyncCalendarEvents).toHaveBeenCalledWith(
+      mockServices.calendar,
+      undefined,
+    );
+    expect(mockSyncMultiAccountCalendarEvents).not.toHaveBeenCalled();
     expect(store.get(calendarEventsAtom)).toEqual([sampleEvent]);
     expect(store.get(calendarLastSyncAtom)).toBe(syncTimestamp);
+  });
+
+  it("should use multi-account sync when accounts has entries", async () => {
+    const syncTimestamp = 6000000;
+    mockSyncMultiAccountCalendarEvents.mockResolvedValue({
+      events: [sampleEvent],
+      syncTimestamp,
+      errors: [],
+    });
+
+    const store = createStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accounts: [
+        {
+          email: "user@example.com",
+          displayName: "User",
+          photoUrl: null,
+          provider: "app-auth" as const,
+          addedAt: 1000,
+        },
+      ],
+    });
+    const { Wrapper } = createWrapper(store);
+
+    const { result } = renderHook(() => useCalendarSync(), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(mockSyncMultiAccountCalendarEvents).toHaveBeenCalledWith(
+      mockServices.accountManager,
+      undefined,
+    );
+    expect(mockSyncCalendarEvents).not.toHaveBeenCalled();
+    expect(store.get(calendarEventsAtom)).toEqual([sampleEvent]);
+    expect(store.get(calendarLastSyncAtom)).toBe(syncTimestamp);
+  });
+
+  it("should return empty events when no accounts and no legacy auth", async () => {
+    const store = createStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accountEmail: null,
+      accounts: [],
+    });
+    const { Wrapper } = createWrapper(store);
+
+    const { result } = renderHook(() => useCalendarSync(), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(mockSyncCalendarEvents).not.toHaveBeenCalled();
+    expect(mockSyncMultiAccountCalendarEvents).not.toHaveBeenCalled();
+    expect(store.get(calendarEventsAtom)).toEqual([]);
+    expect(store.get(calendarLastSyncAtom)).toBeGreaterThan(0);
     expect(result.current.error).toBeNull();
+  });
+
+  it("should set error when multi-account sync has errors and no events", async () => {
+    mockSyncMultiAccountCalendarEvents.mockResolvedValue({
+      events: [],
+      syncTimestamp: Date.now(),
+      errors: [
+        { email: "a@example.com", error: "Token expired" },
+        { email: "b@example.com", error: "API down" },
+      ],
+    });
+
+    const store = createStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accounts: [
+        {
+          email: "a@example.com",
+          displayName: "A",
+          photoUrl: null,
+          provider: "app-auth" as const,
+          addedAt: 1000,
+        },
+      ],
+    });
+    const { Wrapper } = createWrapper(store);
+
+    const { result } = renderHook(() => useCalendarSync(), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(result.current.error).toBe("Token expired; API down");
+  });
+
+  it("should not set error when multi-account sync has errors but also events", async () => {
+    mockSyncMultiAccountCalendarEvents.mockResolvedValue({
+      events: [sampleEvent],
+      syncTimestamp: Date.now(),
+      errors: [{ email: "bad@example.com", error: "Token expired" }],
+    });
+
+    const store = createStore();
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accounts: [
+        {
+          email: "good@example.com",
+          displayName: "Good",
+          photoUrl: null,
+          provider: "app-auth" as const,
+          addedAt: 1000,
+        },
+      ],
+    });
+    const { Wrapper } = createWrapper(store);
+
+    const { result } = renderHook(() => useCalendarSync(), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(store.get(calendarEventsAtom)).toEqual([sampleEvent]);
   });
 
   it("should set calendarSyncErrorAtom on sync error", async () => {
     mockSyncCalendarEvents.mockRejectedValue(new Error("Network failure"));
 
     const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accountEmail: "user@example.com",
+    });
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
@@ -184,7 +349,10 @@ describe("useCalendarSync", () => {
     });
 
     const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accountEmail: "user@example.com",
+    });
     // Set lastSync to now so cache is not stale
     store.set(calendarLastSyncAtom, Date.now());
     const { Wrapper } = createWrapper(store);
@@ -211,7 +379,10 @@ describe("useCalendarSync", () => {
     });
 
     const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accountEmail: "user@example.com",
+    });
     // Set lastSync to now so cache is not stale
     store.set(calendarLastSyncAtom, Date.now());
     const { Wrapper } = createWrapper(store);
@@ -245,7 +416,10 @@ describe("useCalendarSync", () => {
     });
 
     const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accountEmail: "user@example.com",
+    });
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
@@ -274,7 +448,10 @@ describe("useCalendarSync", () => {
     });
 
     const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    store.set(settingsAtom, {
+      ...DEFAULT_SETTINGS,
+      accountEmail: "user@example.com",
+    });
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {

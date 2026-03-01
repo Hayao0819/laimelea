@@ -11,9 +11,12 @@ import {
   createGmsSleepService,
 } from "./gms";
 import { createHmsAuthService, createHmsBackupService } from "./hms";
+import { createAccountManager } from "../account/accountManager";
 import type { PlatformServices, PlatformType } from "./types";
 
 export function createPlatformServices(type: PlatformType): PlatformServices {
+  const accountManager = createAccountManager();
+
   switch (type) {
     case "gms": {
       const auth = createGmsAuthService();
@@ -23,6 +26,7 @@ export function createPlatformServices(type: PlatformType): PlatformServices {
         calendar: createGmsCalendarService(auth),
         backup: createGmsBackupService(auth),
         sleep: createGmsSleepService(),
+        accountManager,
       };
     }
     case "hms": {
@@ -33,6 +37,7 @@ export function createPlatformServices(type: PlatformType): PlatformServices {
         calendar: createAospCalendarService(),
         backup: createHmsBackupService(auth),
         sleep: createAospSleepService(),
+        accountManager,
       };
     }
     case "aosp":
@@ -42,6 +47,7 @@ export function createPlatformServices(type: PlatformType): PlatformServices {
         calendar: createAospCalendarService(),
         backup: createAospBackupService(),
         sleep: createAospSleepService(),
+        accountManager,
       };
   }
 }
