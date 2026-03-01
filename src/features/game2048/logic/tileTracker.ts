@@ -50,9 +50,7 @@ export interface SlideRowResult {
   mergedIds: Set<number>;
 }
 
-export function slideRowTracked(
-  cells: (TrackedTile | null)[],
-): SlideRowResult {
+export function slideRowTracked(cells: (TrackedTile | null)[]): SlideRowResult {
   const size = cells.length;
   const nonNull: TrackedTile[] = cells.filter(
     (c): c is TrackedTile => c !== null,

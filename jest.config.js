@@ -6,7 +6,6 @@ module.exports = {
   ],
   moduleNameMapper: {
     "react-native-config": "<rootDir>/__mocks__/react-native-config.js",
-    "react-native-reanimated":
-      "<rootDir>/__mocks__/react-native-reanimated.js",
+    "react-native-reanimated": "<rootDir>/__mocks__/react-native-reanimated.js",
   },
 };

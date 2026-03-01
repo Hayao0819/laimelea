@@ -171,7 +171,11 @@ describe("computeMoveAnimation", () => {
   });
 
   it("handles empty tiles array", () => {
-    const { moves, resultTiles, mergedIds } = computeMoveAnimation([], "left", 4);
+    const { moves, resultTiles, mergedIds } = computeMoveAnimation(
+      [],
+      "left",
+      4,
+    );
     expect(moves).toHaveLength(0);
     expect(resultTiles).toHaveLength(0);
     expect(mergedIds.size).toBe(0);

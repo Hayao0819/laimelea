@@ -84,7 +84,10 @@ export function useAnimatedBoard(
   }
 
   // For merged tiles, find the first source animation to use as "from" position
-  const mergeSourcePositions = new Map<string, { fromRow: number; fromCol: number }>();
+  const mergeSourcePositions = new Map<
+    string,
+    { fromRow: number; fromCol: number }
+  >();
   for (const a of animations) {
     if (a.type === "merge-source") {
       const destKey = `${a.toRow},${a.toCol}`;
