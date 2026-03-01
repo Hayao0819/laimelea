@@ -247,6 +247,8 @@ gcloud services list --project="$(terraform output -raw project_id)"
 
 ### 5-2. Web Client ID を作成
 
+GMS 端末での `@react-native-google-signin` に使用する。
+
 「認証情報を作成」→「OAuth クライアント ID」を選択。
 
 | 項目                   | 値                      |
@@ -254,20 +256,25 @@ gcloud services list --project="$(terraform output -raw project_id)"
 | アプリケーションの種類 | ウェブ アプリケーション |
 | 名前                   | `Laimelea Web Client`   |
 
-承認済みリダイレクト URI は追加不要（PKCE フローではサーバーサイドリダイレクトは不使用）。
+承認済みリダイレクト URI は追加不要。
 
-作成後に表示されるクライアント IDをメモ:
+作成後に表示されるクライアント IDをメモ → `.env` の `GOOGLE_WEB_CLIENT_ID` に設定。
 
-```txt
-123456789-xxxxxxxxx.apps.googleusercontent.com
-```
+### 5-2b. iOS Client ID を作成
 
-> **この Web Client ID は 2 つの用途で使用する**:
->
-> - AOSP 端末: `react-native-app-auth` の PKCE フロー（`GOOGLE_OAUTH_CLIENT_ID`）
-> - GMS 端末: `@react-native-google-signin` の `webClientId`（`GOOGLE_WEB_CLIENT_ID`）
->
-> 別々に作成する必要はないが、用途を分けたい場合は2つ作成してもよい。
+`react-native-app-auth` のカスタム URI スキームリダイレクトに使用する（Android 上でも必要）。
+
+> **Web クライアントではカスタム URI スキームリダイレクトが許可されない**。`react-native-app-auth` は `com.googleusercontent.apps.{GUID}:/oauth2redirect/google` 形式のカスタムスキームを使うため、このスキームをサポートする **iOS クライアント**が必要。
+
+「認証情報を作成」→「OAuth クライアント ID」を選択。
+
+| 項目                   | 値                       |
+| ---------------------- | ------------------------ |
+| アプリケーションの種類 | iOS                      |
+| 名前                   | `Laimelea OAuth Client`  |
+| バンドル ID            | `com.hayao0819.laimelea` |
+
+作成後に表示されるクライアント IDをメモ → `.env` の `GOOGLE_OAUTH_CLIENT_ID` に設定。
 
 ### 5-3. Android Client ID を作成
 
@@ -313,9 +320,11 @@ keytool -list -v \
 
 > **デバッグ用とリリース用は SHA-1 が異なるため、それぞれの Client ID を作成する必要がある**。開発中はデバッグ用のみでよい。
 
-### 5-4. AOSP 端末での注意
+### 5-4. react-native-app-auth の注意
 
-AOSP 端末（GMS なし）では `react-native-app-auth` が Chrome Custom Tabs で OAuth を行う。この場合、**Web Client ID** が `clientId` として使われる（Android Client ID ではない）。
+AOSP 端末と設定画面のマルチアカウント追加では `react-native-app-auth` が Chrome Custom Tabs で OAuth を行う。この場合、**iOS Client ID** が `clientId` として使われる（Web/Android Client ID ではない）。
+
+GMS 端末のカレンダータブからのサインインは `@react-native-google-signin` を使用し、Web Client ID + Android Client ID の組み合わせで動作する。
 
 ## Step 6: .env に Client ID を記入
 
@@ -329,16 +338,16 @@ cp .env.example .env
 `.env` を編集:
 
 ```env
-GOOGLE_OAUTH_CLIENT_ID=123456789-xxxxxxxxx.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_ID=111111111-yyyyyyyyy.apps.googleusercontent.com
 GOOGLE_WEB_CLIENT_ID=123456789-xxxxxxxxx.apps.googleusercontent.com
 ```
 
-| 変数名                   | 使用先                                 | 値のソース    |
-| ------------------------ | -------------------------------------- | ------------- |
-| `GOOGLE_OAUTH_CLIENT_ID` | `src/core/platform/aosp/authConfig.ts` | Web Client ID |
-| `GOOGLE_WEB_CLIENT_ID`   | `src/core/platform/gms/authConfig.ts`  | Web Client ID |
+| 変数名                   | 使用先                               | 値のソース                |
+| ------------------------ | ------------------------------------ | ------------------------- |
+| `GOOGLE_OAUTH_CLIENT_ID` | `react-native-app-auth`（PKCE）      | iOS Client ID (Step 5-2b) |
+| `GOOGLE_WEB_CLIENT_ID`   | `@react-native-google-signin`（GMS） | Web Client ID (Step 5-2)  |
 
-> 両方とも Step 5-2 で作成した Web Client ID を設定する。同じ値でよい。
+> **2つの Client ID は異なる値にする必要がある**。`GOOGLE_OAUTH_CLIENT_ID` にはカスタム URI スキームリダイレクトをサポートする iOS Client ID を設定すること。
 
 ## Step 7: ビルドと認証テスト
 
@@ -399,14 +408,17 @@ Error: Error setting billing account: ... PERMISSION_DENIED
 Error 400: redirect_uri_mismatch
 ```
 
-→ AOSP フロー（react-native-app-auth）では redirectUrl が `com.hayao0819.laimelea://oauth/callback` に設定されている。Web Client ID にリダイレクト URI を追加する必要はないが、Android のマニフェストに `appAuthRedirectScheme` が正しく設定されているか確認する。
+→ `GOOGLE_OAUTH_CLIENT_ID` に正しい iOS Client ID が設定されているか確認する。`build.gradle` の `appAuthRedirectScheme` はこの Client ID の GUID から自動生成される:
 
 ```groovy
-// android/app/build.gradle
-defaultConfig {
-    manifestPlaceholders = [appAuthRedirectScheme: "com.hayao0819.laimelea"]
-}
+// android/app/build.gradle — 自動設定、手動変更不要
+def oauthClientGuid = oauthClientId.replace(".apps.googleusercontent.com", "")
+manifestPlaceholders = [appAuthRedirectScheme: "com.googleusercontent.apps." + oauthClientGuid]
 ```
+
+### OAuth ログインで「カスタムスキームは許可されない」
+
+→ `GOOGLE_OAUTH_CLIENT_ID` に **Web Client ID** を設定している可能性がある。Web クライアントはカスタム URI スキームリダイレクトをサポートしない。Step 5-2b で作成した **iOS Client ID** を使用すること。
 
 ### OAuth ログインで `access_denied`
 

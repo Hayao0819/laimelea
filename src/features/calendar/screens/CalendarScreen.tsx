@@ -14,7 +14,10 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
-import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
+import {
+  resolvedSettingsAtom,
+  settingsAtom,
+} from "../../../atoms/settingsAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
 import { useCalendarView } from "../hooks/useCalendarView";
@@ -70,6 +73,7 @@ export function CalendarScreen() {
   } = useCalendarView();
   const services = useAtomValue(platformServicesAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
+  const setSettings = useSetAtom(settingsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
   const { events, error, sync, isStale } = useCalendarSync();
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -149,12 +153,16 @@ export function CalendarScreen() {
 
   const handleSignIn = useCallback(async () => {
     try {
-      await services.auth.signIn();
+      const result = await services.auth.signIn();
+      setIsAuthed(true);
+      setSettings({ ...settings, accountEmail: result.email });
       sync(true);
-    } catch {
-      // Sign-in cancelled or failed
+    } catch (e) {
+      if (e instanceof Error && !e.message.includes("cancelled")) {
+        setSnackbar(t("calendar.syncError"));
+      }
     }
-  }, [services.auth, sync]);
+  }, [services.auth, sync, settings, setSettings, t]);
 
   const navTitle = formatNavigationTitle(viewMode, selectedDate, t);
 

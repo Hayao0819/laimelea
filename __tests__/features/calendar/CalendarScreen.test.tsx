@@ -428,6 +428,22 @@ describe("CalendarScreen", () => {
       expect(mockSync).toHaveBeenCalledWith(true);
     });
 
+    it("should set accountEmail and hide banner after successful sign-in", async () => {
+      const { getByText, queryByTestId, store } = await renderWithProviders({
+        authenticated: false,
+      });
+
+      expect(queryByTestId("sign-in-banner")).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.press(getByText("calendar.signIn"));
+      });
+
+      const settings = store.get(settingsAtom) as typeof DEFAULT_SETTINGS;
+      expect(settings.accountEmail).toBe("test@test.com");
+      expect(queryByTestId("sign-in-banner")).toBeNull();
+    });
+
     it("should hide banner when dismiss button is pressed", async () => {
       const { getByTestId, queryByTestId, getByLabelText } =
         await renderWithProviders({
