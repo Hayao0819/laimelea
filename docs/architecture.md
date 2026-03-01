@@ -1537,6 +1537,48 @@ __tests__/
 
 ---
 
+### Phase 19: 設定画面リファクタリング + イースターエッグ ✅ 完了
+
+モノリシックな設定画面（950行）をカテゴリ別サブ画面に分割し、法的情報・About画面と2048パズルゲームを追加。
+
+#### 設定画面分割
+
+- **ハブ画面**: SettingsScreen を ~170行のカテゴリ一覧に書き換え（App / Features / Info の3セクション）
+- **7サブ画面**: CycleConfigScreen, GeneralSettingsScreen, TimezoneSettingsScreen, AlarmDefaultsScreen, CalendarSettingsScreen, WidgetSettingsScreen, BackupScreen
+- **共有Hooks**: `useSettingsUpdate`（settings atom の read/write）、`useSnackbar`（Snackbar表示ロジック）
+
+#### About / Legal
+
+- **AboutScreen**: アプリ名、説明、バージョン、開発者名、GitHubリンク。バージョン7連打でイースターエッグ解除
+- **LegalScreen**: プライバシーポリシーリンク、OSSライセンス一覧への導線
+- **LicensesScreen**: `scripts/generate-licenses.ts` でビルド時に `node_modules` からライセンス情報を JSON 抽出、FlatList で表示
+
+#### 2048パズルゲーム（イースターエッグ）
+
+- **ゲームエンジン**: 純粋関数群（`gameEngine.ts`）。slideRow → move → spawnTile → win/lose判定。73テスト
+- **可変盤面サイズ**: 3×3〜6×6。勝利タイル: 512(3×3), 2048(4×4), 4096(5×5), 8192(6×6)
+- **スコア**: マージ時にマージ後の値を加算
+- **Undo**: 最大100手の履歴スタック
+- **セーブ/ブランチ**: GameSnapshot でゲーム状態を保存、任意の時点から再開・分岐
+- **バックアップ連携**: ゲーム状態を既存のバックアップ/リストアに含める
+- **UI**: PanResponder でスワイプ操作、react-native-paper コンポーネント、タイル色マップ
+
+#### ファイル構成
+
+```text
+src/features/settings/
+  hooks/useSettingsUpdate.ts, useSnackbar.ts
+  screens/SettingsScreen.tsx (hub), CycleConfig~BackupScreen.tsx, About/Legal/LicensesScreen.tsx
+src/features/game2048/
+  logic/gameTypes.ts, gameEngine.ts
+  atoms/game2048Atoms.ts
+  components/GameBoard.tsx, GameTile.tsx, GameHeader.tsx, GameOverlay.tsx, BoardSizeSelector.tsx, SaveSlotList.tsx
+  screens/Game2048Screen.tsx
+scripts/generate-licenses.ts
+```
+
+---
+
 ## 開発環境
 
 | 項目                     | バージョン                      |

@@ -26,6 +26,69 @@ export function SettingsScreen() {
     [],
   );
 
+  const renderCycleIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="clock-edit-outline" />
+    ),
+    [],
+  );
+
+  const renderGeneralIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="cog-outline" />
+    ),
+    [],
+  );
+
+  const renderTimezoneIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="earth" />
+    ),
+    [],
+  );
+
+  const renderAlarmIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="alarm" />
+    ),
+    [],
+  );
+
+  const renderCalendarIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="calendar" />
+    ),
+    [],
+  );
+
+  const renderWidgetIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="widgets-outline" />
+    ),
+    [],
+  );
+
+  const renderBackupIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="cloud-upload-outline" />
+    ),
+    [],
+  );
+
+  const renderAboutIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="information-outline" />
+    ),
+    [],
+  );
+
+  const renderLegalIcon = useCallback(
+    (props: { color: string; style?: object }) => (
+      <List.Icon {...props} icon="gavel" />
+    ),
+    [],
+  );
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -37,14 +100,14 @@ export function SettingsScreen() {
           <List.Item
             title={t("settings.cycleConfig")}
             description={`${cycleHours}h ${cycleMinutes}m`}
-            left={(props) => <List.Icon {...props} icon="clock-edit-outline" />}
+            left={renderCycleIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsCycleConfig")}
             testID="settings-cycle-config-item"
           />
           <List.Item
             title={t("settings.general")}
-            left={(props) => <List.Icon {...props} icon="cog-outline" />}
+            left={renderGeneralIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsGeneral")}
             testID="settings-general-item"
@@ -54,7 +117,7 @@ export function SettingsScreen() {
             description={
               settings.timezone === "auto" ? undefined : settings.timezone
             }
-            left={(props) => <List.Icon {...props} icon="earth" />}
+            left={renderTimezoneIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsTimezone")}
             testID="settings-timezone-item"
@@ -67,30 +130,28 @@ export function SettingsScreen() {
           <List.Subheader>{t("settings.categoryFeatures")}</List.Subheader>
           <List.Item
             title={t("settings.alarmDefaults")}
-            left={(props) => <List.Icon {...props} icon="alarm" />}
+            left={renderAlarmIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsAlarmDefaults")}
             testID="settings-alarm-defaults-item"
           />
           <List.Item
             title={t("settings.calendarSection")}
-            left={(props) => <List.Icon {...props} icon="calendar" />}
+            left={renderCalendarIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsCalendar")}
             testID="settings-calendar-item"
           />
           <List.Item
             title={t("settings.widget")}
-            left={(props) => <List.Icon {...props} icon="widgets-outline" />}
+            left={renderWidgetIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsWidget")}
             testID="settings-widget-item"
           />
           <List.Item
             title={t("settings.backup")}
-            left={(props) => (
-              <List.Icon {...props} icon="cloud-upload-outline" />
-            )}
+            left={renderBackupIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsBackup")}
             testID="settings-backup-item"
@@ -103,16 +164,14 @@ export function SettingsScreen() {
           <List.Subheader>{t("settings.categoryInfo")}</List.Subheader>
           <List.Item
             title={t("settings.about")}
-            left={(props) => (
-              <List.Icon {...props} icon="information-outline" />
-            )}
+            left={renderAboutIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsAbout")}
             testID="settings-about-item"
           />
           <List.Item
             title={t("settings.legal")}
-            left={(props) => <List.Icon {...props} icon="gavel" />}
+            left={renderLegalIcon}
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsLegal")}
             testID="settings-legal-item"
