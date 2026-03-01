@@ -25,14 +25,6 @@ describe("CustomDayIndicator", () => {
     mockLanguage = "en";
   });
 
-  it('should render with testID "custom-day-indicator"', async () => {
-    const realTimeMs = new Date(2026, 1, 28, 10, 0, 0).getTime();
-    const { getByTestId } = await renderWithPaper(
-      <CustomDayIndicator realTimeMs={realTimeMs} />,
-    );
-    expect(getByTestId("custom-day-indicator")).toBeTruthy();
-  });
-
   it("should display date in English format (M/d (EEE))", async () => {
     // Saturday, February 28, 2026
     const realTimeMs = new Date(2026, 1, 28, 10, 0, 0).getTime();

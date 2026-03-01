@@ -30,11 +30,6 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("TimerScreen", () => {
-  it('should render with testID "timer-screen"', async () => {
-    const { getByTestId } = await renderWithProviders(<TimerScreen />);
-    expect(getByTestId("timer-screen")).toBeTruthy();
-  });
-
   it('should render segmented buttons with "timer.countdown" and "timer.stopwatch"', async () => {
     const { getByText } = await renderWithProviders(<TimerScreen />);
     expect(getByText("timer.countdown")).toBeTruthy();
@@ -47,22 +42,6 @@ describe("TimerScreen", () => {
     );
     expect(getByTestId("countdown-timer-mock")).toBeTruthy();
     expect(queryByTestId("stopwatch-mock")).toBeNull();
-  });
-
-  it("should render CountdownTimer when countdown tab selected", async () => {
-    const { getByTestId } = await renderWithProviders(<TimerScreen />);
-    expect(getByTestId("countdown-timer-mock")).toBeTruthy();
-  });
-
-  it("should render Stopwatch when stopwatch tab selected", async () => {
-    const { getByText, getByTestId, queryByTestId } = await renderWithProviders(
-      <TimerScreen />,
-    );
-
-    await fireEvent.press(getByText("timer.stopwatch"));
-
-    expect(getByTestId("stopwatch-mock")).toBeTruthy();
-    expect(queryByTestId("countdown-timer-mock")).toBeNull();
   });
 
   it("should switch to stopwatch when stopwatch button pressed", async () => {

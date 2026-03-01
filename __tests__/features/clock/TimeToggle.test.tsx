@@ -53,11 +53,6 @@ function renderWithProviders(store?: ReturnType<typeof createStore>) {
 }
 
 describe("TimeToggle", () => {
-  it('should render with testID "time-toggle"', async () => {
-    const { getByTestId } = await renderWithProviders();
-    expect(getByTestId("time-toggle")).toBeTruthy();
-  });
-
   it("should render segmented buttons with custom and 24h options", async () => {
     const { getByText } = await renderWithProviders();
 

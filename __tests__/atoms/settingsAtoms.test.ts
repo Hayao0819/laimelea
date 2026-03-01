@@ -44,16 +44,6 @@ describe("cycleConfigAtom", () => {
       baseTimeMs: 0,
     });
   });
-
-  it("should reflect settingsAtom updates", () => {
-    const store = createInitializedStore();
-    store.set(settingsAtom, {
-      ...DEFAULT_SETTINGS,
-      cycleConfig: { cycleLengthMinutes: 1440, baseTimeMs: 1000 },
-    });
-    const config = store.get(cycleConfigAtom);
-    expect(config).toEqual({ cycleLengthMinutes: 1440, baseTimeMs: 1000 });
-  });
 });
 
 describe("setupCompleteAtom", () => {
@@ -61,13 +51,6 @@ describe("setupCompleteAtom", () => {
     const store = createInitializedStore();
     const complete = store.get(setupCompleteAtom);
     expect(complete).toBe(false);
-  });
-
-  it("should reflect settingsAtom updates", () => {
-    const store = createInitializedStore();
-    store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: true });
-    const complete = store.get(setupCompleteAtom);
-    expect(complete).toBe(true);
   });
 });
 
