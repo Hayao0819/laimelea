@@ -102,10 +102,10 @@ devDependencies:
 | 14    | 睡眠ログ・周期自動検出         | **完了** | cycleDetector、Health Connect、手動入力、SleepLogScreen               |
 | 15    | ホーム画面ウィジェット         | **完了** | ClockWidget、WidgetTaskHandler、設定/アラーム変更時更新               |
 | 16    | テスト・仕上げ                 | **完了** | 78 suites / 707 tests、a11yラベル27ファイル、E2Eテスト                |
-| 17    | カレンダーデザイン改善         | **完了** | MonthView/WeekView/AgendaView、CustomDayTimeline、NowIndicator       |
+| 17    | カレンダーデザイン改善         | **完了** | MonthView/WeekView/AgendaView、CustomDayTimeline、NowIndicator        |
 | 18    | Terraform GCPプロジェクト管理  | **完了** | infra/ディレクトリ、react-native-config、.env管理                     |
-| -     | Google Drive Backup            | **完了** | GMS Drive appDataFolder API、drive.appdataスコープ                   |
-| -     | アプリアイコン/スプラッシュ    | **完了** | Adaptive Icon、Android 12+ SplashScreen API                          |
+| -     | Google Drive Backup            | **完了** | GMS Drive appDataFolder API、drive.appdataスコープ                    |
+| -     | アプリアイコン/スプラッシュ    | **完了** | Adaptive Icon、Android 12+ SplashScreen API                           |
 | -     | デスククロック                 | **完了** | DeskClockScreen、FullscreenModule（keep-awake + immersive）           |
 
 ### Phase 1で作成済みのファイル

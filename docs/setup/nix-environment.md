@@ -46,8 +46,8 @@ Managed by [android-nixpkgs](https://github.com/tadfisher/android-nixpkgs) (dail
 | Component              | Version       | Matching `build.gradle`        |
 | ---------------------- | ------------- | ------------------------------ |
 | `platforms-android-36` | API 36        | `compileSdkVersion = 36`       |
-| `build-tools-36-0-0`  | 36.0.0        | `buildToolsVersion = "36.0.0"` |
-| `ndk-27-1-12297006`   | 27.1.12297006 | `ndkVersion = "27.1.12297006"` |
+| `build-tools-36-0-0`   | 36.0.0        | `buildToolsVersion = "36.0.0"` |
+| `ndk-27-1-12297006`    | 27.1.12297006 | `ndkVersion = "27.1.12297006"` |
 | `platform-tools`       | latest        | `adb`, `fastboot`              |
 | `cmdline-tools-latest` | latest        | `sdkmanager`, `avdmanager`     |
 | `emulator`             | latest        | Android emulator               |

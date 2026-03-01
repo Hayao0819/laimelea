@@ -53,11 +53,11 @@ keytool -export -rfc \
 
 Google Play では新規アプリに Play App Signing が**必須**。2 つの鍵を使い分ける:
 
-| 項目 | Upload Key | App Signing Key |
-|---|---|---|
-| 用途 | Play Console へのアップロード認証 | ユーザーへ配信される APK の署名 |
-| 管理者 | 開発者 | Google（HSM で保管） |
-| 紛失時 | Play Console でリセット可能 | 不可逆（Google が管理するため安全） |
+| 項目   | Upload Key                        | App Signing Key                     |
+| ------ | --------------------------------- | ----------------------------------- |
+| 用途   | Play Console へのアップロード認証 | ユーザーへ配信される APK の署名     |
+| 管理者 | 開発者                            | Google（HSM で保管）                |
+| 紛失時 | Play Console でリセット可能       | 不可逆（Google が管理するため安全） |
 
 Upload key を紛失した場合のリセット手順:
 
@@ -127,20 +127,20 @@ keystore を base64 エンコードして Secrets に保存:
 
 ### ストア掲載情報
 
-| 項目 | 制限 |
-|---|---|
-| アプリ名 | 30 文字以内 |
-| 短い説明 | 80 文字以内 |
+| 項目       | 制限           |
+| ---------- | -------------- |
+| アプリ名   | 30 文字以内    |
+| 短い説明   | 80 文字以内    |
 | 詳細な説明 | 4,000 文字以内 |
 
 ### ビジュアルアセット
 
-| アセット | 仕様 |
-|---|---|
-| アプリアイコン | 512x512 px, 32-bit PNG (alpha 可), 1024 KB 以下 |
-| フィーチャーグラフィック | 1024x500 px, JPEG or 24-bit PNG (alpha 不可) |
-| スクリーンショット（スマホ） | 最小 2 枚, 最大 8 枚。推奨: 1080x1920 px |
-| スクリーンショット（タブレット） | 7 インチ / 10 インチ各最大 8 枚 |
+| アセット                         | 仕様                                            |
+| -------------------------------- | ----------------------------------------------- |
+| アプリアイコン                   | 512x512 px, 32-bit PNG (alpha 可), 1024 KB 以下 |
+| フィーチャーグラフィック         | 1024x500 px, JPEG or 24-bit PNG (alpha 不可)    |
+| スクリーンショット（スマホ）     | 最小 2 枚, 最大 8 枚。推奨: 1080x1920 px        |
+| スクリーンショット（タブレット） | 7 インチ / 10 インチ各最大 8 枚                 |
 
 ### 必須申告事項
 
@@ -237,7 +237,7 @@ RepoType: git
 Repo: https://github.com/hayao0819/laimelea.git
 
 Builds:
-  - versionName: '1.0.0'
+  - versionName: "1.0.0"
     versionCode: 1
     commit: v1.0.0
     subdir: android/app
@@ -261,7 +261,7 @@ Builds:
 
 AutoUpdateMode: Version %v
 UpdateCheckMode: Tags
-CurrentVersion: '1.0.0'
+CurrentVersion: "1.0.0"
 CurrentVersionCode: 1
 ```
 
