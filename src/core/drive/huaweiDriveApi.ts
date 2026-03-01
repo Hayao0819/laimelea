@@ -30,6 +30,11 @@ const DRIVE_API_BASE = "https://driveapis.cloud.huawei.com.cn/drive/v1";
 const DRIVE_UPLOAD_BASE =
   "https://driveapis.cloud.huawei.com.cn/upload/drive/v1";
 
+async function parseJson<T>(response: Response): Promise<T> {
+  // response.json() returns Promise<any>, single assertion point
+  return response.json() as Promise<T>;
+}
+
 function checkResponseStatus(status: number): void {
   if (status === 401) {
     throw new DriveAuthExpiredError();
@@ -56,7 +61,7 @@ export async function findBackupFile(
     throw new Error(`Huawei Drive API error: ${response.status}`);
   }
 
-  const data = (await response.json()) as DriveFileListResponse;
+  const data = await parseJson<DriveFileListResponse>(response);
   return data.files.length > 0 ? data.files[0] : null;
 }
 
@@ -82,7 +87,7 @@ export async function uploadBackup(
       throw new Error(`Huawei Drive API error: ${response.status}`);
     }
 
-    const result = (await response.json()) as { id: string };
+    const result = await parseJson<{ id: string }>(response);
     return result.id;
   }
 
@@ -120,7 +125,7 @@ export async function uploadBackup(
     throw new Error(`Huawei Drive API error: ${response.status}`);
   }
 
-  const result = (await response.json()) as { id: string };
+  const result = await parseJson<{ id: string }>(response);
   return result.id;
 }
 
@@ -163,5 +168,5 @@ export async function getFileMetadata(
     throw new Error(`Huawei Drive API error: ${response.status}`);
   }
 
-  return response.json() as Promise<DriveFileResource>;
+  return parseJson<DriveFileResource>(response);
 }
