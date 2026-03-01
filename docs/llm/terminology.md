@@ -1,6 +1,6 @@
 # Terminology / 用語表
 
-This document defines the canonical terminology used throughout the Laimelea codebase. All code, i18n keys, documentation, and comments should follow these conventions.
+Canonical terminology for the Laimelea codebase. All code, i18n keys, docs, and comments must follow these conventions.
 
 ## Time System
 

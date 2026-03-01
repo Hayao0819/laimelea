@@ -12,7 +12,7 @@ AI assistant guidance for Laimelea project.
 ### Guides
 
 - [Nix Dev Environment](docs/guides/nix-dev-environment.md) - `nix develop` setup
-- [Nix Language](docs/guides/nix-language.md) - Language quick reference
+- [Nix Language](docs/llm/nix-language.md) - Language quick reference
 - [Nix Troubleshooting](docs/troubleshooting/nix-common-issues.md) - Debug commands & fixes
 
 ## Essential Rules
@@ -116,7 +116,7 @@ Task tool → subagent_type: "emulator-operator"
 
 ## 自動並列実装
 
-`/implement` スキルで実装計画を並列ワーカーに自動ディスパッチできる。詳細は [Auto-Implement Guide](docs/guides/auto-implement.md) を参照。
+`/implement` スキルで実装計画を並列ワーカーに自動ディスパッチできる。詳細は [Auto-Implement Guide](docs/llm/auto-implement.md) を参照。
 
 - **スキル**: `.claude/skills/implement/SKILL.md` — オーケストレーター
 - **エージェント**: `.claude/agents/worker.md` — 実装ワーカー（Opus, worktree分離）
