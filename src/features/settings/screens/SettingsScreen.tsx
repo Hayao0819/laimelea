@@ -27,7 +27,8 @@ import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { TimezonePickerSheet } from "../components/TimezonePickerSheet";
 import { resolveLanguage } from "../../../core/i18n";
 import { createAccountManager } from "../../../core/account/accountManager";
-import type { DismissalMethod } from "../../../models/Settings";
+import type { DismissalMethod, WidgetSettings } from "../../../models/Settings";
+import { DEFAULT_WIDGET_SETTINGS } from "../../../models/Settings";
 
 const accountManager = createAccountManager();
 
@@ -74,6 +75,45 @@ export function SettingsScreen() {
       });
     },
     [settings, setSettings],
+  );
+
+  const updateWidgetSettings = useCallback(
+    (partial: Partial<WidgetSettings>) => {
+      const current = settings.widgetSettings ?? DEFAULT_WIDGET_SETTINGS;
+      update({ widgetSettings: { ...current, ...partial } });
+      requestClockWidgetUpdate();
+    },
+    [settings.widgetSettings, update],
+  );
+
+  const widgetSettings = settings.widgetSettings ?? DEFAULT_WIDGET_SETTINGS;
+
+  const isValidHex = useCallback((value: string): boolean => {
+    return /^#[0-9A-Fa-f]{6}$/.test(value);
+  }, []);
+
+  const handleColorBlur = useCallback(
+    (field: keyof WidgetSettings, value: string) => {
+      if (!isValidHex(value)) {
+        updateWidgetSettings({
+          [field]: DEFAULT_WIDGET_SETTINGS[field],
+        });
+      }
+    },
+    [isValidHex, updateWidgetSettings],
+  );
+
+  const handleOpacityChange = useCallback(
+    (text: string) => {
+      const num = parseInt(text, 10);
+      if (isNaN(num)) {
+        updateWidgetSettings({ opacity: 0 });
+        return;
+      }
+      const clamped = Math.max(0, Math.min(100, num));
+      updateWidgetSettings({ opacity: clamped });
+    },
+    [updateWidgetSettings],
   );
 
   const cycleHours = Math.floor(settings.cycleConfig.cycleLengthMinutes / 60);
@@ -262,6 +302,41 @@ export function SettingsScreen() {
 
   const hasLegacyAccount =
     settings.accountEmail != null && settings.accounts.length === 0;
+
+  const renderBorderRadiusSwitch = useCallback(
+    () => (
+      <Switch
+        value={widgetSettings.borderRadius > 0}
+        onValueChange={(v) =>
+          updateWidgetSettings({ borderRadius: v ? 16 : 0 })
+        }
+        testID="widget-border-radius-switch"
+      />
+    ),
+    [widgetSettings.borderRadius, updateWidgetSettings],
+  );
+
+  const renderShowRealTimeSwitch = useCallback(
+    () => (
+      <Switch
+        value={widgetSettings.showRealTime}
+        onValueChange={(v) => updateWidgetSettings({ showRealTime: v })}
+        testID="widget-show-real-time-switch"
+      />
+    ),
+    [widgetSettings.showRealTime, updateWidgetSettings],
+  );
+
+  const renderShowNextAlarmSwitch = useCallback(
+    () => (
+      <Switch
+        value={widgetSettings.showNextAlarm}
+        onValueChange={(v) => updateWidgetSettings({ showNextAlarm: v })}
+        testID="widget-show-next-alarm-switch"
+      />
+    ),
+    [widgetSettings.showNextAlarm, updateWidgetSettings],
+  );
 
   return (
     <View
@@ -627,7 +702,134 @@ export function SettingsScreen() {
 
         <Divider />
 
-        {/* Section 6: Backup */}
+        {/* Section 6: Widget */}
+        <List.Section>
+          <List.Subheader>{t("settings.widget")}</List.Subheader>
+          <View style={styles.colorRow}>
+            <View
+              style={[
+                styles.colorPreview,
+                { backgroundColor: widgetSettings.backgroundColor },
+              ]}
+              testID="widget-bg-color-preview"
+            />
+            <TextInput
+              label={t("settings.widgetBackgroundColor")}
+              value={widgetSettings.backgroundColor}
+              onChangeText={(text) =>
+                updateWidgetSettings({ backgroundColor: text })
+              }
+              onBlur={() =>
+                handleColorBlur(
+                  "backgroundColor",
+                  widgetSettings.backgroundColor,
+                )
+              }
+              style={styles.colorInput}
+              mode="outlined"
+              testID="widget-bg-color-input"
+            />
+          </View>
+          <View style={styles.colorRow}>
+            <View
+              style={[
+                styles.colorPreview,
+                { backgroundColor: widgetSettings.textColor },
+              ]}
+              testID="widget-text-color-preview"
+            />
+            <TextInput
+              label={t("settings.widgetTextColor")}
+              value={widgetSettings.textColor}
+              onChangeText={(text) =>
+                updateWidgetSettings({ textColor: text })
+              }
+              onBlur={() =>
+                handleColorBlur("textColor", widgetSettings.textColor)
+              }
+              style={styles.colorInput}
+              mode="outlined"
+              testID="widget-text-color-input"
+            />
+          </View>
+          <View style={styles.colorRow}>
+            <View
+              style={[
+                styles.colorPreview,
+                { backgroundColor: widgetSettings.secondaryTextColor },
+              ]}
+              testID="widget-secondary-color-preview"
+            />
+            <TextInput
+              label={t("settings.widgetSecondaryTextColor")}
+              value={widgetSettings.secondaryTextColor}
+              onChangeText={(text) =>
+                updateWidgetSettings({ secondaryTextColor: text })
+              }
+              onBlur={() =>
+                handleColorBlur(
+                  "secondaryTextColor",
+                  widgetSettings.secondaryTextColor,
+                )
+              }
+              style={styles.colorInput}
+              mode="outlined"
+              testID="widget-secondary-color-input"
+            />
+          </View>
+          <View style={styles.colorRow}>
+            <View
+              style={[
+                styles.colorPreview,
+                { backgroundColor: widgetSettings.accentColor },
+              ]}
+              testID="widget-accent-color-preview"
+            />
+            <TextInput
+              label={t("settings.widgetAccentColor")}
+              value={widgetSettings.accentColor}
+              onChangeText={(text) =>
+                updateWidgetSettings({ accentColor: text })
+              }
+              onBlur={() =>
+                handleColorBlur("accentColor", widgetSettings.accentColor)
+              }
+              style={styles.colorInput}
+              mode="outlined"
+              testID="widget-accent-color-input"
+            />
+          </View>
+          <View style={styles.colorRow}>
+            <TextInput
+              label={t("settings.widgetOpacity")}
+              value={String(widgetSettings.opacity)}
+              onChangeText={handleOpacityChange}
+              keyboardType="numeric"
+              style={styles.colorInput}
+              mode="outlined"
+              testID="widget-opacity-input"
+            />
+          </View>
+          <List.Item
+            title={t("settings.widgetBorderRadius")}
+            right={renderBorderRadiusSwitch}
+            testID="widget-border-radius-item"
+          />
+          <List.Item
+            title={t("settings.widgetShowRealTime")}
+            right={renderShowRealTimeSwitch}
+            testID="widget-show-real-time-item"
+          />
+          <List.Item
+            title={t("settings.widgetShowNextAlarm")}
+            right={renderShowNextAlarmSwitch}
+            testID="widget-show-next-alarm-item"
+          />
+        </List.Section>
+
+        <Divider />
+
+        {/* Section 7: Backup */}
         <List.Section>
           <List.Subheader>{t("settings.backup")}</List.Subheader>
           <View style={styles.backupButtons}>
@@ -722,6 +924,23 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginHorizontal: spacing.base,
     marginTop: spacing.sm,
+  },
+  colorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.sm,
+  },
+  colorPreview: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: "#555",
+  },
+  colorInput: {
+    flex: 1,
   },
   backupButtons: {
     flexDirection: "row",

@@ -251,7 +251,16 @@
     "themeLight": "ライト",
     "themeDark": "ダーク",
     "themeSystem": "自動",
-    "cycleChangeWarning": "周期長の変更は既存アラームに影響します"
+    "cycleChangeWarning": "周期長の変更は既存アラームに影響します",
+    "widget": "ウィジェット",
+    "widgetBackgroundColor": "背景色",
+    "widgetTextColor": "文字色",
+    "widgetSecondaryTextColor": "サブ文字色",
+    "widgetAccentColor": "アクセント色",
+    "widgetOpacity": "透明度 (%)",
+    "widgetBorderRadius": "角丸",
+    "widgetShowRealTime": "実時刻を表示",
+    "widgetShowNextAlarm": "次アラームを表示"
   },
   "setup": {
     "welcome": "Laimeleaへようこそ",

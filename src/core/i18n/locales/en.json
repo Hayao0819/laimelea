@@ -251,7 +251,16 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System",
-    "cycleChangeWarning": "Changing cycle length will affect existing alarms"
+    "cycleChangeWarning": "Changing cycle length will affect existing alarms",
+    "widget": "Widget",
+    "widgetBackgroundColor": "Background Color",
+    "widgetTextColor": "Text Color",
+    "widgetSecondaryTextColor": "Secondary Text Color",
+    "widgetAccentColor": "Accent Color",
+    "widgetOpacity": "Opacity (%)",
+    "widgetBorderRadius": "Rounded Corners",
+    "widgetShowRealTime": "Show Real Time",
+    "widgetShowNextAlarm": "Show Next Alarm"
   },
   "setup": {
     "welcome": "Welcome to Laimelea",
