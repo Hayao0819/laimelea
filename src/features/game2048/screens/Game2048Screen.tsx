@@ -8,7 +8,6 @@ import { useNavigation } from "@react-navigation/native";
 import { spacing } from "../../../app/spacing";
 import {
   game2048StoreAtom,
-  resolvedStoreAtom,
   currentGameAtom,
   bestScoresAtom,
   canUndoAtom,
@@ -21,7 +20,7 @@ import {
   loadSnapshotAtom,
 } from "../atoms/game2048Atoms";
 import { move } from "../logic/gameEngine";
-import type { Direction, GameSnapshot } from "../logic/gameTypes";
+import type { Direction, Game2048Store, GameSnapshot } from "../logic/gameTypes";
 import { GameBoard } from "../components/GameBoard";
 import { GameHeader } from "../components/GameHeader";
 import { GameOverlay } from "../components/GameOverlay";
@@ -31,7 +30,6 @@ export function Game2048Screen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
-  const store = useAtomValue(resolvedStoreAtom);
   const game = useAtomValue(currentGameAtom);
   const bestScores = useAtomValue(bestScoresAtom);
   const canUndo = useAtomValue(canUndoAtom);
@@ -47,6 +45,9 @@ export function Game2048Screen() {
   const [saveListVisible, setSaveListVisible] = useState(false);
   const [lastDirection, setLastDirection] = useState<Direction | null>(null);
 
+  const gameRef = useRef(game);
+  gameRef.current = game;
+
   // Auto-save on game over
   const prevGameOverRef = useRef(false);
   useEffect(() => {
@@ -58,16 +59,20 @@ export function Game2048Screen() {
 
   const handleMove = useCallback(
     (direction: Direction) => {
-      if (game.isGameOver) return;
-      if (game.hasWon && !game.wonAcknowledged) return;
+      const currentGame = gameRef.current;
+      if (currentGame.isGameOver) return;
+      if (currentGame.hasWon && !currentGame.wonAcknowledged) return;
 
-      const result = move(game, direction, { luckyMode: settings.luckyMode });
+      const result = move(currentGame, direction, {
+        luckyMode: settings.luckyMode,
+      });
       if (result.moved) {
+        gameRef.current = result.state;
         setLastDirection(direction);
         pushHistory(result.state);
       }
     },
-    [game, pushHistory, settings.luckyMode],
+    [pushHistory, settings.luckyMode],
   );
 
   const handleNewGame = useCallback(() => {
@@ -76,11 +81,11 @@ export function Game2048Screen() {
   }, [game.boardSize, startNewGame]);
 
   const handleKeepGoing = useCallback(() => {
-    setStore({
-      ...store,
-      currentGame: { ...store.currentGame, wonAcknowledged: true },
+    setStore((prev) => {
+      const s = prev as Game2048Store;
+      return { ...s, currentGame: { ...s.currentGame, wonAcknowledged: true } };
     });
-  }, [store, setStore]);
+  }, [setStore]);
 
   const handleTryAgain = useCallback(() => {
     handleNewGame();
@@ -101,12 +106,12 @@ export function Game2048Screen() {
 
   const handleDeleteSnapshot = useCallback(
     (snapshotId: string) => {
-      setStore({
-        ...store,
-        snapshots: store.snapshots.filter((s) => s.id !== snapshotId),
+      setStore((prev) => {
+        const s = prev as Game2048Store;
+        return { ...s, snapshots: s.snapshots.filter((sn) => sn.id !== snapshotId) };
       });
     },
-    [store, setStore],
+    [setStore],
   );
 
   return (
