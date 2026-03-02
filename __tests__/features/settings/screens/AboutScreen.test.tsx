@@ -151,4 +151,17 @@ describe("AboutScreen", () => {
 
     expect(openURLSpy).toHaveBeenCalledWith("https://github.com/Hayao0819");
   });
+
+  it("should open repository URL on source code press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const repoItem = getByTestId("repo-item");
+
+    await act(async () => {
+      fireEvent.press(repoItem);
+    });
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      "https://github.com/Hayao0819/laimelea",
+    );
+  });
 });

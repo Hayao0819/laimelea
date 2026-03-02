@@ -15,6 +15,7 @@ const TAP_TARGET = 7;
 const TAP_HINT_THRESHOLD = 5;
 const TAP_RESET_MS = 2000;
 const GITHUB_URL = "https://github.com/Hayao0819";
+const REPO_URL = "https://github.com/Hayao0819/laimelea";
 
 export function AboutScreen() {
   const { t } = useTranslation();
@@ -64,9 +65,9 @@ export function AboutScreen() {
     }, TAP_RESET_MS);
   }, [isUnlocked, navigation, snackbar, t]);
 
-  const handleGithubPress = useCallback(async () => {
+  const handleOpenURL = useCallback(async (url: string) => {
     try {
-      await Linking.openURL(GITHUB_URL);
+      await Linking.openURL(url);
     } catch {
       // Silently ignore if URL cannot be opened
     }
@@ -114,9 +115,16 @@ export function AboutScreen() {
           />
           <List.Item
             title={t("settings.developerGithub")}
-            onPress={handleGithubPress}
+            onPress={() => handleOpenURL(GITHUB_URL)}
             right={renderChevron}
             testID="github-item"
+          />
+          <List.Item
+            title={t("settings.sourceCode")}
+            description="GitHub"
+            onPress={() => handleOpenURL(REPO_URL)}
+            right={renderChevron}
+            testID="repo-item"
           />
         </List.Section>
 
