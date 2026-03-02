@@ -244,6 +244,40 @@ export function computeMoveAnimation(
   return { moves, resultTiles, mergedIds: allMerged };
 }
 
+function validateTrackedResult(
+  resultTiles: TrackedTile[],
+  newBoard: number[][],
+): boolean {
+  for (const t of resultTiles) {
+    if (
+      t.row < 0 ||
+      t.row >= newBoard.length ||
+      t.col < 0 ||
+      t.col >= newBoard[0].length
+    ) {
+      return false;
+    }
+    if (newBoard[t.row][t.col] !== t.value) {
+      return false;
+    }
+  }
+
+  let nonZeroCount = 0;
+  for (const row of newBoard) {
+    for (const cell of row) {
+      if (cell !== 0) nonZeroCount++;
+    }
+  }
+  if (
+    nonZeroCount < resultTiles.length ||
+    nonZeroCount > resultTiles.length + 1
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export function trackMove(
   currentTiles: TrackedTile[],
   newBoard: number[][],
@@ -261,6 +295,11 @@ export function trackMove(
     direction,
     boardSize,
   );
+
+  if (!validateTrackedResult(resultTiles, newBoard)) {
+    const tiles = initTilesFromBoard(newBoard);
+    return { tiles, animations: [], mergedIds: new Set(), spawnedId: null };
+  }
 
   const occupied = new Set(resultTiles.map((t) => `${t.row},${t.col}`));
   let spawnedId: number | null = null;

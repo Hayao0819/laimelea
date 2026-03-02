@@ -280,3 +280,79 @@ describe("trackMove", () => {
     expect(result.spawnedId).toBeNull();
   });
 });
+
+describe("trackMove validation", () => {
+  it("falls back to initTilesFromBoard when tracker diverges from board", () => {
+    resetIdCounter(1);
+    const divergedTiles = [makeTile(1, 2, 0, 0)];
+    const newBoard = [
+      [4, 0, 0, 0],
+      [0, 0, 0, 2],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = trackMove(divergedTiles, newBoard, "left");
+    expect(result.animations).toHaveLength(0);
+    expect(result.mergedIds.size).toBe(0);
+    expect(result.spawnedId).toBeNull();
+    expect(result.tiles).toHaveLength(2);
+    const values = result.tiles.map((t) => t.value).sort((a, b) => a - b);
+    expect(values).toEqual([2, 4]);
+  });
+
+  it("works normally when tracker state is consistent", () => {
+    resetIdCounter(100);
+    const tiles = [makeTile(1, 2, 0, 2)];
+    const newBoard = [
+      [2, 0, 0, 0],
+      [0, 0, 4, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = trackMove(tiles, newBoard, "left");
+    expect(result.animations.length).toBeGreaterThan(0);
+    expect(result.tiles.find((t) => t.id === 1)).toMatchObject({
+      row: 0,
+      col: 0,
+    });
+  });
+
+  it("falls back when tile count diverges too much from board", () => {
+    resetIdCounter(1);
+    const tiles = [
+      makeTile(1, 2, 0, 0),
+      makeTile(2, 4, 0, 1),
+      makeTile(3, 8, 0, 2),
+    ];
+    const newBoard = [
+      [2, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = trackMove(tiles, newBoard, "left");
+    expect(result.animations).toHaveLength(0);
+    expect(result.mergedIds.size).toBe(0);
+    expect(result.tiles).toHaveLength(1);
+    expect(result.tiles[0].value).toBe(2);
+  });
+
+  it("falls back when result tiles have wrong positions after merge", () => {
+    resetIdCounter(1);
+    // Tracker has two 2s on row 0 that will merge to 4 at (0,0),
+    // but newBoard has 8 at (0,0) — impossible mismatch
+    const tiles = [makeTile(1, 2, 0, 0), makeTile(2, 2, 0, 1)];
+    const newBoard = [
+      [8, 0, 0, 0],
+      [0, 0, 0, 2],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = trackMove(tiles, newBoard, "left");
+    expect(result.animations).toHaveLength(0);
+    expect(result.mergedIds.size).toBe(0);
+    expect(result.tiles).toHaveLength(2);
+    const values = result.tiles.map((t) => t.value).sort((a, b) => a - b);
+    expect(values).toEqual([2, 8]);
+  });
+});
