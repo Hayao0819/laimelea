@@ -1,9 +1,7 @@
 import React, { useCallback } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
-  Button,
   Checkbox,
-  IconButton,
   List,
   SegmentedButtons,
   Snackbar,
@@ -16,41 +14,8 @@ import { spacing } from "../../../app/spacing";
 import { calendarListAtom } from "../../../atoms/calendarAtoms";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { useSnackbar } from "../hooks/useSnackbar";
-import { createAccountManager } from "../../../core/account/accountManager";
-
-const accountManager = createAccountManager();
 
 const REMINDER_OPTIONS = [0, 5, 10, 15, 30, 60];
-
-function AccountListItem({
-  email,
-  onRemove,
-  accessibilityLabel,
-}: {
-  email: string;
-  onRemove: (email: string) => void;
-  accessibilityLabel: string;
-}) {
-  const handlePress = useCallback(() => onRemove(email), [onRemove, email]);
-  const renderRight = useCallback(
-    () => (
-      <IconButton
-        icon="close"
-        onPress={handlePress}
-        testID={`remove-account-${email}`}
-        accessibilityLabel={accessibilityLabel}
-      />
-    ),
-    [handlePress, email, accessibilityLabel],
-  );
-  return (
-    <List.Item
-      title={email}
-      right={renderRight}
-      testID={`account-item-${email}`}
-    />
-  );
-}
 
 const dayMap = { "0": 0, "1": 1, "6": 6 } as const;
 
@@ -66,62 +31,8 @@ export function CalendarSettingsScreen() {
   const {
     visible: snackbarVisible,
     message: snackbarMessage,
-    show: showSnackbar,
     dismiss: dismissSnackbar,
   } = useSnackbar();
-
-  const hasLegacyAccount =
-    settings.accountEmail != null && settings.accounts.length === 0;
-
-  const handleAddAccount = useCallback(async () => {
-    try {
-      const account = await accountManager.addAccount();
-      const currentAccounts = settings.accounts;
-      const exists = currentAccounts.some((a) => a.email === account.email);
-      const updatedAccounts = exists
-        ? currentAccounts.map((a) => (a.email === account.email ? account : a))
-        : [...currentAccounts, account];
-      update({ accounts: updatedAccounts });
-      showSnackbar(t("settings.accountAdded", { email: account.email }));
-    } catch {
-      showSnackbar(t("settings.accountAddFailed"));
-    }
-  }, [settings.accounts, update, showSnackbar, t]);
-
-  const handleRemoveAccount = useCallback(
-    async (email: string) => {
-      await accountManager.removeAccount(email);
-      const updatedAccounts = settings.accounts.filter(
-        (a) => a.email !== email,
-      );
-      const partialUpdate: Partial<typeof settings> = {
-        accounts: updatedAccounts,
-      };
-      if (settings.accountEmail === email) {
-        partialUpdate.accountEmail = null;
-      }
-      update(partialUpdate);
-      showSnackbar(t("settings.accountRemoved"));
-    },
-    [settings.accounts, settings.accountEmail, update, showSnackbar, t],
-  );
-
-  const handleRemoveLegacyAccount = useCallback(() => {
-    update({ accountEmail: null });
-    showSnackbar(t("settings.accountRemoved"));
-  }, [update, showSnackbar, t]);
-
-  const renderRemoveLegacy = useCallback(
-    () => (
-      <IconButton
-        icon="close"
-        onPress={handleRemoveLegacyAccount}
-        testID="remove-legacy-account-button"
-        accessibilityLabel={t("settings.removeAccount")}
-      />
-    ),
-    [handleRemoveLegacyAccount, t],
-  );
 
   const toggleCalendarVisibility = useCallback(
     (calId: string) => {
@@ -143,32 +54,6 @@ export function CalendarSettingsScreen() {
       >
         <List.Section>
           <List.Subheader>{t("settings.calendarSection")}</List.Subheader>
-          <List.Subheader>{t("settings.account")}</List.Subheader>
-          {hasLegacyAccount && (
-            <List.Item
-              title={settings.accountEmail!}
-              description={t("settings.legacyAccount")}
-              right={renderRemoveLegacy}
-              testID="legacy-account-item"
-            />
-          )}
-          {settings.accounts.map((account) => (
-            <AccountListItem
-              key={account.email}
-              email={account.email}
-              onRemove={handleRemoveAccount}
-              accessibilityLabel={t("settings.removeAccount")}
-            />
-          ))}
-          <Button
-            mode="outlined"
-            onPress={handleAddAccount}
-            style={styles.sectionButton}
-            testID="add-account-button"
-            icon="plus"
-          >
-            {t("settings.addAccount")}
-          </Button>
           <View style={styles.segmentContainer} testID="first-day-segment">
             <Text variant="bodyMedium" style={styles.segmentLabel}>
               {t("settings.firstDayOfWeek")}
@@ -246,10 +131,5 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     marginBottom: spacing.sm,
-  },
-  sectionButton: {
-    alignSelf: "flex-start",
-    marginHorizontal: spacing.base,
-    marginTop: spacing.sm,
   },
 });

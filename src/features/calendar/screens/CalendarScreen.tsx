@@ -3,7 +3,6 @@ import { View, StyleSheet } from "react-native";
 import {
   Text,
   Card,
-  Button,
   Snackbar,
   SegmentedButtons,
   IconButton,
@@ -14,11 +13,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
-import {
-  resolvedSettingsAtom,
-  settingsAtom,
-} from "../../../atoms/settingsAtoms";
-import { createAccountManager } from "../../../core/account/accountManager";
+import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
 import { useCalendarView } from "../hooks/useCalendarView";
 import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
@@ -29,8 +24,6 @@ import { AgendaView } from "../components/AgendaView";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 import type { Alarm } from "../../../models/Alarm";
 import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
-
-const accountManager = createAccountManager();
 
 function formatNavigationTitle(
   viewMode: CalendarViewMode,
@@ -74,11 +67,9 @@ export function CalendarScreen() {
     goToNext,
   } = useCalendarView();
   const settings = useAtomValue(resolvedSettingsAtom);
-  const setSettings = useSetAtom(settingsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
   const { events, error, sync, isStale } = useCalendarSync();
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Auto-sync when tab is focused and cache is stale
   useFocusEffect(
@@ -152,24 +143,6 @@ export function CalendarScreen() {
     [navigation],
   );
 
-  const handleSignIn = useCallback(async () => {
-    try {
-      const account = await accountManager.addAccount();
-      const currentAccounts = settings.accounts;
-      const exists = currentAccounts.some((a) => a.email === account.email);
-      const updatedAccounts = exists
-        ? currentAccounts.map((a) => (a.email === account.email ? account : a))
-        : [...currentAccounts, account];
-      setSettings({ ...settings, accounts: updatedAccounts });
-      setIsAuthed(true);
-      sync(true);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes("cancelled")) {
-        setSnackbar(t("calendar.syncError"));
-      }
-    }
-  }, [sync, settings, setSettings, t]);
-
   const navTitle = formatNavigationTitle(viewMode, selectedDate, t);
 
   const viewButtons = useMemo(
@@ -180,18 +153,6 @@ export function CalendarScreen() {
     ],
     [t],
   );
-
-  // Unauthenticated state — check both legacy accountEmail and multi-account
-  const [isAuthed, setIsAuthed] = React.useState<boolean | null>(null);
-  React.useEffect(() => {
-    if (settings.accounts.length > 0 || settings.accountEmail) {
-      setIsAuthed(true);
-    } else {
-      setIsAuthed(false);
-    }
-  }, [settings.accounts, settings.accountEmail]);
-
-  const showSignInBanner = isAuthed === false && !bannerDismissed;
 
   const renderViewContent = () => {
     switch (viewMode) {
@@ -240,37 +201,6 @@ export function CalendarScreen() {
           buttons={viewButtons}
         />
       </View>
-
-      {/* Sign-in banner for unauthenticated users */}
-      {showSignInBanner && (
-        <Card
-          style={styles.signInBanner}
-          mode="outlined"
-          testID="sign-in-banner"
-        >
-          <Card.Content style={styles.signInBannerContent}>
-            <Text variant="bodyMedium" style={styles.signInBannerText}>
-              {t("calendar.signInBanner")}
-            </Text>
-            <View style={styles.signInBannerActions}>
-              <Button
-                mode="contained"
-                compact
-                onPress={handleSignIn}
-                accessibilityLabel={t("calendar.signIn")}
-              >
-                {t("calendar.signIn")}
-              </Button>
-              <IconButton
-                icon="close"
-                size={20}
-                onPress={() => setBannerDismissed(true)}
-                accessibilityLabel={t("calendar.dismiss")}
-              />
-            </View>
-          </Card.Content>
-        </Card>
-      )}
 
       {/* Navigation header */}
       <View style={styles.navHeader}>
@@ -348,21 +278,5 @@ const styles = StyleSheet.create({
   errorCard: {
     marginHorizontal: spacing.base,
     marginVertical: spacing.sm,
-  },
-  signInBanner: {
-    marginHorizontal: spacing.base,
-    marginTop: spacing.sm,
-  },
-  signInBannerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  signInBannerText: {
-    flex: 1,
-  },
-  signInBannerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
   },
 });

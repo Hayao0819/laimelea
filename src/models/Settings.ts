@@ -1,5 +1,4 @@
 import type { CycleConfig } from "./CustomTime";
-import type { Account } from "../core/account/types";
 import type { PlatformType } from "../core/platform/types";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../core/time/constants";
 export type DismissalMethod = "simple" | "shake" | "math";
@@ -36,9 +35,6 @@ export interface AppSettings {
   dstHandling: "auto" | "ignore";
   secondaryTimezone: string | null;
   alarmDefaults: AlarmDefaults;
-  /** @deprecated Use `accounts` instead */
-  accountEmail: string | null;
-  accounts: Account[];
   calendarFirstDayOfWeek: 0 | 1 | 6;
   defaultEventReminderMin: number;
   visibleCalendarIds: string[];
@@ -81,8 +77,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dstHandling: "auto",
   secondaryTimezone: null,
   alarmDefaults: DEFAULT_ALARM_DEFAULTS,
-  accountEmail: null,
-  accounts: [],
   calendarFirstDayOfWeek: 1,
   defaultEventReminderMin: 15,
   visibleCalendarIds: [],

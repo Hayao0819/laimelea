@@ -2,7 +2,6 @@ import { createStore } from "jotai";
 import {
   platformTypeAtom,
   platformServicesAtom,
-  accountManagerAtom,
 } from "../../src/atoms/platformAtoms";
 import type { PlatformType } from "../../src/core/platform/types";
 
@@ -42,27 +41,6 @@ describe("platformAtoms", () => {
       const store = createStore();
       store.set(platformTypeAtom, "hms");
       expect(store.get(platformTypeAtom)).toBe("hms");
-    });
-  });
-
-  describe("accountManagerAtom", () => {
-    it("should return accountManager with all required methods", () => {
-      const store = createStore();
-      const manager = store.get(accountManagerAtom);
-      expect(typeof manager.getAccounts).toBe("function");
-      expect(typeof manager.addAccount).toBe("function");
-      expect(typeof manager.removeAccount).toBe("function");
-      expect(typeof manager.getAccessToken).toBe("function");
-      expect(typeof manager.getAllAccessTokens).toBe("function");
-    });
-
-    it("should update when platform type changes", () => {
-      const store = createStore();
-      const aospManager = store.get(accountManagerAtom);
-      store.set(platformTypeAtom, "gms");
-      const gmsManager = store.get(accountManagerAtom);
-      expect(aospManager).toBeDefined();
-      expect(gmsManager).toBeDefined();
     });
   });
 

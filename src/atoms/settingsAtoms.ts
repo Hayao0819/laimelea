@@ -4,7 +4,6 @@ import { createAsyncStorage } from "../core/storage/asyncStorageAdapter";
 import { STORAGE_KEYS } from "../core/storage/keys";
 import { DEFAULT_SETTINGS } from "../models/Settings";
 import type { AppSettings } from "../models/Settings";
-import type { Account } from "../core/account/types";
 import type { CycleConfig } from "../models/CustomTime";
 
 export const settingsAtom = atomWithStorage<AppSettings>(
@@ -56,8 +55,4 @@ export const primaryTimeDisplayAtom = atom(
     const current = get(resolvedSettingsAtom);
     set(settingsAtom, { ...current, primaryTimeDisplay: value });
   },
-);
-
-export const accountsAtom = atom<Account[]>(
-  (get) => get(resolvedSettingsAtom).accounts,
 );

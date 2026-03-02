@@ -9,11 +9,8 @@ import {
   calendarListAtom,
 } from "../atoms/calendarAtoms";
 import { platformServicesAtom } from "../atoms/platformAtoms";
-import { accountsAtom, resolvedSettingsAtom } from "../atoms/settingsAtoms";
-import {
-  syncCalendarEvents,
-  syncMultiAccountCalendarEvents,
-} from "../core/calendar/calendarSyncService";
+import { resolvedSettingsAtom } from "../atoms/settingsAtoms";
+import { syncCalendarEvents } from "../core/calendar/calendarSyncService";
 import type { CalendarEvent } from "../models/CalendarEvent";
 
 export interface CalendarSyncResult {
@@ -33,7 +30,6 @@ export function useCalendarSync(): CalendarSyncResult {
   const isStale = useAtomValue(calendarCacheStaleAtom);
   const services = useAtomValue(platformServicesAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
-  const accounts = useAtomValue(accountsAtom);
 
   const syncingRef = useRef(false);
 
@@ -52,31 +48,12 @@ export function useCalendarSync(): CalendarSyncResult {
             ? settings.visibleCalendarIds
             : undefined;
 
-        if (accounts.length > 0) {
-          // Multi-account sync via AccountManager
-          const result = await syncMultiAccountCalendarEvents(
-            services.accountManager,
-            visibleIds,
-          );
-          setEvents(result.events);
-          setLastSync(result.syncTimestamp);
-
-          if (result.errors.length > 0 && result.events.length === 0) {
-            setError(result.errors.map((e) => e.error).join("; "));
-          }
-        } else if (settings.accountEmail) {
-          // Legacy single-account sync via PlatformCalendarService
-          const result = await syncCalendarEvents(
-            services.calendar,
-            visibleIds,
-          );
-          setEvents(result.events);
-          setLastSync(result.syncTimestamp);
-        } else {
-          // No accounts configured - return empty
-          setEvents([]);
-          setLastSync(Date.now());
-        }
+        const result = await syncCalendarEvents(
+          services.calendar,
+          visibleIds,
+        );
+        setEvents(result.events);
+        setLastSync(result.syncTimestamp);
 
         try {
           const calendars = await services.calendar.getCalendarList();
@@ -93,11 +70,8 @@ export function useCalendarSync(): CalendarSyncResult {
     },
     [
       isStale,
-      accounts,
-      services.accountManager,
       services.calendar,
       settings.visibleCalendarIds,
-      settings.accountEmail,
       setEvents,
       setLastSync,
       setCalendarList,

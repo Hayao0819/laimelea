@@ -99,16 +99,20 @@ describe("AgendaView", () => {
   });
 
   it("renders section headers with date and weekday", async () => {
+    const event = makeEvent({
+      id: "ev-mon",
+      title: "Monday Event",
+      startTimestampMs: MONDAY + 10 * MS_PER_HOUR,
+      endTimestampMs: MONDAY + 11 * MS_PER_HOUR,
+    });
+
     const { getAllByText } = await renderAgendaView({
+      events: [event],
       selectedDate: MONDAY,
     });
 
     // Section headers contain: `${monthName} ${day} ${weekdayName}`
     // For Monday March 11: "calendar.monthNames.2 11 calendar.weekday.mon"
-    const headers = getAllByText(/calendar\.monthNames\.\d+/);
-    expect(headers.length).toBeGreaterThan(0);
-
-    // Verify the selected date section header is rendered
     const mondayHeaders = getAllByText(
       /calendar\.monthNames\.2 11 calendar\.weekday\.mon/,
     );
@@ -119,7 +123,15 @@ describe("AgendaView", () => {
     // Set fake time to MONDAY so it becomes "today"
     jest.setSystemTime(MONDAY + 12 * MS_PER_HOUR);
 
+    const event = makeEvent({
+      id: "ev-today",
+      title: "Today Event",
+      startTimestampMs: MONDAY + 10 * MS_PER_HOUR,
+      endTimestampMs: MONDAY + 11 * MS_PER_HOUR,
+    });
+
     const { getAllByText } = await renderAgendaView({
+      events: [event],
       selectedDate: MONDAY,
     });
 
@@ -144,16 +156,31 @@ describe("AgendaView", () => {
     expect(getByText("Team Standup")).toBeTruthy();
   });
 
-  it("shows no-events placeholder for empty days", async () => {
-    const { getAllByText } = await renderAgendaView({
+  it("hides days with no events", async () => {
+    const event = makeEvent({
+      id: "ev-only",
+      title: "Only Event",
+      startTimestampMs: MONDAY + 10 * MS_PER_HOUR,
+      endTimestampMs: MONDAY + 11 * MS_PER_HOUR,
+    });
+
+    const { queryAllByText } = await renderAgendaView({
+      events: [event],
+      selectedDate: MONDAY,
+    });
+
+    // Only the day with the event should have a section header
+    const headers = queryAllByText(/calendar\.monthNames\.\d+/);
+    expect(headers.length).toBe(1);
+  });
+
+  it("shows empty message when no events in range", async () => {
+    const { getByText } = await renderAgendaView({
       events: [],
       selectedDate: MONDAY,
     });
 
-    // SectionList virtualizes rendering, so not all 29 sections are mounted.
-    // The rendered empty sections should show the placeholder text.
-    const placeholders = getAllByText("calendar.noEventsForDay");
-    expect(placeholders.length).toBeGreaterThan(0);
+    expect(getByText("calendar.noEventsForDay")).toBeTruthy();
   });
 
   it("renders EventCard for each event", async () => {
@@ -252,21 +279,34 @@ describe("AgendaView", () => {
     expect(onCreateAlarm).toHaveBeenCalledWith(event);
   });
 
-  it("generates sections for +/-14 days around selected date", async () => {
+  it("only shows sections for days with events across the range", async () => {
+    // MONDAY is March 11; -14 days = Feb 26
+    const febEvent = makeEvent({
+      id: "ev-feb",
+      title: "Feb Event",
+      startTimestampMs: MONDAY - 13 * MS_PER_DAY + 10 * MS_PER_HOUR,
+      endTimestampMs: MONDAY - 13 * MS_PER_DAY + 11 * MS_PER_HOUR,
+    });
+    const marEvent = makeEvent({
+      id: "ev-mar",
+      title: "Mar Event",
+      startTimestampMs: MONDAY + 5 * MS_PER_DAY + 10 * MS_PER_HOUR,
+      endTimestampMs: MONDAY + 5 * MS_PER_DAY + 11 * MS_PER_HOUR,
+    });
+
     const { getAllByText } = await renderAgendaView({
+      events: [febEvent, marEvent],
       selectedDate: MONDAY,
     });
 
-    // AGENDA_RANGE_DAYS = 14, so -14 to +14 = 29 sections total.
-    // SectionList virtualizes so not all sections are mounted, but the
-    // rendered sections should span from Feb (monthNames.1) to Mar (monthNames.2).
+    // Only 2 sections should be rendered (one for each event's day)
     const headers = getAllByText(/calendar\.monthNames\.\d+/);
-    expect(headers.length).toBeGreaterThanOrEqual(20);
+    expect(headers).toHaveLength(2);
 
     // Verify the date range spans both February and March
     const febHeaders = getAllByText(/calendar\.monthNames\.1/);
     const marHeaders = getAllByText(/calendar\.monthNames\.2/);
-    expect(febHeaders.length).toBeGreaterThan(0);
-    expect(marHeaders.length).toBeGreaterThan(0);
+    expect(febHeaders.length).toBe(1);
+    expect(marHeaders.length).toBe(1);
   });
 });

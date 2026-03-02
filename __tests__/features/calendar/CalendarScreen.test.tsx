@@ -26,12 +26,6 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
   },
 }));
 
-jest.mock("react-native-app-auth", () => ({
-  authorize: jest.fn(),
-  refresh: jest.fn(),
-  revoke: jest.fn(),
-}));
-
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
   return {
@@ -104,21 +98,6 @@ jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
   scheduleAlarm: jest.fn().mockResolvedValue("trigger-id"),
 }));
 
-jest.mock("../../../src/core/account/accountManager", () => {
-  const manager = {
-    getAccounts: jest.fn().mockResolvedValue([]),
-    addAccount: jest.fn(),
-    removeAccount: jest.fn().mockResolvedValue(undefined),
-    getAccessToken: jest.fn().mockResolvedValue(null),
-    getAllAccessTokens: jest.fn().mockResolvedValue(new Map()),
-  };
-  return { createAccountManager: () => manager };
-});
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const mockAccountManager =
-  require("../../../src/core/account/accountManager").createAccountManager();
-
 jest.mock("../../../src/core/platform/factory");
 
 const mockCreatePlatformServices =
@@ -150,7 +129,7 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-function createMockServices(authenticated = true): PlatformServices {
+function createMockServices(): PlatformServices {
   return {
     type: "aosp",
     auth: {
@@ -159,9 +138,7 @@ function createMockServices(authenticated = true): PlatformServices {
         .fn()
         .mockResolvedValue({ email: "test@test.com", accessToken: "token" }),
       signOut: jest.fn().mockResolvedValue(undefined),
-      getAccessToken: jest
-        .fn()
-        .mockResolvedValue(authenticated ? "mock-token" : null),
+      getAccessToken: jest.fn().mockResolvedValue("mock-token"),
     },
     calendar: {
       isAvailable: jest.fn().mockResolvedValue(true),
@@ -179,20 +156,12 @@ function createMockServices(authenticated = true): PlatformServices {
       requestPermissions: jest.fn().mockResolvedValue(true),
       fetchSleepSessions: jest.fn().mockResolvedValue([]),
     },
-    accountManager: {
-      getAccounts: jest.fn().mockResolvedValue([]),
-      addAccount: jest.fn().mockRejectedValue(new Error("not implemented")),
-      removeAccount: jest.fn().mockResolvedValue(undefined),
-      getAccessToken: jest.fn().mockResolvedValue(null),
-      getAllAccessTokens: jest.fn().mockResolvedValue(new Map()),
-    },
   };
 }
 
 let currentMockServices: PlatformServices;
 
 async function renderWithProviders(options?: {
-  authenticated?: boolean;
   events?: CalendarEvent[];
   loading?: boolean;
   error?: string | null;
@@ -202,7 +171,6 @@ async function renderWithProviders(options?: {
   initialAlarms?: Alarm[];
 }) {
   const {
-    authenticated = true,
     events = [],
     loading = false,
     error = null,
@@ -220,25 +188,11 @@ async function renderWithProviders(options?: {
     isStale,
   });
 
-  currentMockServices = createMockServices(authenticated);
+  currentMockServices = createMockServices();
   mockCreatePlatformServices.mockReturnValue(currentMockServices);
 
   const store = createStore();
-  const settingsOverride = authenticated
-    ? {
-        ...DEFAULT_SETTINGS,
-        accounts: [
-          {
-            email: "test@test.com",
-            displayName: "test@test.com",
-            photoUrl: null,
-            provider: "app-auth" as const,
-            addedAt: Date.now(),
-          },
-        ],
-      }
-    : DEFAULT_SETTINGS;
-  store.set(settingsAtom, settingsOverride);
+  store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, initialAlarms);
   store.set(calendarSelectedDateAtom, selectedDate);
   store.set(calendarViewModeAtom, viewMode);
@@ -250,7 +204,6 @@ async function renderWithProviders(options?: {
       </PaperProvider>
     </JotaiProvider>,
   );
-  // Flush effects: useFocusEffect and async getAccessToken/setIsAuthed
   await act(async () => {});
 
   return { ...utils, store, mockServices: currentMockServices };
@@ -259,13 +212,6 @@ async function renderWithProviders(options?: {
 describe("CalendarScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAccountManager.addAccount.mockResolvedValue({
-      email: "new@test.com",
-      displayName: "new@test.com",
-      photoUrl: null,
-      provider: "app-auth" as const,
-      addedAt: Date.now(),
-    });
     mockUseCalendarSync.mockReturnValue({
       events: [],
       loading: false,
@@ -275,232 +221,156 @@ describe("CalendarScreen", () => {
     });
   });
 
-  describe("authenticated state", () => {
-    it('should render with testID "calendar-screen"', async () => {
-      const { getByTestId } = await renderWithProviders();
-      expect(getByTestId("calendar-screen")).toBeTruthy();
-    });
-
-    it("should render agenda view by default", async () => {
-      const { getByTestId } = await renderWithProviders();
-      expect(getByTestId("agenda-view")).toBeTruthy();
-    });
-
-    it("should show events for selected day in agenda view", async () => {
-      const todayEvent = makeEvent({
-        id: "today-event",
-        title: "Today Event",
-        startTimestampMs: TODAY + 9 * 60 * 60 * 1000,
-        endTimestampMs: TODAY + 10 * 60 * 60 * 1000,
-      });
-
-      const { getByText } = await renderWithProviders({
-        events: [todayEvent],
-        selectedDate: TODAY,
-      });
-
-      expect(getByText("Today Event")).toBeTruthy();
-    });
-
-    it("should include all-day events that span the selected date", async () => {
-      const allDayEvent = makeEvent({
-        id: "allday-event",
-        title: "Multi-day Conference",
-        allDay: true,
-        startTimestampMs: TODAY - MS_PER_DAY, // started yesterday
-        endTimestampMs: TODAY + 2 * MS_PER_DAY, // ends day after tomorrow
-      });
-
-      const { getAllByText } = await renderWithProviders({
-        events: [allDayEvent],
-        selectedDate: TODAY,
-      });
-
-      expect(
-        getAllByText("Multi-day Conference").length,
-      ).toBeGreaterThanOrEqual(1);
-    });
-
-    it("should show all event titles in agenda", async () => {
-      const laterEvent = makeEvent({
-        id: "later-event",
-        title: "Afternoon Meeting",
-        startTimestampMs: TODAY + 15 * 60 * 60 * 1000,
-        endTimestampMs: TODAY + 16 * 60 * 60 * 1000,
-      });
-      const earlierEvent = makeEvent({
-        id: "earlier-event",
-        title: "Morning Standup",
-        startTimestampMs: TODAY + 9 * 60 * 60 * 1000,
-        endTimestampMs: TODAY + 9.5 * 60 * 60 * 1000,
-      });
-      const allDayEvent = makeEvent({
-        id: "allday",
-        title: "Holiday",
-        allDay: true,
-        startTimestampMs: TODAY,
-        endTimestampMs: TODAY + MS_PER_DAY,
-      });
-
-      const { getAllByText } = await renderWithProviders({
-        events: [laterEvent, earlierEvent, allDayEvent],
-        selectedDate: TODAY,
-      });
-
-      const titles = ["Holiday", "Morning Standup", "Afternoon Meeting"];
-      for (const title of titles) {
-        expect(getAllByText(title).length).toBeGreaterThanOrEqual(1);
-      }
-    });
-
-    it("should call sync on focus when isStale is true", async () => {
-      await renderWithProviders({ isStale: true });
-      expect(mockSync).toHaveBeenCalled();
-    });
-
-    it("should not call sync on focus when isStale is false", async () => {
-      await renderWithProviders({ isStale: false });
-      expect(mockSync).not.toHaveBeenCalled();
-    });
-
-    it("should show error card when sync error occurs", async () => {
-      const { getByText } = await renderWithProviders({
-        error: "Network error",
-      });
-      expect(getByText("calendar.syncError")).toBeTruthy();
-    });
-
-    it("should create alarm from event (handleCreateAlarm)", async () => {
-      const event = makeEvent({
-        id: "event-alarm",
-        title: "Important Meeting",
-        startTimestampMs: TODAY + 14 * 60 * 60 * 1000, // 14:00
-        endTimestampMs: TODAY + 15 * 60 * 60 * 1000,
-      });
-
-      const { getByTestId } = await renderWithProviders({
-        events: [event],
-      });
-
-      await act(async () => {
-        fireEvent.press(getByTestId("event-create-alarm-event-alarm"));
-      });
-
-      expect(scheduleAlarm).toHaveBeenCalledWith(
-        expect.objectContaining({
-          label: "Important Meeting",
-          linkedCalendarEventId: "event-alarm",
-          enabled: true,
-        }),
-      );
-    });
-
-    it("should render month view when viewMode is month", async () => {
-      const { getByTestId } = await renderWithProviders({
-        viewMode: "month",
-      });
-      expect(getByTestId("month-view")).toBeTruthy();
-    });
-
-    it("should render week view when viewMode is week", async () => {
-      const { getByTestId } = await renderWithProviders({
-        viewMode: "week",
-      });
-      expect(getByTestId("week-view")).toBeTruthy();
-    });
-
-    it("should render segmented buttons for view switching", async () => {
-      const { getByText } = await renderWithProviders();
-      expect(getByText("calendar.views.month")).toBeTruthy();
-      expect(getByText("calendar.views.week")).toBeTruthy();
-      expect(getByText("calendar.views.agenda")).toBeTruthy();
-    });
-
-    it("should render navigation header with title", async () => {
-      const { getByTestId } = await renderWithProviders();
-      // Navigation header is part of calendar-screen
-      const screen = getByTestId("calendar-screen");
-      expect(screen).toBeTruthy();
-    });
+  it('should render with testID "calendar-screen"', async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("calendar-screen")).toBeTruthy();
   });
 
-  describe("unauthenticated state", () => {
-    it("should show calendar view with segmented buttons when not authenticated", async () => {
-      const { getByText, getByTestId } = await renderWithProviders({
-        authenticated: false,
-      });
-      expect(getByTestId("calendar-screen")).toBeTruthy();
-      expect(getByText("calendar.views.month")).toBeTruthy();
-      expect(getByText("calendar.views.week")).toBeTruthy();
-      expect(getByText("calendar.views.agenda")).toBeTruthy();
-      expect(getByTestId("agenda-view")).toBeTruthy();
+  it("should render agenda view by default", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("agenda-view")).toBeTruthy();
+  });
+
+  it("should show events for selected day in agenda view", async () => {
+    const todayEvent = makeEvent({
+      id: "today-event",
+      title: "Today Event",
+      startTimestampMs: TODAY + 9 * 60 * 60 * 1000,
+      endTimestampMs: TODAY + 10 * 60 * 60 * 1000,
     });
 
-    it("should show sign-in banner when not authenticated", async () => {
-      const { getByTestId, getByText } = await renderWithProviders({
-        authenticated: false,
-      });
-      expect(getByTestId("sign-in-banner")).toBeTruthy();
-      expect(getByText("calendar.signInBanner")).toBeTruthy();
+    const { getByText } = await renderWithProviders({
+      events: [todayEvent],
+      selectedDate: TODAY,
     });
 
-    it('should show sign-in button with "calendar.signIn"', async () => {
-      const { getByText } = await renderWithProviders({
-        authenticated: false,
-      });
-      expect(getByText("calendar.signIn")).toBeTruthy();
+    expect(getByText("Today Event")).toBeTruthy();
+  });
+
+  it("should include all-day events that span the selected date", async () => {
+    const allDayEvent = makeEvent({
+      id: "allday-event",
+      title: "Multi-day Conference",
+      allDay: true,
+      startTimestampMs: TODAY - MS_PER_DAY, // started yesterday
+      endTimestampMs: TODAY + 2 * MS_PER_DAY, // ends day after tomorrow
     });
 
-    it("should call accountManager.addAccount and then sync when sign-in button pressed", async () => {
-      const { getByText } = await renderWithProviders({
-        authenticated: false,
-      });
-
-      await act(async () => {
-        fireEvent.press(getByText("calendar.signIn"));
-      });
-
-      expect(mockAccountManager.addAccount).toHaveBeenCalled();
-      expect(mockSync).toHaveBeenCalledWith(true);
+    const { getAllByText } = await renderWithProviders({
+      events: [allDayEvent],
+      selectedDate: TODAY,
     });
 
-    it("should add account to settings and hide banner after successful sign-in", async () => {
-      const { getByText, queryByTestId, store } = await renderWithProviders({
-        authenticated: false,
-      });
+    expect(
+      getAllByText("Multi-day Conference").length,
+    ).toBeGreaterThanOrEqual(1);
+  });
 
-      expect(queryByTestId("sign-in-banner")).toBeTruthy();
-
-      await act(async () => {
-        fireEvent.press(getByText("calendar.signIn"));
-      });
-
-      const settings = store.get(settingsAtom) as typeof DEFAULT_SETTINGS;
-      expect(settings.accounts).toHaveLength(1);
-      expect(settings.accounts[0].email).toBe("new@test.com");
-      expect(queryByTestId("sign-in-banner")).toBeNull();
+  it("should show all event titles in agenda", async () => {
+    const laterEvent = makeEvent({
+      id: "later-event",
+      title: "Afternoon Meeting",
+      startTimestampMs: TODAY + 15 * 60 * 60 * 1000,
+      endTimestampMs: TODAY + 16 * 60 * 60 * 1000,
+    });
+    const earlierEvent = makeEvent({
+      id: "earlier-event",
+      title: "Morning Standup",
+      startTimestampMs: TODAY + 9 * 60 * 60 * 1000,
+      endTimestampMs: TODAY + 9.5 * 60 * 60 * 1000,
+    });
+    const allDayEvent = makeEvent({
+      id: "allday",
+      title: "Holiday",
+      allDay: true,
+      startTimestampMs: TODAY,
+      endTimestampMs: TODAY + MS_PER_DAY,
     });
 
-    it("should hide banner when dismiss button is pressed", async () => {
-      const { getByTestId, queryByTestId, getByLabelText } =
-        await renderWithProviders({
-          authenticated: false,
-        });
-      expect(getByTestId("sign-in-banner")).toBeTruthy();
-
-      await act(async () => {
-        fireEvent.press(getByLabelText("calendar.dismiss"));
-      });
-
-      expect(queryByTestId("sign-in-banner")).toBeNull();
+    const { getAllByText } = await renderWithProviders({
+      events: [laterEvent, earlierEvent, allDayEvent],
+      selectedDate: TODAY,
     });
 
-    it("should not show banner when authenticated", async () => {
-      const { queryByTestId } = await renderWithProviders({
-        authenticated: true,
-      });
-      expect(queryByTestId("sign-in-banner")).toBeNull();
+    const titles = ["Holiday", "Morning Standup", "Afternoon Meeting"];
+    for (const title of titles) {
+      expect(getAllByText(title).length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("should call sync on focus when isStale is true", async () => {
+    await renderWithProviders({ isStale: true });
+    expect(mockSync).toHaveBeenCalled();
+  });
+
+  it("should not call sync on focus when isStale is false", async () => {
+    await renderWithProviders({ isStale: false });
+    expect(mockSync).not.toHaveBeenCalled();
+  });
+
+  it("should show error card when sync error occurs", async () => {
+    const { getByText } = await renderWithProviders({
+      error: "Network error",
     });
+    expect(getByText("calendar.syncError")).toBeTruthy();
+  });
+
+  it("should create alarm from event (handleCreateAlarm)", async () => {
+    const event = makeEvent({
+      id: "event-alarm",
+      title: "Important Meeting",
+      startTimestampMs: TODAY + 14 * 60 * 60 * 1000, // 14:00
+      endTimestampMs: TODAY + 15 * 60 * 60 * 1000,
+    });
+
+    const { getByTestId } = await renderWithProviders({
+      events: [event],
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId("event-create-alarm-event-alarm"));
+    });
+
+    expect(scheduleAlarm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        label: "Important Meeting",
+        linkedCalendarEventId: "event-alarm",
+        enabled: true,
+      }),
+    );
+  });
+
+  it("should render month view when viewMode is month", async () => {
+    const { getByTestId } = await renderWithProviders({
+      viewMode: "month",
+    });
+    expect(getByTestId("month-view")).toBeTruthy();
+  });
+
+  it("should render week view when viewMode is week", async () => {
+    const { getByTestId } = await renderWithProviders({
+      viewMode: "week",
+    });
+    expect(getByTestId("week-view")).toBeTruthy();
+  });
+
+  it("should render segmented buttons for view switching", async () => {
+    const { getByText } = await renderWithProviders();
+    expect(getByText("calendar.views.month")).toBeTruthy();
+    expect(getByText("calendar.views.week")).toBeTruthy();
+    expect(getByText("calendar.views.agenda")).toBeTruthy();
+  });
+
+  it("should render navigation header with title", async () => {
+    const { getByTestId } = await renderWithProviders();
+    // Navigation header is part of calendar-screen
+    const screen = getByTestId("calendar-screen");
+    expect(screen).toBeTruthy();
+  });
+
+  it("should not show sign-in banner (removed)", async () => {
+    const { queryByTestId } = await renderWithProviders();
+    expect(queryByTestId("sign-in-banner")).toBeNull();
   });
 
   describe("Array.isArray guard for atomWithStorage", () => {

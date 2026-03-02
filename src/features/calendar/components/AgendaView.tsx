@@ -50,24 +50,6 @@ interface AgendaSection {
   data: CalendarEvent[];
 }
 
-const EMPTY_PLACEHOLDER_ID = "__empty__";
-
-function createEmptyPlaceholder(dateMs: number): CalendarEvent {
-  return {
-    id: `${EMPTY_PLACEHOLDER_ID}-${dateMs}`,
-    sourceEventId: "",
-    source: "local",
-    title: "",
-    description: "",
-    startTimestampMs: dateMs,
-    endTimestampMs: dateMs,
-    allDay: false,
-    colorId: null,
-    calendarName: "",
-    calendarId: "",
-  };
-}
-
 export function AgendaView({
   events,
   selectedDate,
@@ -105,6 +87,8 @@ export function AgendaView({
           return a.startTimestampMs - b.startTimestampMs;
         });
 
+      if (dayEvents.length === 0) continue;
+
       const date = new Date(dayMs);
       const month = date.getMonth();
       const day = date.getDate();
@@ -121,18 +105,33 @@ export function AgendaView({
         dateMs: dayMs,
         title: titleStr,
         isToday: isDayToday,
-        data:
-          dayEvents.length > 0 ? dayEvents : [createEmptyPlaceholder(dayMs)],
+        data: dayEvents,
       });
     }
 
     return result;
   }, [events, selectedDayStart, today, t]);
 
-  const selectedSectionIndex = AGENDA_RANGE_DAYS;
+  const selectedSectionIndex = useMemo(() => {
+    // Find the section closest to the selected date
+    let closest = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < sections.length; i++) {
+      const diff = Math.abs(sections[i].dateMs - selectedDayStart);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = i;
+      }
+    }
+    return closest;
+  }, [sections, selectedDayStart]);
 
   useEffect(() => {
-    if (sectionListRef.current && sections.length > selectedSectionIndex) {
+    if (
+      sectionListRef.current &&
+      sections.length > 0 &&
+      selectedSectionIndex < sections.length
+    ) {
       const timer = setTimeout(() => {
         try {
           sectionListRef.current?.scrollToLocation({
@@ -177,28 +176,14 @@ export function AgendaView({
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: CalendarEvent }) => {
-      if (item.id.startsWith(EMPTY_PLACEHOLDER_ID)) {
-        return (
-          <View style={styles.emptyDay}>
-            <Text
-              variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant }}
-            >
-              {t("calendar.noEventsForDay")}
-            </Text>
-          </View>
-        );
-      }
-      return (
-        <EventCard
-          event={item}
-          onPress={onEventPress}
-          onCreateAlarm={onCreateAlarm}
-        />
-      );
-    },
-    [theme, t, onEventPress, onCreateAlarm],
+    ({ item }: { item: CalendarEvent }) => (
+      <EventCard
+        event={item}
+        onPress={onEventPress}
+        onCreateAlarm={onCreateAlarm}
+      />
+    ),
+    [onEventPress, onCreateAlarm],
   );
 
   const keyExtractor = useCallback(
@@ -215,6 +200,16 @@ export function AgendaView({
       keyExtractor={keyExtractor}
       stickySectionHeadersEnabled
       contentContainerStyle={styles.listContent}
+      ListEmptyComponent={
+        <View style={styles.emptyList}>
+          <Text
+            variant="bodyMedium"
+            style={{ color: theme.colors.onSurfaceVariant }}
+          >
+            {t("calendar.noEventsForDay")}
+          </Text>
+        </View>
+      }
       testID="agenda-view"
       initialNumToRender={60}
       getItemLayout={undefined}
@@ -232,9 +227,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#e0e0e0",
   },
-  emptyDay: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.base,
+  emptyList: {
+    paddingVertical: spacing.xl,
     alignItems: "center",
   },
   listContent: {

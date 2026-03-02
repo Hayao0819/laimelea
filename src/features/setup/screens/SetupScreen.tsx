@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Icon, Surface, Text, TextInput } from "react-native-paper";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 
 import { spacing, radius } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { DEFAULT_SETTINGS } from "../../../models/Settings";
 import { realToCustom } from "../../../core/time/conversions";
 import {
@@ -14,22 +15,19 @@ import {
   formatCustomTime,
 } from "../../../core/time/formatting";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../../core/time/constants";
-import { createAccountManager } from "../../../core/account/accountManager";
-import type { Account } from "../../../core/account/types";
-
-const accountManager = createAccountManager();
 
 const DEFAULT_HOURS = Math.floor(DEFAULT_CYCLE_LENGTH_MINUTES / 60);
 const DEFAULT_MINUTES = DEFAULT_CYCLE_LENGTH_MINUTES % 60;
 
 export function SetupScreen() {
   const setSettings = useSetAtom(settingsAtom);
+  const services = useAtomValue(platformServicesAtom);
   const { t } = useTranslation();
 
   const [hours, setHours] = useState(String(DEFAULT_HOURS));
   const [minutes, setMinutes] = useState(String(DEFAULT_MINUTES));
   const [baseTimeMs, setBaseTimeMs] = useState<number | null>(null);
-  const [addedAccounts, setAddedAccounts] = useState<Account[]>([]);
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
 
   const cycleLengthMinutes = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
@@ -50,19 +48,14 @@ export function SetupScreen() {
   const handleGoogleSignIn = useCallback(async () => {
     setSigningIn(true);
     try {
-      const account = await accountManager.addAccount();
-      setAddedAccounts((prev) => {
-        const exists = prev.some((a) => a.email === account.email);
-        return exists
-          ? prev.map((a) => (a.email === account.email ? account : a))
-          : [...prev, account];
-      });
+      const result = await services.auth.signIn();
+      setSignedInEmail(result.email);
     } catch {
       // User cancelled or auth failed - sign in is optional
     } finally {
       setSigningIn(false);
     }
-  }, []);
+  }, [services.auth]);
 
   const handleDone = useCallback(() => {
     if (!isValid) return;
@@ -75,10 +68,9 @@ export function SetupScreen() {
         cycleLengthMinutes,
         baseTimeMs: baseTimeMs!,
       },
-      accounts: addedAccounts,
       setupComplete: true,
     }));
-  }, [isValid, cycleLengthMinutes, baseTimeMs, addedAccounts, setSettings]);
+  }, [isValid, cycleLengthMinutes, baseTimeMs, setSettings]);
 
   return (
     <ScrollView
@@ -162,30 +154,30 @@ export function SetupScreen() {
         <Text variant="bodySmall" style={styles.hint}>
           {t("setup.googleAccountDescription")}
         </Text>
-        <Button
-          mode="outlined"
-          onPress={handleGoogleSignIn}
-          loading={signingIn}
-          disabled={signingIn}
-          style={styles.button}
-          testID="google-sign-in-button"
-          accessibilityLabel={t("setup.signInWithGoogle")}
-          icon="google"
-        >
-          {t("setup.signInWithGoogle")}
-        </Button>
-        {addedAccounts.map((account) => (
+        {signedInEmail ? (
           <View
-            key={account.email}
             style={styles.accountRow}
-            testID={`added-account-${account.email}`}
+            testID={`signed-in-account-${signedInEmail}`}
           >
             <Icon source="check-circle" size={18} color="#4caf50" />
             <Text variant="bodyMedium" style={styles.accountEmail}>
-              {account.email}
+              {signedInEmail}
             </Text>
           </View>
-        ))}
+        ) : (
+          <Button
+            mode="outlined"
+            onPress={handleGoogleSignIn}
+            loading={signingIn}
+            disabled={signingIn}
+            style={styles.button}
+            testID="google-sign-in-button"
+            accessibilityLabel={t("setup.signInWithGoogle")}
+            icon="google"
+          >
+            {t("setup.signInWithGoogle")}
+          </Button>
+        )}
       </Surface>
 
       <Button

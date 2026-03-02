@@ -5,20 +5,9 @@ import { PaperProvider } from "react-native-paper";
 
 import { SetupScreen } from "../../../src/features/setup/screens/SetupScreen";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
+import { createPlatformServices } from "../../../src/core/platform/factory";
 import type { AppSettings } from "../../../src/models/Settings";
-import type { Account } from "../../../src/core/account/types";
-
-const mockAddAccount = jest.fn();
-
-jest.mock("../../../src/core/account/accountManager", () => ({
-  createAccountManager: () => ({
-    addAccount: (...args: unknown[]) => mockAddAccount(...args),
-    removeAccount: jest.fn(),
-    getAccounts: jest.fn(),
-    getAccessToken: jest.fn(),
-    getAllAccessTokens: jest.fn(),
-  }),
-}));
+import type { PlatformServices } from "../../../src/core/platform/types";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
@@ -38,6 +27,16 @@ jest.mock("@react-native-async-storage/async-storage", () => {
   };
 });
 
+jest.mock("@react-native-google-signin/google-signin", () => ({
+  GoogleSignin: {
+    hasPlayServices: jest.fn(),
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getTokens: jest.fn(),
+    configure: jest.fn(),
+  },
+}));
+
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -45,17 +44,44 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-function createMockAccount(email: string): Account {
+jest.mock("../../../src/core/platform/factory");
+
+const mockCreatePlatformServices =
+  createPlatformServices as jest.MockedFunction<typeof createPlatformServices>;
+
+const mockSignIn = jest.fn();
+
+function createMockServices(): PlatformServices {
   return {
-    email,
-    displayName: email.split("@")[0],
-    photoUrl: null,
-    provider: "app-auth",
-    addedAt: Date.now(),
+    type: "aosp",
+    auth: {
+      isAvailable: jest.fn().mockResolvedValue(true),
+      signIn: mockSignIn,
+      signOut: jest.fn().mockResolvedValue(undefined),
+      getAccessToken: jest.fn().mockResolvedValue("token"),
+    },
+    calendar: {
+      isAvailable: jest.fn().mockResolvedValue(true),
+      fetchEvents: jest.fn().mockResolvedValue([]),
+      getCalendarList: jest.fn().mockResolvedValue([]),
+    },
+    backup: {
+      isAvailable: jest.fn().mockResolvedValue(true),
+      backup: jest.fn().mockResolvedValue(undefined),
+      restore: jest.fn().mockResolvedValue(null),
+      getLastBackupTime: jest.fn().mockResolvedValue(null),
+    },
+    sleep: {
+      isAvailable: jest.fn().mockResolvedValue(true),
+      requestPermissions: jest.fn().mockResolvedValue(true),
+      fetchSleepSessions: jest.fn().mockResolvedValue([]),
+    },
   };
 }
 
 function renderWithProviders(store = createStore()) {
+  mockCreatePlatformServices.mockReturnValue(createMockServices());
+
   const utils = render(
     <JotaiProvider store={store}>
       <PaperProvider>
@@ -132,17 +158,23 @@ describe("SetupScreen", () => {
       expect(getByTestId("google-sign-in-button")).toBeTruthy();
     });
 
-    it("should call addAccount on sign-in button tap and display account", async () => {
-      const mockAccount = createMockAccount("user@gmail.com");
-      mockAddAccount.mockResolvedValue(mockAccount);
+    it("should call auth.signIn and display signed-in account", async () => {
+      mockSignIn.mockResolvedValue({
+        email: "user@gmail.com",
+        accessToken: "token",
+      });
 
       const { getByTestId } = await renderWithProviders();
 
-      await fireEvent.press(getByTestId("google-sign-in-button"));
+      await act(async () => {
+        fireEvent.press(getByTestId("google-sign-in-button"));
+      });
 
       await waitFor(() => {
-        expect(mockAddAccount).toHaveBeenCalledTimes(1);
-        expect(getByTestId("added-account-user@gmail.com")).toBeTruthy();
+        expect(mockSignIn).toHaveBeenCalledTimes(1);
+        expect(
+          getByTestId("signed-in-account-user@gmail.com"),
+        ).toBeTruthy();
       });
     });
 
@@ -159,89 +191,72 @@ describe("SetupScreen", () => {
       });
     });
 
-    it("should save accounts to settings on Done", async () => {
-      const mockAccount = createMockAccount("user@gmail.com");
-      mockAddAccount.mockResolvedValue(mockAccount);
+    it("should not save accounts to settings on Done (single-account auth is separate)", async () => {
+      mockSignIn.mockResolvedValue({
+        email: "user@gmail.com",
+        accessToken: "token",
+      });
 
       const store = createStore();
       const { getByText, getByTestId } = await renderWithProviders(store);
 
-      await fireEvent.press(getByText("setup.useNow"));
-
-      await fireEvent.press(getByTestId("google-sign-in-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("added-account-user@gmail.com")).toBeTruthy();
+      await act(async () => {
+        fireEvent.press(getByText("setup.useNow"));
       });
 
-      await fireEvent.press(getByTestId("done-button"));
+      await act(async () => {
+        fireEvent.press(getByTestId("google-sign-in-button"));
+      });
+
+      await waitFor(() => {
+        expect(
+          getByTestId("signed-in-account-user@gmail.com"),
+        ).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId("done-button"));
+      });
 
       const settings = store.get(settingsAtom) as AppSettings;
       expect(settings.setupComplete).toBe(true);
-      expect(settings.accounts).toHaveLength(1);
-      expect(settings.accounts[0].email).toBe("user@gmail.com");
     });
 
     it("should handle sign-in cancellation gracefully", async () => {
-      mockAddAccount.mockRejectedValue(new Error("User cancelled"));
+      mockSignIn.mockRejectedValue(new Error("User cancelled"));
 
       const { getByTestId, queryByTestId } = await renderWithProviders();
 
-      await fireEvent.press(getByTestId("google-sign-in-button"));
-
-      await waitFor(() => {
-        expect(mockAddAccount).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        fireEvent.press(getByTestId("google-sign-in-button"));
       });
 
-      expect(queryByTestId(/^added-account-/)).toBeNull();
+      await waitFor(() => {
+        expect(mockSignIn).toHaveBeenCalledTimes(1);
+      });
+
+      expect(queryByTestId(/^signed-in-account-/)).toBeNull();
+      // Sign-in button should still be visible after cancellation
+      expect(getByTestId("google-sign-in-button")).toBeTruthy();
     });
 
-    it("should support adding multiple accounts", async () => {
-      const account1 = createMockAccount("user1@gmail.com");
-      const account2 = createMockAccount("user2@gmail.com");
-      mockAddAccount
-        .mockResolvedValueOnce(account1)
-        .mockResolvedValueOnce(account2);
-
-      const { getByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("google-sign-in-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("added-account-user1@gmail.com")).toBeTruthy();
+    it("should hide sign-in button and show account after successful sign-in", async () => {
+      mockSignIn.mockResolvedValue({
+        email: "user@gmail.com",
+        accessToken: "token",
       });
 
-      await fireEvent.press(getByTestId("google-sign-in-button"));
+      const { getByTestId, queryByTestId } = await renderWithProviders();
 
-      await waitFor(() => {
-        expect(getByTestId("added-account-user1@gmail.com")).toBeTruthy();
-        expect(getByTestId("added-account-user2@gmail.com")).toBeTruthy();
-      });
-    });
-
-    it("should update existing account when re-added with same email", async () => {
-      const account1 = createMockAccount("user@gmail.com");
-      const account2 = {
-        ...createMockAccount("user@gmail.com"),
-        displayName: "Updated",
-      };
-      mockAddAccount
-        .mockResolvedValueOnce(account1)
-        .mockResolvedValueOnce(account2);
-
-      const { getByTestId, getAllByTestId } = await renderWithProviders();
-
-      await fireEvent.press(getByTestId("google-sign-in-button"));
-
-      await waitFor(() => {
-        expect(getByTestId("added-account-user@gmail.com")).toBeTruthy();
+      await act(async () => {
+        fireEvent.press(getByTestId("google-sign-in-button"));
       });
 
-      await fireEvent.press(getByTestId("google-sign-in-button"));
-
       await waitFor(() => {
-        const items = getAllByTestId("added-account-user@gmail.com");
-        expect(items).toHaveLength(1);
+        expect(
+          getByTestId("signed-in-account-user@gmail.com"),
+        ).toBeTruthy();
+        expect(queryByTestId("google-sign-in-button")).toBeNull();
       });
     });
   });
