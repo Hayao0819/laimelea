@@ -51,6 +51,9 @@ export function BulkAlarmScreen() {
       timeSystem,
       dismissalMethod,
       gradualVolumeDurationSec: defaults.gradualVolumeDurationSec,
+      snoozeDurationMin: defaults.snoozeDurationMin,
+      snoozeMaxCount: defaults.snoozeMaxCount,
+      mathDifficulty: defaults.mathDifficulty,
       label,
     }),
     [

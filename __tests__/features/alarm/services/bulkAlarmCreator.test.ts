@@ -24,6 +24,9 @@ function makeParams(overrides: Partial<BulkAlarmParams> = {}): BulkAlarmParams {
     timeSystem: "24h",
     dismissalMethod: "simple",
     gradualVolumeDurationSec: 30,
+    snoozeDurationMin: 5,
+    snoozeMaxCount: 3,
+    mathDifficulty: 1,
     label: "Bulk",
     ...overrides,
   };

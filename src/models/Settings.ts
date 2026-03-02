@@ -2,6 +2,7 @@ import type { CycleConfig } from "./CustomTime";
 import type { PlatformType } from "../core/platform/types";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../core/time/constants";
 export type DismissalMethod = "simple" | "shake" | "math";
+export type MathDifficulty = 1 | 2 | 3;
 
 export interface AlarmDefaults {
   dismissalMethod: DismissalMethod;
@@ -10,6 +11,7 @@ export interface AlarmDefaults {
   snoozeMaxCount: number;
   vibrationEnabled: boolean;
   volumeButtonBehavior: "snooze" | "dismiss" | "volume";
+  mathDifficulty: MathDifficulty;
 }
 
 export interface WidgetSettings {
@@ -49,6 +51,7 @@ export const DEFAULT_ALARM_DEFAULTS: AlarmDefaults = {
   snoozeMaxCount: 3,
   vibrationEnabled: true,
   volumeButtonBehavior: "snooze",
+  mathDifficulty: 1,
 };
 
 export const DEFAULT_WIDGET_SETTINGS: WidgetSettings = {

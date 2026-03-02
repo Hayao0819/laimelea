@@ -63,6 +63,7 @@ const sampleAlarms: Alarm[] = [
     skipNextOccurrence: false,
     linkedCalendarEventId: null,
     linkedEventOffsetMs: 0,
+    mathDifficulty: 1,
     lastFiredAt: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),

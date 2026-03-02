@@ -1,6 +1,6 @@
 import type { Alarm } from "../../models/Alarm";
 import type { CalendarEvent } from "../../models/CalendarEvent";
-import type { DismissalMethod } from "../../models/Settings";
+import type { DismissalMethod, MathDifficulty } from "../../models/Settings";
 
 export interface AlarmSyncResult {
   updatedAlarms: Alarm[];
@@ -58,6 +58,7 @@ export interface AlarmCreationDefaults {
   snoozeDurationMin: number;
   snoozeMaxCount: number;
   vibrationEnabled: boolean;
+  mathDifficulty: MathDifficulty;
 }
 
 /**
@@ -90,6 +91,7 @@ export function createAlarmFromEvent(
     skipNextOccurrence: false,
     linkedCalendarEventId: event.id,
     linkedEventOffsetMs: offsetMs,
+    mathDifficulty: defaults.mathDifficulty,
     lastFiredAt: null,
     createdAt: now,
     updatedAt: now,

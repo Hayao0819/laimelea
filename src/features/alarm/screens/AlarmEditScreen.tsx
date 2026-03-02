@@ -29,8 +29,16 @@ import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
 import { getAllStrategies, getStrategy } from "../strategies";
 import type { Alarm } from "../../../models/Alarm";
-import type { DismissalMethod } from "../../../models/Settings";
+import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
 import { spacing, radius } from "../../../app/spacing";
+
+const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
+const SNOOZE_MAX_OPTIONS = [1, 2, 3, 5, 10];
+
+function cycleNext<T>(options: T[], current: T): T {
+  const idx = options.indexOf(current);
+  return options[(idx + 1) % options.length];
+}
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmEdit">;
 
@@ -71,11 +79,14 @@ export function AlarmEditScreen() {
   const [vibration, setVibration] = useState(
     existingAlarm?.vibrationEnabled ?? defaults.vibrationEnabled,
   );
-  const [snoozeDuration] = useState(
+  const [snoozeDuration, setSnoozeDuration] = useState(
     existingAlarm?.snoozeDurationMin ?? defaults.snoozeDurationMin,
   );
-  const [snoozeMax] = useState(
+  const [snoozeMax, setSnoozeMax] = useState(
     existingAlarm?.snoozeMaxCount ?? defaults.snoozeMaxCount,
+  );
+  const [mathDifficulty, setMathDifficulty] = useState<MathDifficulty>(
+    existingAlarm?.mathDifficulty ?? defaults.mathDifficulty,
   );
   const [autoSilenceMin] = useState(existingAlarm?.autoSilenceMin ?? 15);
   const [dismissalMethod, setDismissalMethod] = useState<DismissalMethod>(
@@ -125,6 +136,7 @@ export function AlarmEditScreen() {
       skipNextOccurrence: false,
       linkedCalendarEventId: existingAlarm?.linkedCalendarEventId ?? null,
       linkedEventOffsetMs: existingAlarm?.linkedEventOffsetMs ?? 0,
+      mathDifficulty,
       lastFiredAt: existingAlarm?.lastFiredAt ?? null,
       createdAt: existingAlarm?.createdAt ?? now,
       updatedAt: now,
@@ -160,6 +172,7 @@ export function AlarmEditScreen() {
     snoozeMax,
     autoSilenceMin,
     vibration,
+    mathDifficulty,
     alarms,
     setAlarms,
     navigation,
@@ -205,6 +218,7 @@ export function AlarmEditScreen() {
       skipNextOccurrence: false,
       linkedCalendarEventId: null,
       linkedEventOffsetMs: 0,
+      mathDifficulty,
       lastFiredAt: null,
       createdAt: now,
       updatedAt: now,
@@ -225,6 +239,7 @@ export function AlarmEditScreen() {
     defaults,
     snoozeDuration,
     vibration,
+    mathDifficulty,
     alarms,
     setAlarms,
     t,
@@ -350,12 +365,25 @@ export function AlarmEditScreen() {
           />
           <Divider />
           <List.Item
-            title={t("alarm.snooze")}
-            description={t("alarm.snoozeSettings", {
-              duration: snoozeDuration,
-              max: snoozeMax,
-            })}
+            title={t("settings.snoozeDuration")}
+            description={`${snoozeDuration} min`}
             left={renderSnoozeIcon}
+            onPress={() =>
+              setSnoozeDuration(
+                cycleNext(SNOOZE_DURATION_OPTIONS, snoozeDuration),
+              )
+            }
+            testID="snooze-duration-item"
+          />
+          <Divider />
+          <List.Item
+            title={t("settings.snoozeMaxCount")}
+            description={`${snoozeMax}`}
+            left={renderSnoozeIcon}
+            onPress={() =>
+              setSnoozeMax(cycleNext(SNOOZE_MAX_OPTIONS, snoozeMax))
+            }
+            testID="snooze-max-item"
           />
           <Divider />
           <List.Item
@@ -369,6 +397,27 @@ export function AlarmEditScreen() {
             description={t("alarm.autoSilenceMin", { minutes: autoSilenceMin })}
             left={renderSilenceIcon}
           />
+          {dismissalMethod === "math" && (
+            <>
+              <Divider />
+              <View style={styles.mathDifficultyContainer}>
+                <Text variant="bodyMedium" style={styles.mathDifficultyLabel}>
+                  {t("settings.mathDifficulty")}
+                </Text>
+                <SegmentedButtons
+                  value={String(mathDifficulty)}
+                  onValueChange={(v) =>
+                    setMathDifficulty(Number(v) as MathDifficulty)
+                  }
+                  buttons={[
+                    { value: "1", label: t("settings.mathDifficultyEasy") },
+                    { value: "2", label: t("settings.mathDifficultyMedium") },
+                    { value: "3", label: t("settings.mathDifficultyHard") },
+                  ]}
+                />
+              </View>
+            </>
+          )}
         </Surface>
 
         <Button
@@ -462,5 +511,11 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginTop: spacing.sm,
+  },
+  mathDifficultyContainer: {
+    padding: spacing.base,
+  },
+  mathDifficultyLabel: {
+    marginBottom: spacing.sm,
   },
 });

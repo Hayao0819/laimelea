@@ -76,6 +76,7 @@ export function EventDetailScreen() {
         skipNextOccurrence: false,
         linkedCalendarEventId: ev.id,
         linkedEventOffsetMs: offsetMs,
+        mathDifficulty: alarmDefaults.mathDifficulty,
         lastFiredAt: null,
         createdAt: now,
         updatedAt: now,

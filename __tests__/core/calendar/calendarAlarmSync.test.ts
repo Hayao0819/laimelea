@@ -43,6 +43,7 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
     skipNextOccurrence: false,
     linkedCalendarEventId: "evt-1",
     linkedEventOffsetMs: -900000,
+    mathDifficulty: 1,
     lastFiredAt: null,
     createdAt: 1699999000000,
     updatedAt: 1699999000000,
@@ -56,6 +57,7 @@ const defaultAlarmDefaults: AlarmCreationDefaults = {
   snoozeDurationMin: 5,
   snoozeMaxCount: 3,
   vibrationEnabled: true,
+  mathDifficulty: 1,
 };
 
 describe("syncCalendarAlarms", () => {

@@ -267,7 +267,11 @@
     "legal": "Legal",
     "privacyPolicy": "Privacy Policy",
     "openSourceLicenses": "Open Source Licenses",
-    "noLicenses": "No license information available"
+    "noLicenses": "No license information available",
+    "mathDifficulty": "Math Difficulty",
+    "mathDifficultyEasy": "Easy",
+    "mathDifficultyMedium": "Medium",
+    "mathDifficultyHard": "Hard"
   },
   "game2048": {
     "title": "2048",

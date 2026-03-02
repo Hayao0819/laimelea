@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
-import type { DismissalMethod } from "../../../models/Settings";
+import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
 
 const GRADUAL_VOLUME_OPTIONS = [0, 15, 30, 60];
 const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
@@ -99,6 +99,29 @@ export function AlarmDefaultsScreen() {
           right={renderVibrationSwitch}
           testID="vibration-item"
         />
+        {settings.alarmDefaults.dismissalMethod === "math" && (
+          <View
+            style={styles.segmentContainer}
+            testID="math-difficulty-segment"
+          >
+            <Text variant="bodyMedium" style={styles.segmentLabel}>
+              {t("settings.mathDifficulty")}
+            </Text>
+            <SegmentedButtons
+              value={String(settings.alarmDefaults.mathDifficulty)}
+              onValueChange={(v) =>
+                updateAlarmDefaults({
+                  mathDifficulty: Number(v) as MathDifficulty,
+                })
+              }
+              buttons={[
+                { value: "1", label: t("settings.mathDifficultyEasy") },
+                { value: "2", label: t("settings.mathDifficultyMedium") },
+                { value: "3", label: t("settings.mathDifficultyHard") },
+              ]}
+            />
+          </View>
+        )}
         <View style={styles.segmentContainer} testID="volume-button-segment">
           <Text variant="bodyMedium" style={styles.segmentLabel}>
             {t("settings.volumeButton")}

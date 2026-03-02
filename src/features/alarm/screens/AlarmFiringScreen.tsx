@@ -122,7 +122,7 @@ export function AlarmFiringScreen() {
       </Text>
       <DismissalContainer
         method={alarm.dismissalMethod}
-        difficulty={1}
+        difficulty={alarm.mathDifficulty ?? 1}
         onDismiss={handleDismiss}
         onSnooze={handleSnooze}
         canSnooze={canSnooze}

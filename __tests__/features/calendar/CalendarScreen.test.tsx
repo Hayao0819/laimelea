@@ -395,6 +395,7 @@ describe("CalendarScreen", () => {
         skipNextOccurrence: false,
         linkedCalendarEventId: null,
         linkedEventOffsetMs: 0,
+        mathDifficulty: 1,
         lastFiredAt: null,
         createdAt: now,
         updatedAt: now,

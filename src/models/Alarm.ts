@@ -1,4 +1,4 @@
-import type { DismissalMethod } from "./Settings";
+import type { DismissalMethod, MathDifficulty } from "./Settings";
 
 export interface AlarmRepeat {
   type: "interval" | "weekdays" | "customCycleInterval";
@@ -26,6 +26,7 @@ export interface Alarm {
   skipNextOccurrence: boolean;
   linkedCalendarEventId: string | null;
   linkedEventOffsetMs: number;
+  mathDifficulty: MathDifficulty;
   lastFiredAt: number | null;
   createdAt: number;
   updatedAt: number;
@@ -40,5 +41,8 @@ export interface BulkAlarmParams {
   timeSystem: "custom" | "24h";
   dismissalMethod: DismissalMethod;
   gradualVolumeDurationSec: number;
+  snoozeDurationMin: number;
+  snoozeMaxCount: number;
+  mathDifficulty: MathDifficulty;
   label: string;
 }

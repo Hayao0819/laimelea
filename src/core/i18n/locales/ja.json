@@ -267,7 +267,11 @@
     "legal": "法的情報",
     "privacyPolicy": "プライバシーポリシー",
     "openSourceLicenses": "オープンソースライセンス",
-    "noLicenses": "ライセンス情報がありません"
+    "noLicenses": "ライセンス情報がありません",
+    "mathDifficulty": "計算難易度",
+    "mathDifficultyEasy": "かんたん",
+    "mathDifficultyMedium": "ふつう",
+    "mathDifficultyHard": "むずかしい"
   },
   "game2048": {
     "title": "2048",

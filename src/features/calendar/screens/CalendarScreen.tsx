@@ -124,6 +124,7 @@ export function CalendarScreen() {
         skipNextOccurrence: false,
         linkedCalendarEventId: event.id,
         linkedEventOffsetMs: offsetMs,
+        mathDifficulty: alarmDefaults.mathDifficulty,
         lastFiredAt: null,
         createdAt: now,
         updatedAt: now,
