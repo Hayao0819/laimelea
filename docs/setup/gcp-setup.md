@@ -321,11 +321,11 @@ keytool -list -v \
 
 ### 5-4. Client ID の使い分け
 
-| Client ID                | 用途                                                                 |
-| ------------------------ | -------------------------------------------------------------------- |
-| `GOOGLE_OAUTH_CLIENT_ID` | AOSP 端末でのバックアップ認証（`react-native-app-auth` + PKCE）      |
-| `GOOGLE_WEB_CLIENT_ID`   | GMS 端末でのバックアップ認証（`@react-native-google-signin`）        |
-| Android Client ID        | GMS 端末で `@react-native-google-signin` の ID トークン検証に必要    |
+| Client ID                | 用途                                                              |
+| ------------------------ | ----------------------------------------------------------------- |
+| `GOOGLE_OAUTH_CLIENT_ID` | AOSP 端末でのバックアップ認証（`react-native-app-auth` + PKCE）   |
+| `GOOGLE_WEB_CLIENT_ID`   | GMS 端末でのバックアップ認証（`@react-native-google-signin`）     |
+| Android Client ID        | GMS 端末で `@react-native-google-signin` の ID トークン検証に必要 |
 
 カレンダー読取は Android CalendarProvider（`READ_CALENDAR` パーミッション）を使用するため、OAuth 認証は不要。
 

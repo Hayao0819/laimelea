@@ -172,9 +172,7 @@ describe("SetupScreen", () => {
 
       await waitFor(() => {
         expect(mockSignIn).toHaveBeenCalledTimes(1);
-        expect(
-          getByTestId("signed-in-account-user@gmail.com"),
-        ).toBeTruthy();
+        expect(getByTestId("signed-in-account-user@gmail.com")).toBeTruthy();
       });
     });
 
@@ -209,9 +207,7 @@ describe("SetupScreen", () => {
       });
 
       await waitFor(() => {
-        expect(
-          getByTestId("signed-in-account-user@gmail.com"),
-        ).toBeTruthy();
+        expect(getByTestId("signed-in-account-user@gmail.com")).toBeTruthy();
       });
 
       await act(async () => {
@@ -253,9 +249,7 @@ describe("SetupScreen", () => {
       });
 
       await waitFor(() => {
-        expect(
-          getByTestId("signed-in-account-user@gmail.com"),
-        ).toBeTruthy();
+        expect(getByTestId("signed-in-account-user@gmail.com")).toBeTruthy();
         expect(queryByTestId("google-sign-in-button")).toBeNull();
       });
     });

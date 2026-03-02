@@ -312,9 +312,9 @@ describe("useCalendarSync", () => {
       await result.current.sync(true);
     });
 
-    expect(mockSyncCalendarEvents).toHaveBeenCalledWith(
-      mockServices.calendar,
-      ["cal-1", "cal-3"],
-    );
+    expect(mockSyncCalendarEvents).toHaveBeenCalledWith(mockServices.calendar, [
+      "cal-1",
+      "cal-3",
+    ]);
   });
 });
