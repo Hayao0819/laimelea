@@ -1,6 +1,6 @@
 # GCPプロジェクトセットアップガイド
 
-LaimeleaのGoogleカレンダー連携（OAuth2認証）を動作させるために必要なGCPプロジェクトのセットアップ手順。
+LaimeleaのGoogle Drive バックアップ連携（OAuth2認証）を動作させるために必要なGCPプロジェクトのセットアップ手順。
 
 Terraform で自動化できる部分（プロジェクト作成、API有効化）と、手動で行う部分（OAuth同意画面、Client ID作成）に分かれる。
 
@@ -223,13 +223,12 @@ gcloud services list --project="$(terraform output -raw project_id)"
 
 「スコープを追加または削除」をクリックし、以下を追加:
 
-| スコープ                                            | 説明                                        |
-| --------------------------------------------------- | ------------------------------------------- |
-| `openid                                             | OpenID Connect（自動選択される場合あり）    |
-| `email`                                             | メールアドレス                              |
-| `profile`                                           | 基本プロフィール                            |
-| `https://www.googleapis.com/auth/calendar.readonly` | Google カレンダーの読み取り                 |
-| `https://www.googleapis.com/auth/drive.appdata`     | Google Drive アプリデータ（バックアップ用） |
+| スコープ                                        | 説明                                        |
+| ----------------------------------------------- | ------------------------------------------- |
+| `openid`                                        | OpenID Connect（自動選択される場合あり）    |
+| `email`                                         | メールアドレス                              |
+| `profile`                                       | 基本プロフィール                            |
+| `https://www.googleapis.com/auth/drive.appdata` | Google Drive アプリデータ（バックアップ用） |
 
 ### 4-4. テストユーザーの追加
 
@@ -262,7 +261,7 @@ GMS 端末での `@react-native-google-signin` に使用する。
 
 ### 5-2b. iOS Client ID を作成
 
-`react-native-app-auth` のカスタム URI スキームリダイレクトに使用する（Android 上でも必要）。
+AOSP 端末での `react-native-app-auth`（PKCE + Chrome Custom Tabs）によるバックアップ用認証に使用する（Android 上でも必要）。
 
 > **Web クライアントではカスタム URI スキームリダイレクトが許可されない**。`react-native-app-auth` は `com.googleusercontent.apps.{GUID}:/oauth2redirect/google` 形式のカスタムスキームを使うため、このスキームをサポートする **iOS クライアント**が必要。
 
@@ -320,11 +319,15 @@ keytool -list -v \
 
 > **デバッグ用とリリース用は SHA-1 が異なるため、それぞれの Client ID を作成する必要がある**。開発中はデバッグ用のみでよい。
 
-### 5-4. react-native-app-auth の注意
+### 5-4. Client ID の使い分け
 
-CalendarScreen と CalendarSettingsScreen はプラットフォーム（GMS/AOSP）に関わらず `accountManager`（`react-native-app-auth` ベース）を使用する。Chrome Custom Tabs で OAuth を行い、**iOS Client ID** が `clientId` として使われる（Web/Android Client ID ではない）。
+| Client ID                | 用途                                                                 |
+| ------------------------ | -------------------------------------------------------------------- |
+| `GOOGLE_OAUTH_CLIENT_ID` | AOSP 端末でのバックアップ認証（`react-native-app-auth` + PKCE）      |
+| `GOOGLE_WEB_CLIENT_ID`   | GMS 端末でのバックアップ認証（`@react-native-google-signin`）        |
+| Android Client ID        | GMS 端末で `@react-native-google-signin` の ID トークン検証に必要    |
 
-Android Client ID は GMS 固有機能（バックアップ等）の `@react-native-google-signin` で引き続き必要。
+カレンダー読取は Android CalendarProvider（`READ_CALENDAR` パーミッション）を使用するため、OAuth 認証は不要。
 
 ## Step 6: .env に Client ID を記入
 
@@ -376,13 +379,13 @@ pnpm react-native run-android
 
 ### 7-3. 認証フローをテスト
 
-カレンダータブと設定画面は同じ認証フロー（`accountManager` → `react-native-app-auth`）を使用する。どちらからでもテスト可能:
+認証は Google Drive バックアップ用。カレンダーは `READ_CALENDAR` パーミッションのみで動作する。
 
-1. アプリが起動したらカレンダータブのサインインバナー、または Settings → カレンダー設定 →「アカウント追加」をタップ
-2. Chrome Custom Tabs で Google ログイン画面が開く（GMS/AOSP 共通）
-3. テストユーザーとして追加したアカウントでログイン
-4. カレンダーへのアクセス許可を承認
-5. カレンダー画面で Google カレンダーの予定が表示されることを確認
+1. **カレンダー**: アプリ起動後、カレンダータブで端末のカレンダーアプリに登録された予定が表示されることを確認（サインイン不要）
+2. **バックアップ**: Settings → バックアップ → サインインをタップ
+3. GMS 端末: ネイティブ Google サインインダイアログが表示される。AOSP 端末: Chrome Custom Tabs で Google ログイン画面が開く
+4. テストユーザーとしてログイン、Drive アプリデータへのアクセスを承認
+5. バックアップの作成・復元が動作することを確認
 
 ## トラブルシューティング
 

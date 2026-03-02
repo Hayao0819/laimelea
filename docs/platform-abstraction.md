@@ -1,6 +1,6 @@
 # プラットフォーム抽象化レイヤー
 
-GMS/HMS/AOSP を統一インターフェースで切り替える基盤。アラーム・通知は AOSP API のみで動作し GMS 不要。GMS 依存は**認証・カレンダー同期・バックアップ・睡眠データ**の 4 機能のみで、これらをインターフェースで抽象化している。
+GMS/HMS/AOSP を統一インターフェースで切り替える基盤。アラーム・通知は AOSP API のみで動作し GMS 不要。GMS 依存は**認証・バックアップ・睡眠データ**の 3 機能のみで、これらをインターフェースで抽象化している。カレンダー読取は全プラットフォームで Android CalendarContract（カスタム Turbo Module）を使用し、Google Calendar REST API は使用しない。
 
 ## アーキテクチャ概要
 
@@ -33,8 +33,7 @@ src/core/platform/
 │   └── index.ts
 ├── gms/
 │   ├── authService.ts    # @react-native-google-signin v16 wrapper (signIn/signOut/getTokens)
-│   ├── authConfig.ts     # GMS 用 OAuth2 設定 (calendar.readonly, drive.appdata スコープ)
-│   ├── calendarService.ts # Google Calendar REST API 経由のイベント取得
+│   ├── authConfig.ts     # GMS 用 OAuth2 設定 (drive.appdata スコープ)
 │   ├── backupService.ts  # Google Drive appDataFolder API (googleDriveApi 経由)
 │   ├── sleepService.ts   # Health Connect API (react-native-health-connect)
 │   └── index.ts
@@ -72,21 +71,17 @@ src/atoms/
 | サービス | AOSP                                 | GMS                                          | HMS           |
 | -------- | ------------------------------------ | -------------------------------------------- | ------------- |
 | Auth     | react-native-app-auth + PKCE         | @react-native-google-signin v16              | 未実装 (将来) |
-| Calendar | CalendarContract Turbo Module        | Google Calendar REST API                     | 未実装 (将来) |
+| Calendar | CalendarContract Turbo Module        | CalendarContract Turbo Module (AOSP と同一)  | 未実装 (将来) |
 | Backup   | AsyncStorage ローカル backup/restore | Google Drive appDataFolder                   | 未実装 (将来) |
 | Sleep    | 手動入力 CRUD (AsyncStorage)         | Health Connect (react-native-health-connect) | 未実装 (将来) |
 
 ### 各実装の詳細
 
-**GMS Auth**: `@react-native-google-signin/google-signin` v16 でネイティブ認証。`react-native-config` から Web Client ID を読み込み。スコープは `calendar.readonly` + `drive.appdata`。ただし CalendarScreen・CalendarSettingsScreen のサインインは GMS/AOSP 問わず `accountManager`（react-native-app-auth ベース）に統一されている。GMS Auth はバックアップ等の他機能で引き続き使用。
+**GMS Auth**: `@react-native-google-signin/google-signin` v16 でネイティブ認証。`react-native-config` から Web Client ID を読み込み。スコープは `drive.appdata` のみ（バックアップ用）。
 
-**AOSP Auth**: `react-native-app-auth` で Chrome Custom Tabs + PKCE による Google OAuth2。GMS 不要で Google API にアクセス可能。トークンは AsyncStorage に永続化し、自動リフレッシュ対応。`tokenUtils.ts` で JWT id_token からメール抽出。
+**AOSP Auth**: `react-native-app-auth` で Chrome Custom Tabs + PKCE による Google OAuth2。GMS 不要で Google API にアクセス可能。トークンは AsyncStorage に永続化し、自動リフレッシュ対応。`tokenUtils.ts` で JWT id_token からメール抽出。スコープは `drive.appdata` のみ。
 
-**AccountManager（統一認証）**: `src/core/account/accountManager.ts` がマルチアカウント対応の認証レイヤーを提供。CalendarScreen と CalendarSettingsScreen の両方が `accountManager.addAccount()` を使用し、プラットフォームに関わらず `react-native-app-auth`（PKCE + Chrome Custom Tabs）でログインする。GCP Console では **iOS タイプの OAuth クライアントID** が必要（Web クライアントではカスタム URI スキームリダイレクトが許可されないため）。
-
-**GMS Calendar**: `googleCalendarApi.ts` 経由で Google Calendar REST API を呼び出し。マルチカレンダー対応、イベントを `CalendarEvent` 型に正規化。
-
-**AOSP Calendar**: Kotlin Turbo Module (`NativeCalendarModule`) で Android CalendarContract を直接読取。`react-native-calendar-events` は New Architecture 非対応のため自前実装。
+**Calendar（全プラットフォーム共通）**: Kotlin Turbo Module (`NativeCalendarModule`) で Android CalendarContract を直接読取。`READ_CALENDAR` パーミッションのみで動作し、OAuth 認証不要。GMS/AOSP 問わず同一の `createAospCalendarService()` を使用。
 
 **GMS Backup**: `googleDriveApi.ts` で Google Drive appDataFolder にバックアップファイルをアップロード/ダウンロード。ファイルの検索・作成・更新・取得に対応。
 
@@ -129,15 +124,21 @@ function MyComponent() {
 }
 ```
 
-カレンダー認証（サインイン・アカウント追加）は `accountManager` を直接使用:
+カレンダーは `READ_CALENDAR` パーミッションのみで動作し、認証不要:
 
 ```typescript
-import { createAccountManager } from "../core/account/accountManager";
+import { useAtomValue } from "jotai";
+import { platformServicesAtom } from "../atoms/platformAtoms";
 
-const accountManager = createAccountManager();
+function MyComponent() {
+  const services = useAtomValue(platformServicesAtom);
 
-// CalendarScreen・CalendarSettingsScreen 共通パターン
-const account = await accountManager.addAccount(); // react-native-app-auth
+  const handleSync = async () => {
+    if (await services.calendar.isAvailable()) {
+      const events = await services.calendar.fetchEvents(startMs, endMs);
+    }
+  };
+}
 ```
 
 ## テスト
@@ -149,14 +150,13 @@ const account = await accountManager.addAccount(); // react-native-app-auth
 | `detection.test.ts`            | 2        | GMS available / unavailable                                 |
 | `factory.test.ts`              | 4        | aosp/gms/hms 各タイプ + 実装差異                            |
 | `aospServices.test.ts`         | 25       | auth + calendar + backup + sleep 統合テスト                 |
-| `gmsServices.test.ts`          | 21       | auth + calendar + backup + sleep 統合テスト                 |
+| `gmsServices.test.ts`          | 14       | auth + backup + sleep 統合テスト                            |
 | `aosp/authService.test.ts`     | 12       | AppAuth 認証フロー、トークン管理                            |
 | `aosp/backupService.test.ts`   | 6        | AsyncStorage backup/restore                                 |
 | `aosp/calendarService.test.ts` | 8        | CalendarContract Turbo Module 経由の読取                    |
 | `aosp/tokenUtils.test.ts`      | 6        | JWT デコード、メール抽出                                    |
 | `gms/authService.test.ts`      | 7        | GoogleSignin wrapper                                        |
 | `gms/backupService.test.ts`    | 13       | Google Drive appDataFolder API                              |
-| `gms/calendarService.test.ts`  | 8        | Calendar REST API 呼び出し                                  |
 | `drive/googleDriveApi.test.ts` | -        | Drive API クライアント (`src/core/drive/__tests__/` に配置) |
 
 テスト実行:

@@ -74,7 +74,7 @@ Terraform applyが完了したら、以下の手動設定を行います。`terr
 2. User Type: 「外部」を選択
 3. アプリ名: `Laimelea`
 4. サポートメール: `terraform.tfvars` の `support_email` と同じ値
-5. スコープ: `calendar.readonly`, `calendar.events.readonly`, `userinfo.email`, `userinfo.profile`
+5. スコープ: `drive.appdata`, `userinfo.email`, `userinfo.profile`
 
 ### 2. Web Client IDを作成
 

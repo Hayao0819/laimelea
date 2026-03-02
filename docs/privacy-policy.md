@@ -25,7 +25,7 @@ Laimelea stores the following data exclusively on your device using local storag
 If you choose to sign in with your Google account, Laimelea may access the following data. Each type of access requires your explicit consent through Google's standard authorization flow:
 
 - **Google account information** -- your email address and profile name, used solely to identify your account within the app
-- **Google Calendar events** (read-only) -- your calendar events are fetched using the `calendar.readonly` scope and displayed within the app. Laimelea does not create, modify, or delete any calendar events
+- **Calendar events** (read-only) -- your calendar events are read from the local Android CalendarProvider using the `READ_CALENDAR` permission. Laimelea does not create, modify, or delete any calendar events. No calendar data is sent to external services
 - **Google Drive app data** -- backup data is stored in a private, app-specific folder on your Google Drive using the `drive.appdata` scope. Laimelea cannot access any other files on your Google Drive
 - **Health Connect sleep data** -- on devices with Google Mobile Services, Laimelea can read sleep session data through the Health Connect API. This is used to populate your sleep log automatically
 
@@ -70,15 +70,14 @@ When you sign in with Google, Laimelea requests only the following OAuth2 scopes
 
 - `openid` -- to authenticate your identity
 - `email` and `profile` -- to display your account information
-- `calendar.readonly` -- to read your calendar events (read-only access)
 - `drive.appdata` -- to store and retrieve backup data in a private app folder
 
 You may revoke any of these permissions at any time through your [Google Account settings](https://myaccount.google.com/permissions).
 
 ### Platform Variants
 
-- **GMS devices** (with Google Play Services): Authentication uses Google Sign-In natively. Calendar sync uses the Google Calendar API. Backups use Google Drive. Sleep data can be read from Health Connect.
-- **AOSP devices** (without Google Play Services): Authentication uses OAuth2 with PKCE through Chrome Custom Tabs. Calendar access uses the local Android CalendarContract. Backups are stored locally. Sleep data is entered manually.
+- **GMS devices** (with Google Play Services): Authentication uses Google Sign-In natively. Calendar events are read from the local Android CalendarProvider. Backups use Google Drive. Sleep data can be read from Health Connect.
+- **AOSP devices** (without Google Play Services): Authentication uses OAuth2 with PKCE through Chrome Custom Tabs. Calendar events are read from the local Android CalendarProvider. Backups are stored locally. Sleep data is entered manually.
 
 ## Data Sharing
 
