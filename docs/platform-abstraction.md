@@ -78,9 +78,11 @@ src/atoms/
 
 ### 各実装の詳細
 
-**GMS Auth**: `@react-native-google-signin/google-signin` v16 でネイティブ認証。`react-native-config` から Web Client ID を読み込み。スコープは `calendar.readonly` + `drive.appdata`。
+**GMS Auth**: `@react-native-google-signin/google-signin` v16 でネイティブ認証。`react-native-config` から Web Client ID を読み込み。スコープは `calendar.readonly` + `drive.appdata`。ただし CalendarScreen・CalendarSettingsScreen のサインインは GMS/AOSP 問わず `accountManager`（react-native-app-auth ベース）に統一されている。GMS Auth はバックアップ等の他機能で引き続き使用。
 
 **AOSP Auth**: `react-native-app-auth` で Chrome Custom Tabs + PKCE による Google OAuth2。GMS 不要で Google API にアクセス可能。トークンは AsyncStorage に永続化し、自動リフレッシュ対応。`tokenUtils.ts` で JWT id_token からメール抽出。
+
+**AccountManager（統一認証）**: `src/core/account/accountManager.ts` がマルチアカウント対応の認証レイヤーを提供。CalendarScreen と CalendarSettingsScreen の両方が `accountManager.addAccount()` を使用し、プラットフォームに関わらず `react-native-app-auth`（PKCE + Chrome Custom Tabs）でログインする。GCP Console では **iOS タイプの OAuth クライアントID** が必要（Web クライアントではカスタム URI スキームリダイレクトが許可されないため）。
 
 **GMS Calendar**: `googleCalendarApi.ts` 経由で Google Calendar REST API を呼び出し。マルチカレンダー対応、イベントを `CalendarEvent` 型に正規化。
 
@@ -110,6 +112,8 @@ HMS 検出は将来フェーズで `HmsAvailability.isHuaweiMobileServicesAvaila
 
 ## コンポーネントからの使用方法
 
+バックアップ等のプラットフォーム固有機能は `platformServicesAtom` 経由で使用:
+
 ```typescript
 import { useAtomValue } from "jotai";
 import { platformServicesAtom } from "../atoms/platformAtoms";
@@ -123,6 +127,17 @@ function MyComponent() {
     }
   };
 }
+```
+
+カレンダー認証（サインイン・アカウント追加）は `accountManager` を直接使用:
+
+```typescript
+import { createAccountManager } from "../core/account/accountManager";
+
+const accountManager = createAccountManager();
+
+// CalendarScreen・CalendarSettingsScreen 共通パターン
+const account = await accountManager.addAccount(); // react-native-app-auth
 ```
 
 ## テスト

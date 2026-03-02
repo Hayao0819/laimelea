@@ -847,14 +847,19 @@ async function detectPlatform(): Promise<PlatformType> {
 - カスタム時間計算: 純JavaScript
 - UI/ナビゲーション: react-native-paper + React Navigation
 
-### AOSP実装の認証フロー
+### カレンダー認証フロー（GMS/AOSP 共通）
 
-ユーザーが「アカウント連携」をタップ
-→ react-native-app-auth でChrome Custom Tabsを開く
-→ GoogleのOAuth2エンドポイントにPKCEでリクエスト
-→ ユーザーがGoogleアカウントで認証
-→ アクセストークン取得（GMS不要）
-→ Google Calendar REST API / Google Drive APIを通常通り呼び出し
+CalendarScreen と CalendarSettingsScreen はプラットフォームに関わらず `accountManager`（`react-native-app-auth` ベース）を使用する統一フローを採用:
+
+ユーザーが「サインイン」または「アカウント追加」をタップ
+→ `accountManager.addAccount()` を呼び出し
+→ react-native-app-auth で Chrome Custom Tabs を開く
+→ Google の OAuth2 エンドポイントに PKCE でリクエスト（iOS タイプの Client ID を使用）
+→ ユーザーが Google アカウントで認証
+→ アクセストークン取得 → AsyncStorage に永続化（マルチアカウント対応）
+→ Google Calendar REST API を呼び出し
+
+> GMS 端末でも `@react-native-google-signin` ではなく `react-native-app-auth` を使用する。これはマルチアカウント対応とプラットフォーム間の一貫性のため。GMS 固有の `PlatformAuthService` はバックアップ等の他機能で引き続き使用される。
 
 ### Google OAuth2 Granular Consent対応
 
@@ -1287,18 +1292,22 @@ output "manual_setup_instructions" {
     1. OAuth同意画面を設定:
        https://console.cloud.google.com/apis/credentials/consent?project=${google_project.laimelea.project_id}
 
-    2. Web Client ID を作成（AOSP用 + GMS用）:
-       https://console.cloud.google.com/apis/credentials/oauthclient?project=${google_project.laimelea.project_id}
+    2. Web Client ID を作成（GMS用 @react-native-google-signin）:
        - Application Type: Web application
        - Name: Laimelea Web Client
 
-    3. Android Client ID を作成:
+    3. iOS Client ID を作成（react-native-app-auth 用、Android上でも使用）:
+       - Application Type: iOS
+       - Bundle ID: com.hayao0819.laimelea
+       ※ Web ClientではカスタムURIスキームリダイレクトが許可されないためiOSタイプが必要
+
+    4. Android Client ID を作成:
        - Application Type: Android
        - Package name: com.hayao0819.laimelea
        - SHA-1: (keytoolで取得した値)
 
-    4. 取得したClient IDを以下に設定:
-       - .env → GOOGLE_OAUTH_CLIENT_ID, GOOGLE_WEB_CLIENT_ID
+    5. 取得したClient IDを以下に設定:
+       - .env → GOOGLE_OAUTH_CLIENT_ID (iOS Client ID), GOOGLE_WEB_CLIENT_ID (Web Client ID)
   EOT
 }
 ```
@@ -1324,8 +1333,10 @@ export const AOSP_AUTH_CONFIG: AuthConfiguration = {
 `.env.example`をリポジトリに含め、実際の`.env`は`.gitignore`対象:
 
 ```env
+# iOS Client ID — react-native-app-auth (PKCE + custom URI scheme)
 GOOGLE_OAUTH_CLIENT_ID=xxxx.apps.googleusercontent.com
-GOOGLE_WEB_CLIENT_ID=xxxx.apps.googleusercontent.com
+# Web Client ID — @react-native-google-signin (GMS)
+GOOGLE_WEB_CLIENT_ID=yyyy.apps.googleusercontent.com
 ```
 
 #### 18f: .gitignoreとセキュリティ

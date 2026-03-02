@@ -322,9 +322,9 @@ keytool -list -v \
 
 ### 5-4. react-native-app-auth の注意
 
-AOSP 端末と設定画面のマルチアカウント追加では `react-native-app-auth` が Chrome Custom Tabs で OAuth を行う。この場合、**iOS Client ID** が `clientId` として使われる（Web/Android Client ID ではない）。
+CalendarScreen と CalendarSettingsScreen はプラットフォーム（GMS/AOSP）に関わらず `accountManager`（`react-native-app-auth` ベース）を使用する。Chrome Custom Tabs で OAuth を行い、**iOS Client ID** が `clientId` として使われる（Web/Android Client ID ではない）。
 
-GMS 端末のカレンダータブからのサインインは `@react-native-google-signin` を使用し、Web Client ID + Android Client ID の組み合わせで動作する。
+Android Client ID は GMS 固有機能（バックアップ等）の `@react-native-google-signin` で引き続き必要。
 
 ## Step 6: .env に Client ID を記入
 
@@ -376,13 +376,13 @@ pnpm react-native run-android
 
 ### 7-3. 認証フローをテスト
 
-1. アプリが起動したら Settings（設定）画面を開く
-2. 「Googleアカウント連携」をタップ
-3. AOSP 端末の場合: Chrome Custom Tabs でGoogleログイン画面が開く
-4. GMS 端末の場合: Google Sign-In のボトムシートが表示される
-5. テストユーザーとして追加したアカウントでログイン
-6. カレンダーへのアクセス許可を承認
-7. カレンダー画面でGoogleカレンダーの予定が表示されることを確認
+カレンダータブと設定画面は同じ認証フロー（`accountManager` → `react-native-app-auth`）を使用する。どちらからでもテスト可能:
+
+1. アプリが起動したらカレンダータブのサインインバナー、または Settings → カレンダー設定 →「アカウント追加」をタップ
+2. Chrome Custom Tabs で Google ログイン画面が開く（GMS/AOSP 共通）
+3. テストユーザーとして追加したアカウントでログイン
+4. カレンダーへのアクセス許可を承認
+5. カレンダー画面で Google カレンダーの予定が表示されることを確認
 
 ## トラブルシューティング
 
