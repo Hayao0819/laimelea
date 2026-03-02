@@ -24,6 +24,7 @@ export function useAnimatedBoard(
   const tilesRef = useRef<TrackedTile[]>([]);
   const isFirstRender = useRef(true);
   const resultRef = useRef<TileRenderData[]>([]);
+  const prevBoardRef = useRef<number[][] | null>(null);
 
   // We compute synchronously so the returned array is ready for render.
   // Using a ref + manual comparison avoids extra re-renders.
@@ -32,6 +33,7 @@ export function useAnimatedBoard(
     isFirstRender.current = false;
     const tiles = initTilesFromBoard(board);
     tilesRef.current = tiles;
+    prevBoardRef.current = board;
     resultRef.current = tiles.map((t) => ({
       key: t.id,
       value: t.value,
@@ -48,6 +50,7 @@ export function useAnimatedBoard(
     // Board changed without direction (new game, undo, load)
     const tiles = initTilesFromBoard(board);
     tilesRef.current = tiles;
+    prevBoardRef.current = board;
     resultRef.current = tiles.map((t) => ({
       key: t.id,
       value: t.value,
@@ -60,6 +63,10 @@ export function useAnimatedBoard(
     return resultRef.current;
   }
 
+  if (board === prevBoardRef.current) {
+    return resultRef.current;
+  }
+
   const { tiles, animations, mergedIds, spawnedId } = trackMove(
     tilesRef.current,
     board,
@@ -67,6 +74,7 @@ export function useAnimatedBoard(
     boardSize,
   );
   tilesRef.current = tiles;
+  prevBoardRef.current = board;
 
   // Build animation lookup: tileId -> {fromRow, fromCol}
   const animLookup = new Map<
