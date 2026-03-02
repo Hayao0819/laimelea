@@ -1,1 +1,164 @@
-[]
+[
+  {
+    "name": "@date-fns/tz",
+    "version": "1.4.1",
+    "license": "MIT",
+    "repository": "https://github.com/date-fns/tz"
+  },
+  {
+    "name": "@notifee/react-native",
+    "version": "9.1.8",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/invertase/notifee"
+  },
+  {
+    "name": "@react-native-async-storage/async-storage",
+    "version": "3.0.1",
+    "license": "MIT",
+    "repository": "https://github.com/react-native-async-storage/async-storage"
+  },
+  {
+    "name": "@react-native-community/slider",
+    "version": "5.1.2",
+    "license": "MIT",
+    "repository": "https://github.com/callstack/react-native-slider"
+  },
+  {
+    "name": "@react-native-google-signin/google-signin",
+    "version": "16.1.1",
+    "license": "MIT",
+    "repository": "https://github.com/react-native-google-signin/google-signin"
+  },
+  {
+    "name": "@react-navigation/bottom-tabs",
+    "version": "7.14.0",
+    "license": "MIT",
+    "repository": "https://github.com/react-navigation/react-navigation"
+  },
+  {
+    "name": "@react-navigation/native",
+    "version": "7.1.28",
+    "license": "MIT",
+    "repository": "https://github.com/react-navigation/react-navigation"
+  },
+  {
+    "name": "@react-navigation/native-stack",
+    "version": "7.13.0",
+    "license": "MIT",
+    "repository": "https://github.com/react-navigation/react-navigation"
+  },
+  {
+    "name": "date-fns",
+    "version": "4.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/date-fns/date-fns"
+  },
+  {
+    "name": "i18next",
+    "version": "25.8.13",
+    "license": "MIT",
+    "repository": "https://github.com/i18next/i18next"
+  },
+  {
+    "name": "jotai",
+    "version": "2.18.0",
+    "license": "MIT",
+    "repository": "https://github.com/pmndrs/jotai"
+  },
+  {
+    "name": "react",
+    "version": "19.2.3",
+    "license": "MIT",
+    "repository": "https://github.com/facebook/react"
+  },
+  {
+    "name": "react-i18next",
+    "version": "16.5.4",
+    "license": "MIT",
+    "repository": "https://github.com/i18next/react-i18next"
+  },
+  {
+    "name": "react-native",
+    "version": "0.84.0",
+    "license": "MIT",
+    "repository": "https://github.com/facebook/react-native"
+  },
+  {
+    "name": "react-native-android-widget",
+    "version": "0.20.1",
+    "license": "MIT",
+    "repository": "https://github.com/sAleksovski/react-native-android-widget"
+  },
+  {
+    "name": "react-native-app-auth",
+    "version": "8.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/FormidableLabs/react-native-app-auth"
+  },
+  {
+    "name": "react-native-config",
+    "version": "1.6.1",
+    "license": "MIT",
+    "repository": "https://github.com/luggit/react-native-config"
+  },
+  {
+    "name": "react-native-health-connect",
+    "version": "3.5.0",
+    "license": "MIT",
+    "repository": "https://github.com/matinzd/react-native-health-connect"
+  },
+  {
+    "name": "react-native-localize",
+    "version": "3.7.0",
+    "license": "MIT",
+    "repository": "https://github.com/zoontek/react-native-localize"
+  },
+  {
+    "name": "react-native-paper",
+    "version": "5.15.0",
+    "license": "MIT",
+    "repository": "https://github.com/callstack/react-native-paper"
+  },
+  {
+    "name": "react-native-reanimated",
+    "version": "4.2.2",
+    "license": "MIT",
+    "repository": "https://github.com/software-mansion/react-native-reanimated"
+  },
+  {
+    "name": "react-native-safe-area-context",
+    "version": "5.7.0",
+    "license": "MIT",
+    "repository": "https://github.com/AppAndFlow/react-native-safe-area-context"
+  },
+  {
+    "name": "react-native-screens",
+    "version": "4.24.0",
+    "license": "MIT",
+    "repository": "https://github.com/software-mansion/react-native-screens"
+  },
+  {
+    "name": "react-native-shake",
+    "version": "6.8.3",
+    "license": "MIT",
+    "repository": "https://github.com/Doko-Demo-Doa/react-native-shake"
+  },
+  {
+    "name": "react-native-svg",
+    "version": "15.15.3",
+    "license": "MIT",
+    "repository": "https://github.com/react-native-community/react-native-svg"
+  },
+  {
+    "name": "react-native-vector-icons",
+    "version": "10.3.0",
+    "license": "MIT",
+    "repository": "git://github.com/oblador/react-native-vector-icons"
+  },
+  {
+    "name": "react-native-worklets",
+    "version": "0.7.4",
+    "license": "MIT",
+    "repository": "https://github.com/software-mansion/react-native-reanimated"
+  }
+]
