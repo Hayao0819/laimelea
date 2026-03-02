@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Format check
+        run: treefmt --fail-on-change
+
       - name: Lint
         run: pnpm eslint .
 

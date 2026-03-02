@@ -16,34 +16,34 @@ AI assistant guidance for Laimelea project.
 ## Essential Rules
 
 1. **Development environment**: Always use `nix develop` (or direnv) for a reproducible environment with Node.js, pnpm, JDK 17, and Android SDK
-2. **ALWAYS format with treefmt** before committing or after any file change. treefmt runs Prettier (JS/TS/JSON/MD/YAML) and nixfmt (Nix) in one command. **Never run prettier or nixfmt directly** — always use treefmt:
-
-   ```bash
-   treefmt
-   ```
-
-3. **Lint** with ESLint (separate from treefmt, as ESLint is a linter not a formatter):
+2. **Lint** with ESLint. Fix any errors before proceeding:
 
    ```bash
    pnpm eslint .
    ```
 
-4. **Type-check** with TypeScript compiler (catches type errors that ESLint misses):
+3. **Type-check** with TypeScript compiler (catches type errors that ESLint misses):
 
    ```bash
    pnpm tsc --noEmit
    ```
 
-5. **ALWAYS validate** after any `.nix` file change:
-
-   ```bash
-   nix flake check
-   ```
-
-6. **Run tests** after code changes:
+4. **Run tests** after code changes:
 
    ```bash
    pnpm jest
+   ```
+
+5. **ALWAYS format with treefmt as the final step before committing**. treefmt runs Prettier (JS/TS/JSON/MD/YAML) and nixfmt (Nix) in one command. **Never run prettier or nixfmt directly** — always use treefmt. This MUST run after all code modifications (including eslint fixes) to ensure nothing is committed unformatted:
+
+   ```bash
+   treefmt
+   ```
+
+6. **Validate Nix** after any `.nix` file change:
+
+   ```bash
+   nix flake check
    ```
 
 7. **Package manager**: pnpm (with `node-linker=hoisted` in `.npmrc` for Metro compatibility). Always use `pnpm` instead of `npm` or `npx`.
