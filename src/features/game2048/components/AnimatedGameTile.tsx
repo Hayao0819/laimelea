@@ -54,11 +54,15 @@ export function AnimatedGameTile({
 
     switch (tile.animationType) {
       case "slide":
+        x.value = startX;
+        y.value = startY;
         x.value = withTiming(targetX, timingConfig);
         y.value = withTiming(targetY, timingConfig);
         break;
 
       case "merge":
+        x.value = startX;
+        y.value = startY;
         x.value = withTiming(targetX, timingConfig);
         y.value = withTiming(targetY, timingConfig);
         scale.value = withDelay(
@@ -88,8 +92,7 @@ export function AnimatedGameTile({
         scale.value = 1;
         break;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tile.key, tile.animationType]);
+  }, [tile.key, tile.animationType, targetX, targetY, startX, startY, x, y, scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
