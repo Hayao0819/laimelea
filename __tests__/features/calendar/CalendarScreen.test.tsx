@@ -104,6 +104,21 @@ jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
   scheduleAlarm: jest.fn().mockResolvedValue("trigger-id"),
 }));
 
+jest.mock("../../../src/core/account/accountManager", () => {
+  const manager = {
+    getAccounts: jest.fn().mockResolvedValue([]),
+    addAccount: jest.fn(),
+    removeAccount: jest.fn().mockResolvedValue(undefined),
+    getAccessToken: jest.fn().mockResolvedValue(null),
+    getAllAccessTokens: jest.fn().mockResolvedValue(new Map()),
+  };
+  return { createAccountManager: () => manager };
+});
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const mockAccountManager =
+  require("../../../src/core/account/accountManager").createAccountManager();
+
 jest.mock("../../../src/core/platform/factory");
 
 const mockCreatePlatformServices =
@@ -209,7 +224,21 @@ async function renderWithProviders(options?: {
   mockCreatePlatformServices.mockReturnValue(currentMockServices);
 
   const store = createStore();
-  store.set(settingsAtom, DEFAULT_SETTINGS);
+  const settingsOverride = authenticated
+    ? {
+        ...DEFAULT_SETTINGS,
+        accounts: [
+          {
+            email: "test@test.com",
+            displayName: "test@test.com",
+            photoUrl: null,
+            provider: "app-auth" as const,
+            addedAt: Date.now(),
+          },
+        ],
+      }
+    : DEFAULT_SETTINGS;
+  store.set(settingsAtom, settingsOverride);
   store.set(alarmsAtom, initialAlarms);
   store.set(calendarSelectedDateAtom, selectedDate);
   store.set(calendarViewModeAtom, viewMode);
@@ -230,6 +259,13 @@ async function renderWithProviders(options?: {
 describe("CalendarScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAccountManager.addAccount.mockResolvedValue({
+      email: "new@test.com",
+      displayName: "new@test.com",
+      photoUrl: null,
+      provider: "app-auth" as const,
+      addedAt: Date.now(),
+    });
     mockUseCalendarSync.mockReturnValue({
       events: [],
       loading: false,
@@ -415,8 +451,8 @@ describe("CalendarScreen", () => {
       expect(getByText("calendar.signIn")).toBeTruthy();
     });
 
-    it("should call auth.signIn and then sync when sign-in button pressed", async () => {
-      const { getByText, mockServices } = await renderWithProviders({
+    it("should call accountManager.addAccount and then sync when sign-in button pressed", async () => {
+      const { getByText } = await renderWithProviders({
         authenticated: false,
       });
 
@@ -424,11 +460,11 @@ describe("CalendarScreen", () => {
         fireEvent.press(getByText("calendar.signIn"));
       });
 
-      expect(mockServices.auth.signIn).toHaveBeenCalled();
+      expect(mockAccountManager.addAccount).toHaveBeenCalled();
       expect(mockSync).toHaveBeenCalledWith(true);
     });
 
-    it("should set accountEmail and hide banner after successful sign-in", async () => {
+    it("should add account to settings and hide banner after successful sign-in", async () => {
       const { getByText, queryByTestId, store } = await renderWithProviders({
         authenticated: false,
       });
@@ -440,7 +476,8 @@ describe("CalendarScreen", () => {
       });
 
       const settings = store.get(settingsAtom) as typeof DEFAULT_SETTINGS;
-      expect(settings.accountEmail).toBe("test@test.com");
+      expect(settings.accounts).toHaveLength(1);
+      expect(settings.accounts[0].email).toBe("new@test.com");
       expect(queryByTestId("sign-in-banner")).toBeNull();
     });
 

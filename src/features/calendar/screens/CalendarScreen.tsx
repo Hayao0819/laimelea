@@ -18,7 +18,7 @@ import {
   resolvedSettingsAtom,
   settingsAtom,
 } from "../../../atoms/settingsAtoms";
-import { platformServicesAtom } from "../../../atoms/platformAtoms";
+import { createAccountManager } from "../../../core/account/accountManager";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
 import { useCalendarView } from "../hooks/useCalendarView";
 import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
@@ -29,6 +29,8 @@ import { AgendaView } from "../components/AgendaView";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 import type { Alarm } from "../../../models/Alarm";
 import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
+
+const accountManager = createAccountManager();
 
 function formatNavigationTitle(
   viewMode: CalendarViewMode,
@@ -71,7 +73,6 @@ export function CalendarScreen() {
     goToPrevious,
     goToNext,
   } = useCalendarView();
-  const services = useAtomValue(platformServicesAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const setSettings = useSetAtom(settingsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
@@ -153,16 +154,21 @@ export function CalendarScreen() {
 
   const handleSignIn = useCallback(async () => {
     try {
-      const result = await services.auth.signIn();
+      const account = await accountManager.addAccount();
+      const currentAccounts = settings.accounts;
+      const exists = currentAccounts.some((a) => a.email === account.email);
+      const updatedAccounts = exists
+        ? currentAccounts.map((a) => (a.email === account.email ? account : a))
+        : [...currentAccounts, account];
+      setSettings({ ...settings, accounts: updatedAccounts });
       setIsAuthed(true);
-      setSettings({ ...settings, accountEmail: result.email });
       sync(true);
     } catch (e) {
       if (e instanceof Error && !e.message.includes("cancelled")) {
         setSnackbar(t("calendar.syncError"));
       }
     }
-  }, [services.auth, sync, settings, setSettings, t]);
+  }, [sync, settings, setSettings, t]);
 
   const navTitle = formatNavigationTitle(viewMode, selectedDate, t);
 
@@ -175,11 +181,15 @@ export function CalendarScreen() {
     [t],
   );
 
-  // Unauthenticated state
+  // Unauthenticated state — check both legacy accountEmail and multi-account
   const [isAuthed, setIsAuthed] = React.useState<boolean | null>(null);
   React.useEffect(() => {
-    services.auth.getAccessToken().then((token) => setIsAuthed(token != null));
-  }, [services.auth]);
+    if (settings.accounts.length > 0 || settings.accountEmail) {
+      setIsAuthed(true);
+    } else {
+      setIsAuthed(false);
+    }
+  }, [settings.accounts, settings.accountEmail]);
 
   const showSignInBanner = isAuthed === false && !bannerDismissed;
 
