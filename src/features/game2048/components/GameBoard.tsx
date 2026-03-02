@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useMemo } from "react";
 import { Dimensions, PanResponder, StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
 import { GameTile } from "./GameTile";
@@ -7,18 +7,7 @@ import { useAnimatedBoard } from "../hooks/useAnimatedBoard";
 import type { Direction } from "../logic/gameTypes";
 import { spacing } from "../../../app/spacing";
 
-const KEY_TO_DIRECTION: Record<string, Direction> = {
-  ArrowUp: "up",
-  ArrowDown: "down",
-  ArrowLeft: "left",
-  ArrowRight: "right",
-  w: "up",
-  s: "down",
-  a: "left",
-  d: "right",
-};
-
-export interface GameBoardProps {
+interface GameBoardProps {
   board: number[][];
   boardSize: number;
   onMove: (direction: Direction) => void;
@@ -36,33 +25,12 @@ export function GameBoard({
   direction,
 }: GameBoardProps) {
   const theme = useTheme();
-  const boardRef = useRef<View>(null);
   const screenWidth = Dimensions.get("window").width;
   const boardWidth = screenWidth - spacing.base * 2;
   const cellSize =
     (boardWidth - BOARD_PADDING * 2 - CELL_GAP * (boardSize - 1)) / boardSize;
 
   const tiles = useAnimatedBoard(board, direction, boardSize);
-
-  const handleKeyUp = useCallback(
-    (e: { nativeEvent: { key: string } }) => {
-      const dir = KEY_TO_DIRECTION[e.nativeEvent.key];
-      if (dir) {
-        onMove(dir);
-      }
-    },
-    [onMove],
-  );
-
-  const handleLayout = useCallback(() => {
-    boardRef.current?.focus();
-  }, []);
-
-  // onKeyUp and focusable are Android-only View props not yet in RN 0.84 TS types
-  const keyboardProps = useMemo(
-    () => ({ focusable: true, onKeyUp: handleKeyUp }),
-    [handleKeyUp],
-  );
 
   const panResponder = useMemo(
     () =>
@@ -106,7 +74,6 @@ export function GameBoard({
 
   return (
     <View
-      ref={boardRef}
       style={[
         styles.board,
         {
@@ -117,9 +84,7 @@ export function GameBoard({
         },
       ]}
       testID="game-board"
-      onLayout={handleLayout}
       {...panResponder.panHandlers}
-      {...(keyboardProps as object)}
     >
       {bgCells}
       {tiles.map((tile) => (
