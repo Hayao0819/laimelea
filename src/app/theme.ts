@@ -1,5 +1,5 @@
 import type { MD3Theme } from "react-native-paper";
-import { MD3DarkTheme,MD3LightTheme } from "react-native-paper";
+import { MD3DarkTheme, MD3LightTheme } from "react-native-paper";
 
 export const lightTheme: MD3Theme = {
   ...MD3LightTheme,
@@ -21,6 +21,24 @@ export const lightTheme: MD3Theme = {
     onBackground: "#191C20",
     surface: "#F8FAFF",
     onSurface: "#191C20",
+    surfaceVariant: "#DEE1EB",
+    onSurfaceVariant: "#434650",
+    surfaceDisabled: "rgba(25, 28, 32, 0.12)",
+    onSurfaceDisabled: "rgba(25, 28, 32, 0.38)",
+    outline: "#737781",
+    outlineVariant: "#C2C6D0",
+    inverseSurface: "#2E3137",
+    inverseOnSurface: "#EFF1F6",
+    inversePrimary: "#9ECAFF",
+    backdrop: "rgba(45, 48, 56, 0.4)",
+    elevation: {
+      level0: "transparent",
+      level1: "rgb(239, 243, 250)",
+      level2: "rgb(233, 238, 247)",
+      level3: "rgb(227, 234, 244)",
+      level4: "rgb(225, 233, 243)",
+      level5: "rgb(222, 230, 241)",
+    },
   },
 };
 
@@ -44,5 +62,23 @@ export const darkTheme: MD3Theme = {
     onBackground: "#E1E2E8",
     surface: "#111418",
     onSurface: "#E1E2E8",
+    surfaceVariant: "#434650",
+    onSurfaceVariant: "#C2C6D0",
+    surfaceDisabled: "rgba(225, 226, 232, 0.12)",
+    onSurfaceDisabled: "rgba(225, 226, 232, 0.38)",
+    outline: "#8D919B",
+    outlineVariant: "#434650",
+    inverseSurface: "#E1E2E8",
+    inverseOnSurface: "#2E3137",
+    inversePrimary: "#3B6898",
+    backdrop: "rgba(45, 48, 56, 0.4)",
+    elevation: {
+      level0: "transparent",
+      level1: "rgb(24, 29, 36)",
+      level2: "rgb(28, 35, 43)",
+      level3: "rgb(33, 40, 49)",
+      level4: "rgb(34, 42, 52)",
+      level5: "rgb(37, 46, 56)",
+    },
   },
 };
