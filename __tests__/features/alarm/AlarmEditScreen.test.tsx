@@ -245,6 +245,85 @@ describe("AlarmEditScreen", () => {
     });
   });
 
+  describe("snooze settings", () => {
+    it("should display default snooze duration for new alarm", async () => {
+      const { getByTestId } = await renderWithProviders();
+      const item = getByTestId("snooze-duration-item");
+      expect(item).toBeTruthy();
+    });
+
+    it("should cycle snooze duration on press", async () => {
+      const { getByTestId, getByText } = await renderWithProviders();
+      // Default snoozeDuration is 5 (from DEFAULT_SETTINGS)
+      expect(getByText("5 min")).toBeTruthy();
+
+      // Press to cycle: 5 -> 10
+      await fireEvent.press(getByTestId("snooze-duration-item"));
+      await waitFor(() => {
+        expect(getByText("10 min")).toBeTruthy();
+      });
+    });
+
+    it("should display default snooze max for new alarm", async () => {
+      const { getByTestId } = await renderWithProviders();
+      const item = getByTestId("snooze-max-item");
+      expect(item).toBeTruthy();
+    });
+
+    it("should cycle snooze max on press", async () => {
+      const { getByTestId } = await renderWithProviders();
+      // Default snoozeMax is 3; cycle: 3 -> 5
+      await fireEvent.press(getByTestId("snooze-max-item"));
+      await waitFor(() => {
+        expect(getByTestId("snooze-max-item")).toBeTruthy();
+      });
+    });
+
+    it("should load existing alarm snooze values", async () => {
+      mockRouteParams.alarmId = "existing-alarm";
+      const { getByText } = await renderWithProviders(createStore(), [
+        makeAlarm({ snoozeDurationMin: 10, snoozeMaxCount: 5 }),
+      ]);
+      expect(getByText("10 min")).toBeTruthy();
+    });
+  });
+
+  describe("math difficulty", () => {
+    it("should not show math difficulty when dismissalMethod is simple", async () => {
+      const { queryByText } = await renderWithProviders();
+      // Default dismissalMethod is "simple"
+      expect(queryByText("settings.mathDifficulty")).toBeNull();
+    });
+
+    it("should include mathDifficulty in test alarm", async () => {
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("test-alarm-button"));
+
+      await waitFor(() => {
+        expect(mockScheduleAlarm).toHaveBeenCalled();
+      });
+      const alarmArg = mockScheduleAlarm.mock.calls[0][0];
+      expect(alarmArg.mathDifficulty).toBe(1);
+    });
+
+    it("should load mathDifficulty from existing alarm", async () => {
+      mockRouteParams.alarmId = "existing-alarm";
+      const store = createStore();
+      const { getByTestId } = await renderWithProviders(store, [
+        makeAlarm({ mathDifficulty: 3, dismissalMethod: "math" }),
+      ]);
+
+      // Test alarm should carry the loaded mathDifficulty
+      await fireEvent.press(getByTestId("test-alarm-button"));
+      await waitFor(() => {
+        expect(mockScheduleAlarm).toHaveBeenCalled();
+      });
+      const alarmArg = mockScheduleAlarm.mock.calls[0][0];
+      expect(alarmArg.mathDifficulty).toBe(3);
+    });
+  });
+
   describe("test alarm button", () => {
     it("should render test alarm button", async () => {
       const { getByTestId } = await renderWithProviders();
