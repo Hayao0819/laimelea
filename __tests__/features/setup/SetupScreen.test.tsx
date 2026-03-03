@@ -1,3 +1,4 @@
+import NetInfo from "@react-native-community/netinfo";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
@@ -8,6 +9,8 @@ import { createPlatformServices } from "../../../src/core/platform/factory";
 import type { PlatformServices } from "../../../src/core/platform/types";
 import { SetupScreen } from "../../../src/features/setup/screens/SetupScreen";
 import type { AppSettings } from "../../../src/models/Settings";
+
+const mockAddEventListener = NetInfo.addEventListener as jest.Mock;
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
@@ -252,6 +255,30 @@ describe("SetupScreen", () => {
         expect(getByTestId("signed-in-account-user@gmail.com")).toBeTruthy();
         expect(queryByTestId("google-sign-in-button")).toBeNull();
       });
+    });
+
+    it("should hide Google account section when offline", async () => {
+      mockAddEventListener.mockImplementation((callback) => {
+        callback({ isConnected: false, isInternetReachable: false });
+        return () => {};
+      });
+
+      const { queryByTestId, queryByText } = await renderWithProviders();
+
+      expect(queryByTestId("google-sign-in-button")).toBeNull();
+      expect(queryByText("setup.googleAccount")).toBeNull();
+    });
+
+    it("should show Google account section when online", async () => {
+      mockAddEventListener.mockImplementation((callback) => {
+        callback({ isConnected: true, isInternetReachable: true });
+        return () => {};
+      });
+
+      const { getByTestId, getByText } = await renderWithProviders();
+
+      expect(getByTestId("google-sign-in-button")).toBeTruthy();
+      expect(getByText("setup.googleAccount")).toBeTruthy();
     });
   });
 });

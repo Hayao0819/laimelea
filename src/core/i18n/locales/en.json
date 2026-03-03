@@ -321,7 +321,8 @@
     "preview": "Current custom time",
     "googleAccount": "Google Account",
     "googleAccountDescription": "Sign in for backup. You can also set this up later in Settings.",
-    "signInWithGoogle": "Sign in with Google"
+    "signInWithGoogle": "Sign in with Google",
+    "offlineNote": "Sign in with Google is available when online"
   },
   "common": {
     "save": "Save",

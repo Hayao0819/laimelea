@@ -321,7 +321,8 @@
     "preview": "現在のカスタム時間",
     "googleAccount": "Googleアカウント連携",
     "googleAccountDescription": "バックアップに使います。後から設定画面でも追加できます。",
-    "signInWithGoogle": "Googleでサインイン"
+    "signInWithGoogle": "Googleでサインイン",
+    "offlineNote": "Googleログインはオンライン時に利用できます"
   },
   "common": {
     "save": "保存",

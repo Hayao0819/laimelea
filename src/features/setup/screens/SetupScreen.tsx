@@ -14,6 +14,7 @@ import {
   formatCustomDay,
   formatCustomTime,
 } from "../../../core/time/formatting";
+import { useNetworkStatus } from "../../../hooks/useNetworkStatus";
 import { DEFAULT_SETTINGS } from "../../../models/Settings";
 
 const DEFAULT_HOURS = Math.floor(DEFAULT_CYCLE_LENGTH_MINUTES / 60);
@@ -29,6 +30,7 @@ export function SetupScreen() {
   const [baseTimeMs, setBaseTimeMs] = useState<number | null>(null);
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const { isConnected } = useNetworkStatus();
 
   const cycleLengthMinutes = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
   const isValid = cycleLengthMinutes > 0 && baseTimeMs !== null;
@@ -147,38 +149,40 @@ export function SetupScreen() {
         </Surface>
       )}
 
-      <Surface style={styles.card} elevation={1}>
-        <Text variant="titleMedium" accessibilityRole="header">
-          {t("setup.googleAccount")}
-        </Text>
-        <Text variant="bodySmall" style={styles.hint}>
-          {t("setup.googleAccountDescription")}
-        </Text>
-        {signedInEmail ? (
-          <View
-            style={styles.accountRow}
-            testID={`signed-in-account-${signedInEmail}`}
-          >
-            <Icon source="check-circle" size={18} color="#4caf50" />
-            <Text variant="bodyMedium" style={styles.accountEmail}>
-              {signedInEmail}
-            </Text>
-          </View>
-        ) : (
-          <Button
-            mode="outlined"
-            onPress={handleGoogleSignIn}
-            loading={signingIn}
-            disabled={signingIn}
-            style={styles.button}
-            testID="google-sign-in-button"
-            accessibilityLabel={t("setup.signInWithGoogle")}
-            icon="google"
-          >
-            {t("setup.signInWithGoogle")}
-          </Button>
-        )}
-      </Surface>
+      {isConnected !== false && (
+        <Surface style={styles.card} elevation={1}>
+          <Text variant="titleMedium" accessibilityRole="header">
+            {t("setup.googleAccount")}
+          </Text>
+          <Text variant="bodySmall" style={styles.hint}>
+            {t("setup.googleAccountDescription")}
+          </Text>
+          {signedInEmail ? (
+            <View
+              style={styles.accountRow}
+              testID={`signed-in-account-${signedInEmail}`}
+            >
+              <Icon source="check-circle" size={18} color="#4caf50" />
+              <Text variant="bodyMedium" style={styles.accountEmail}>
+                {signedInEmail}
+              </Text>
+            </View>
+          ) : (
+            <Button
+              mode="outlined"
+              onPress={handleGoogleSignIn}
+              loading={signingIn}
+              disabled={signingIn}
+              style={styles.button}
+              testID="google-sign-in-button"
+              accessibilityLabel={t("setup.signInWithGoogle")}
+              icon="google"
+            >
+              {t("setup.signInWithGoogle")}
+            </Button>
+          )}
+        </Surface>
+      )}
 
       <Button
         mode="contained"
