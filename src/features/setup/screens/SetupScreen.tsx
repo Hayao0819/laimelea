@@ -1,20 +1,20 @@
+import { format } from "date-fns";
+import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Icon, Surface, Text, TextInput } from "react-native-paper";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
 
-import { spacing, radius } from "../../../app/spacing";
-import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { radius,spacing } from "../../../app/spacing";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
-import { DEFAULT_SETTINGS } from "../../../models/Settings";
+import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../../core/time/constants";
 import { realToCustom } from "../../../core/time/conversions";
 import {
   formatCustomDay,
   formatCustomTime,
 } from "../../../core/time/formatting";
-import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../../core/time/constants";
+import { DEFAULT_SETTINGS } from "../../../models/Settings";
 
 const DEFAULT_HOURS = Math.floor(DEFAULT_CYCLE_LENGTH_MINUTES / 60);
 const DEFAULT_MINUTES = DEFAULT_CYCLE_LENGTH_MINUTES % 60;

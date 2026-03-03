@@ -2,8 +2,8 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import * as RNLocalize from "react-native-localize";
 
-import ja from "./locales/ja.json";
 import en from "./locales/en.json";
+import ja from "./locales/ja.json";
 
 const resources = {
   ja: { translation: ja },

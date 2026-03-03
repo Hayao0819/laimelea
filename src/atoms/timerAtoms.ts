@@ -1,5 +1,6 @@
 import { atom } from "jotai";
-import type { TimerState, StopwatchState } from "../models/Timer";
+
+import type { StopwatchState,TimerState } from "../models/Timer";
 
 export const timersAtom = atom<TimerState[]>([]);
 

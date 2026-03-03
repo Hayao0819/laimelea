@@ -1,5 +1,6 @@
-import { device, element, by, expect } from "detox";
-import { launchAppFresh, launchApp, waitVisible } from "./utils/helpers";
+import { by, device, element, expect } from "detox";
+
+import { launchApp, launchAppFresh, waitVisible } from "./utils/helpers";
 
 describe("Setup Flow", () => {
   beforeAll(async () => {

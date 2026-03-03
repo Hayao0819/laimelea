@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
-import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
+import { Dimensions,StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
+import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
+
 import { spacing } from "../../../app/spacing";
 import type { SleepSession } from "../../../models/SleepSession";
 

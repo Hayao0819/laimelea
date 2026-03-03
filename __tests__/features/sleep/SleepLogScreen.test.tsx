@@ -1,9 +1,10 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { SleepLogScreen } from "../../../src/features/sleep/screens/SleepLogScreen";
-import type { SleepSession } from "../../../src/models/SleepSession";
 import type { SleepSyncResult } from "../../../src/hooks/useSleepSync";
+import type { SleepSession } from "../../../src/models/SleepSession";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

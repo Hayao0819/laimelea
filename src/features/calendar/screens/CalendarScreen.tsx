@@ -1,29 +1,30 @@
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
 import {
-  Text,
   Card,
-  Snackbar,
-  SegmentedButtons,
   IconButton,
+  SegmentedButtons,
+  Snackbar,
+  Text,
   useTheme,
 } from "react-native-paper";
-import { useTranslation } from "react-i18next";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
+import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import { useCalendarSync } from "../../../hooks/useCalendarSync";
-import { useCalendarView } from "../hooks/useCalendarView";
 import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
+import { useCalendarSync } from "../../../hooks/useCalendarSync";
+import type { Alarm } from "../../../models/Alarm";
+import type { CalendarEvent } from "../../../models/CalendarEvent";
 import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
+import { AgendaView } from "../components/AgendaView";
 import { MonthView } from "../components/MonthView";
 import { WeekView } from "../components/WeekView";
-import { AgendaView } from "../components/AgendaView";
-import type { CalendarEvent } from "../../../models/CalendarEvent";
-import type { Alarm } from "../../../models/Alarm";
-import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
+import { useCalendarView } from "../hooks/useCalendarView";
 
 function formatNavigationTitle(
   viewMode: CalendarViewMode,

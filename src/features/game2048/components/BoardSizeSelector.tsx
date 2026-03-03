@@ -1,9 +1,10 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { SegmentedButtons, Text } from "react-native-paper";
-import { useTranslation } from "react-i18next";
-import type { BoardSize } from "../logic/gameTypes";
+
 import { spacing } from "../../../app/spacing";
+import type { BoardSize } from "../logic/gameTypes";
 
 interface BoardSizeSelectorProps {
   size: BoardSize;

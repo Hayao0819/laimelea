@@ -2,8 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authorize, refresh, revoke } from "react-native-app-auth";
 
 import { STORAGE_KEYS } from "../../storage/keys";
-import type { AuthResult, PlatformAuthService } from "../types";
 import { extractEmailFromIdToken } from "../aosp/tokenUtils";
+import type { AuthResult, PlatformAuthService } from "../types";
 import { HMS_AUTH_CONFIG } from "./authConfig";
 
 interface StoredAuthState {

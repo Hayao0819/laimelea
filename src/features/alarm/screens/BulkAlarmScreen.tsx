@@ -1,20 +1,21 @@
-import React, { useState, useMemo, useCallback, useLayoutEffect } from "react";
-import { View, ScrollView, StyleSheet, Alert } from "react-native";
-import { IconButton, Snackbar, useTheme } from "react-native-paper";
-import { useAtom, useAtomValue } from "jotai";
-import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../../navigation/types";
+import { useAtom, useAtomValue } from "jotai";
+import React, { useCallback, useLayoutEffect,useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert,ScrollView, StyleSheet, View } from "react-native";
+import { IconButton, Snackbar, useTheme } from "react-native-paper";
+
+import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import { scheduleAlarm } from "../services/alarmScheduler";
-import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
-import { generateBulkAlarms } from "../services/bulkAlarmCreator";
-import { BulkAlarmForm } from "../components/BulkAlarmForm";
 import type { BulkAlarmParams } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
-import { spacing } from "../../../app/spacing";
+import type { RootStackParamList } from "../../../navigation/types";
+import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
+import { BulkAlarmForm } from "../components/BulkAlarmForm";
+import { scheduleAlarm } from "../services/alarmScheduler";
+import { generateBulkAlarms } from "../services/bulkAlarmCreator";
 
 type Props = NativeStackScreenProps<RootStackParamList, "BulkAlarm">;
 

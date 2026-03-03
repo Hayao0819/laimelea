@@ -1,9 +1,10 @@
-import { renderHook, act } from "@testing-library/react-native";
+import { act,renderHook } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React, { Suspense } from "react";
-import { Provider as JotaiProvider, createStore } from "jotai";
-import { useCurrentTime } from "../../src/hooks/useCurrentTime";
-import { settingsAtom } from "../../src/atoms/settingsAtoms";
+
 import { currentTimeMsAtom } from "../../src/atoms/clockAtoms";
+import { settingsAtom } from "../../src/atoms/settingsAtoms";
+import { useCurrentTime } from "../../src/hooks/useCurrentTime";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {

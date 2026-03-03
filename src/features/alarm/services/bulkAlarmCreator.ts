@@ -1,7 +1,7 @@
+import { customToReal } from "../../../core/time/conversions";
 import type { Alarm, BulkAlarmParams } from "../../../models/Alarm";
 import type { CycleConfig } from "../../../models/CustomTime";
 import type { AlarmDefaults } from "../../../models/Settings";
-import { customToReal } from "../../../core/time/conversions";
 
 export const ANDROID_ALARM_TRIGGER_LIMIT = 50;
 

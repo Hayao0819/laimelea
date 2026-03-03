@@ -1,11 +1,12 @@
+import { act,fireEvent, render } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { WeekView } from "../../../../src/features/calendar/components/WeekView";
+
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
+import { WeekView } from "../../../../src/features/calendar/components/WeekView";
 import type { CalendarEvent } from "../../../../src/models/CalendarEvent";
+import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

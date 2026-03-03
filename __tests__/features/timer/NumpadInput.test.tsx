@@ -1,6 +1,7 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { NumpadInput } from "../../../src/features/timer/components/NumpadInput";
 
 jest.mock("react-i18next", () => ({

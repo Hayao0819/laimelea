@@ -1,6 +1,6 @@
-import type { CycleConfig } from "./CustomTime";
 import type { PlatformType } from "../core/platform/types";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../core/time/constants";
+import type { CycleConfig } from "./CustomTime";
 export type DismissalMethod = "simple" | "shake" | "math";
 export type MathDifficulty = 1 | 2 | 3;
 

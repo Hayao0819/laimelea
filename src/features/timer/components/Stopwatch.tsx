@@ -1,7 +1,8 @@
 import React from "react";
-import { View, FlatList, StyleSheet } from "react-native";
-import { Button, Text, Divider, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { FlatList, StyleSheet,View } from "react-native";
+import { Button, Divider, Text, useTheme } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
 import { useStopwatch } from "../../../hooks/useStopwatch";
 

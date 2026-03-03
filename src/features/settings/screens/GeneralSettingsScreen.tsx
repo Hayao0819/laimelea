@@ -1,11 +1,11 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, SegmentedButtons, Text } from "react-native-paper";
-import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
-import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { resolveLanguage } from "../../../core/i18n";
+import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
 export function GeneralSettingsScreen() {
   const { t } = useTranslation();

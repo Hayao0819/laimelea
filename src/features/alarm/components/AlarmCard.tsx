@@ -1,12 +1,13 @@
-import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Card, Icon, Switch, Text, useTheme } from "react-native-paper";
-import { spacing } from "../../../app/spacing";
-import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
-import type { Alarm } from "../../../models/Alarm";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Card, Icon, Switch, Text, useTheme } from "react-native-paper";
+
+import { spacing } from "../../../app/spacing";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
+import type { Alarm } from "../../../models/Alarm";
 import type { CycleConfig } from "../../../models/CustomTime";
 
 interface AlarmCardProps {

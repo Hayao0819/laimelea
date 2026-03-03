@@ -1,19 +1,19 @@
+import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
 import {
-  snapshotsAtom,
   activeSnapshotIdAtom,
-  loadSnapshotAtom,
   game2048StoreAtom,
+  loadSnapshotAtom,
   resolvedStoreAtom,
+  snapshotsAtom,
 } from "../atoms/game2048Atoms";
-import type { GameSnapshot } from "../logic/gameTypes";
 import { SnapshotTree } from "../components/SnapshotTree";
+import type { GameSnapshot } from "../logic/gameTypes";
 
 export function Game2048TreeScreen() {
   const { t } = useTranslation();

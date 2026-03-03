@@ -1,6 +1,7 @@
+import { act,fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { BulkAlarmForm } from "../../../src/features/alarm/components/BulkAlarmForm";
 import type { Alarm } from "../../../src/models/Alarm";
 import type { DismissalMethod } from "../../../src/models/Settings";

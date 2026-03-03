@@ -1,10 +1,10 @@
 import {
-  findBackupFile,
-  uploadBackup,
   downloadBackup,
-  getFileMetadata,
   DriveAuthExpiredError,
   DriveScopeDeniedError,
+  findBackupFile,
+  getFileMetadata,
+  uploadBackup,
 } from "../googleDriveApi";
 
 const mockFetch = jest.fn();

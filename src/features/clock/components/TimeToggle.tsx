@@ -1,8 +1,9 @@
-import React from "react";
-import { View } from "react-native";
 import { useAtom } from "jotai";
-import { SegmentedButtons } from "react-native-paper";
+import React from "react";
 import { useTranslation } from "react-i18next";
+import { View } from "react-native";
+import { SegmentedButtons } from "react-native-paper";
+
 import { primaryTimeDisplayAtom } from "../../../atoms/settingsAtoms";
 
 export function TimeToggle() {

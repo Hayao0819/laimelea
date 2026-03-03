@@ -1,13 +1,14 @@
+import { useNavigation } from "@react-navigation/native";
+import { useAtomValue } from "jotai";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Divider, List, useTheme } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
-import { useTranslation } from "react-i18next";
-import { useAtomValue } from "jotai";
+
 import { spacing } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../../models/Settings";
 import type { AppSettings } from "../../../models/Settings";
+import { DEFAULT_SETTINGS } from "../../../models/Settings";
 
 export function SettingsScreen() {
   const { t } = useTranslation();

@@ -1,11 +1,12 @@
 import React, { useMemo } from "react";
 import { Dimensions, PanResponder, StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
-import { GameTile } from "./GameTile";
-import { AnimatedGameTile } from "./AnimatedGameTile";
+
+import { spacing } from "../../../app/spacing";
 import { useAnimatedBoard } from "../hooks/useAnimatedBoard";
 import type { Direction } from "../logic/gameTypes";
-import { spacing } from "../../../app/spacing";
+import { AnimatedGameTile } from "./AnimatedGameTile";
+import { GameTile } from "./GameTile";
 
 interface GameBoardProps {
   board: number[][];

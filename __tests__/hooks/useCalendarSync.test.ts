@@ -1,19 +1,20 @@
+import { act,renderHook } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { renderHook, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
-import { useCalendarSync } from "../../src/hooks/useCalendarSync";
+
 import {
+  calendarCacheStaleAtom,
   calendarEventsAtom,
   calendarLastSyncAtom,
-  calendarSyncErrorAtom,
   calendarListAtom,
-  calendarCacheStaleAtom,
+  calendarSyncErrorAtom,
 } from "../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../src/atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 import { syncCalendarEvents } from "../../src/core/calendar/calendarSyncService";
 import { createPlatformServices } from "../../src/core/platform/factory";
+import { useCalendarSync } from "../../src/hooks/useCalendarSync";
 import type { CalendarEvent } from "../../src/models/CalendarEvent";
+import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 
 jest.mock("../../src/core/calendar/calendarSyncService", () => ({
   syncCalendarEvents: jest.fn(),

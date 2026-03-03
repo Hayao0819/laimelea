@@ -1,19 +1,20 @@
-import React, { useCallback } from "react";
-import { View, FlatList, StyleSheet } from "react-native";
-import { FAB, Text, Snackbar, useTheme } from "react-native-paper";
-import { spacing } from "../../../app/spacing";
-import { useAtom, useAtomValue } from "jotai";
-import { useTranslation } from "react-i18next";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect,useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../../navigation/types";
+import { useAtom, useAtomValue } from "jotai";
+import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { FlatList, StyleSheet,View } from "react-native";
+import { FAB, Snackbar, Text, useTheme } from "react-native-paper";
+
+import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import { scheduleAlarm, cancelAlarm } from "../services/alarmScheduler";
-import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { setupForegroundHandler } from "../../../core/notifications/foregroundHandler";
-import { AlarmCard } from "../components/AlarmCard";
 import type { Alarm } from "../../../models/Alarm";
+import type { RootStackParamList } from "../../../navigation/types";
+import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
+import { AlarmCard } from "../components/AlarmCard";
+import { cancelAlarm,scheduleAlarm } from "../services/alarmScheduler";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

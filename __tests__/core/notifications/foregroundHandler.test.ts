@@ -1,4 +1,5 @@
 import notifee from "@notifee/react-native";
+
 import { setupForegroundHandler } from "../../../src/core/notifications/foregroundHandler";
 
 let registeredCallback: (event: { type: number; detail: unknown }) => void;

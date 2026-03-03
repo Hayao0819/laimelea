@@ -1,23 +1,24 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
 import {
-  TextInput,
+  Banner,
+  Chip,
+  Dialog,
+  List,
+  Portal,
+  RadioButton,
   SegmentedButtons,
   Surface,
-  List,
   Text,
-  Chip,
-  Banner,
-  Portal,
-  Dialog,
-  RadioButton,
+  TextInput,
 } from "react-native-paper";
-import { useTranslation } from "react-i18next";
-import { AlarmTimePicker } from "./AlarmTimePicker";
-import { getAllStrategies, getStrategy } from "../strategies";
+
+import { radius,spacing } from "../../../app/spacing";
 import type { Alarm } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
-import { spacing, radius } from "../../../app/spacing";
+import { getAllStrategies, getStrategy } from "../strategies";
+import { AlarmTimePicker } from "./AlarmTimePicker";
 
 interface TimeValue {
   hours: number;

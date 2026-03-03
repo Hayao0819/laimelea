@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, View, StyleSheet } from "react-native";
-import { Text, useTheme } from "react-native-paper";
 import { useAtomValue } from "jotai";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ScrollView, StyleSheet,View } from "react-native";
+import { Text, useTheme } from "react-native-paper";
+
 import { cycleConfigAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";

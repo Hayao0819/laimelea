@@ -1,4 +1,5 @@
 import { createStore } from "jotai";
+
 import {
   CALENDAR_CACHE_TTL_MS,
   calendarCacheStaleAtom,

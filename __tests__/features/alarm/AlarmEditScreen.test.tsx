@@ -1,14 +1,15 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { Alert } from "react-native";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { AlarmEditScreen } from "../../../src/features/alarm/screens/AlarmEditScreen";
+
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
-import type { Alarm } from "../../../src/models/Alarm";
+import { AlarmEditScreen } from "../../../src/features/alarm/screens/AlarmEditScreen";
 import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
+import type { Alarm } from "../../../src/models/Alarm";
+import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("react-native-shake", () => ({
   __esModule: true,

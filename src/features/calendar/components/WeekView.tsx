@@ -1,11 +1,12 @@
 import React, { useMemo } from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { StyleSheet,TouchableOpacity, View } from "react-native";
+import { Text, useTheme } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
+import type { CalendarEvent } from "../../../models/CalendarEvent";
 import { CustomDayTimeline } from "./CustomDayTimeline";
 import { EventCard } from "./EventCard";
-import type { CalendarEvent } from "../../../models/CalendarEvent";
 
 interface WeekViewProps {
   events: CalendarEvent[];

@@ -1,5 +1,5 @@
-import { createAospAuthService } from "../../../../src/core/platform/aosp/authService";
 import { AOSP_AUTH_CONFIG } from "../../../../src/core/platform/aosp/authConfig";
+import { createAospAuthService } from "../../../../src/core/platform/aosp/authService";
 import { STORAGE_KEYS } from "../../../../src/core/storage/keys";
 
 const mockStore: Record<string, string> = {};

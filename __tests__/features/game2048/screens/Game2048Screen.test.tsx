@@ -1,10 +1,9 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { Game2048Screen } from "../../../../src/features/game2048/screens/Game2048Screen";
+
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 import {
   game2048StoreAtom,
   resolvedStoreAtom,
@@ -15,6 +14,8 @@ import {
   move,
 } from "../../../../src/features/game2048/logic/gameEngine";
 import type { Game2048Store } from "../../../../src/features/game2048/logic/gameTypes";
+import { Game2048Screen } from "../../../../src/features/game2048/screens/Game2048Screen";
+import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 
 const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => ({

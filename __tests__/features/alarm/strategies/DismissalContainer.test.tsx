@@ -1,10 +1,11 @@
-import React from "react";
 import { render } from "@testing-library/react-native";
+import React from "react";
 import { PaperProvider } from "react-native-paper";
+
 import { DismissalContainer } from "../../../../src/features/alarm/components/dismissal/DismissalContainer";
 import {
-  registerStrategy,
   clearStrategies,
+  registerStrategy,
 } from "../../../../src/features/alarm/strategies/registry";
 import type { DismissalStrategy } from "../../../../src/features/alarm/strategies/types";
 

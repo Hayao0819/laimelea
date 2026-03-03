@@ -1,6 +1,7 @@
-import React from "react";
 import { render } from "@testing-library/react-native";
+import React from "react";
 import { PaperProvider } from "react-native-paper";
+
 import { LicensesScreen } from "../../../../src/features/settings/screens/LicensesScreen";
 
 jest.mock("react-i18next", () => ({

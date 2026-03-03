@@ -1,12 +1,12 @@
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, Switch, TextInput } from "react-native-paper";
-import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
-import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
-import { DEFAULT_WIDGET_SETTINGS } from "../../../models/Settings";
 import type { WidgetSettings } from "../../../models/Settings";
+import { DEFAULT_WIDGET_SETTINGS } from "../../../models/Settings";
+import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
 export function WidgetSettingsScreen() {
   const { t } = useTranslation();

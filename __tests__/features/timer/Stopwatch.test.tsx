@@ -1,8 +1,9 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
-import { useStopwatch } from "../../../src/hooks/useStopwatch";
+
 import { Stopwatch } from "../../../src/features/timer/components/Stopwatch";
+import { useStopwatch } from "../../../src/hooks/useStopwatch";
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({

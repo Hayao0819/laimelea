@@ -1,8 +1,9 @@
-import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Card, Text, IconButton, useTheme } from "react-native-paper";
-import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Card, IconButton, Text, useTheme } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";

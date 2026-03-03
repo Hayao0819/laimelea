@@ -1,10 +1,11 @@
-import { useCallback, useMemo } from "react";
 import { useAtom } from "jotai";
-import {
-  calendarViewModeAtom,
-  calendarSelectedDateAtom,
-} from "../../../atoms/calendarAtoms";
+import { useCallback, useMemo } from "react";
+
 import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
+import {
+  calendarSelectedDateAtom,
+  calendarViewModeAtom,
+} from "../../../atoms/calendarAtoms";
 
 export interface CalendarViewState {
   viewMode: CalendarViewMode;

@@ -1,8 +1,9 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
-import { useTimers } from "../../../src/hooks/useTimers";
+
 import { CountdownTimer } from "../../../src/features/timer/components/CountdownTimer";
+import { useTimers } from "../../../src/hooks/useTimers";
 import type { TimerState } from "../../../src/models/Timer";
 
 jest.mock("react-i18next", () => ({

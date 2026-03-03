@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { View, SectionList, StyleSheet } from "react-native";
-import { Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { SectionList, StyleSheet,View } from "react-native";
+import { Text, useTheme } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
-import { EventCard } from "./EventCard";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import { EventCard } from "./EventCard";
 
 interface AgendaViewProps {
   events: CalendarEvent[];

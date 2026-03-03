@@ -1,10 +1,11 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import {
-  SnapshotTree,
   buildTree,
   flattenTree,
+  SnapshotTree,
 } from "../../../../src/features/game2048/components/SnapshotTree";
 import type { GameSnapshot } from "../../../../src/features/game2048/logic/gameTypes";
 

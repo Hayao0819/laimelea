@@ -1,4 +1,4 @@
-import type { CycleConfig, CustomTimeValue } from "../../models/CustomTime";
+import type { CustomTimeValue,CycleConfig } from "../../models/CustomTime";
 import { MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } from "./constants";
 
 /**

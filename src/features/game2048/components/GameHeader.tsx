@@ -1,7 +1,8 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
-import { useTranslation } from "react-i18next";
+
 import { spacing } from "../../../app/spacing";
 
 interface GameHeaderProps {

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
 import { useAtom } from "jotai";
+import { useCallback, useEffect, useRef } from "react";
+
 import { stopwatchAtom } from "../atoms/timerAtoms";
 
 const TICK_INTERVAL = 50;

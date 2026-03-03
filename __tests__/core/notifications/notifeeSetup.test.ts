@@ -1,9 +1,10 @@
 import notifee from "@notifee/react-native";
+
 import {
+  ALARM_CHANNEL_ID,
   createAlarmChannel,
   createTimerChannel,
   ensureNotificationPermissions,
-  ALARM_CHANNEL_ID,
   TIMER_CHANNEL_ID,
 } from "../../../src/core/notifications/notifeeSetup";
 

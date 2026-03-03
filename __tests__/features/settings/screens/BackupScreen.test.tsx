@@ -1,19 +1,20 @@
+import { act,fireEvent, render } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { BackupScreen } from "../../../../src/features/settings/screens/BackupScreen";
-import {
-  settingsAtom,
-  resolvedSettingsAtom,
-} from "../../../../src/atoms/settingsAtoms";
+
 import { alarmsAtom } from "../../../../src/atoms/alarmAtoms";
+import {
+  resolvedSettingsAtom,
+  settingsAtom,
+} from "../../../../src/atoms/settingsAtoms";
 import { sleepSessionsAtom } from "../../../../src/atoms/sleepAtoms";
-import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
-import { game2048StoreAtom } from "../../../../src/features/game2048/atoms/game2048Atoms";
-import { createDefaultStore } from "../../../../src/features/game2048/logic/gameEngine";
 import { createPlatformServices } from "../../../../src/core/platform/factory";
 import type { PlatformServices } from "../../../../src/core/platform/types";
+import { game2048StoreAtom } from "../../../../src/features/game2048/atoms/game2048Atoms";
+import { createDefaultStore } from "../../../../src/features/game2048/logic/gameEngine";
+import { BackupScreen } from "../../../../src/features/settings/screens/BackupScreen";
+import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: jest.fn() }),

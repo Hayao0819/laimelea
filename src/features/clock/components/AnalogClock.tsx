@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
-import { View, StyleSheet } from "react-native";
-import Svg, { Circle, Line, G, Path, Text as SvgText } from "react-native-svg";
-import { useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { useTheme } from "react-native-paper";
+import Svg, { Circle, G, Line, Path, Text as SvgText } from "react-native-svg";
+
 import type { CustomTimeValue } from "../../../models/CustomTime";
 
 // Proportions (relative to radius)

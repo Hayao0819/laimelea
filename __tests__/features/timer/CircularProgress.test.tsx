@@ -1,7 +1,8 @@
-import React from "react";
 import { render } from "@testing-library/react-native";
+import React from "react";
 import { Text } from "react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { CircularProgress } from "../../../src/features/timer/components/CircularProgress";
 
 jest.mock("react-native-svg", () => {

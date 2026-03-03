@@ -1,21 +1,22 @@
-import React, { useState, useMemo, useCallback, useLayoutEffect } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
-import {
-  TextInput,
-  Button,
-  Text,
-  Snackbar,
-  useTheme,
-} from "react-native-paper";
-import { useAtom } from "jotai";
-import { useTranslation } from "react-i18next";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { format } from "date-fns";
+import { useAtom } from "jotai";
+import React, { useCallback, useLayoutEffect,useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { ScrollView, StyleSheet,View } from "react-native";
+import {
+  Button,
+  Snackbar,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
 import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
-import type { RootStackParamList } from "../../../navigation/types";
 import type { SleepSession } from "../../../models/SleepSession";
+import type { RootStackParamList } from "../../../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManualSleepEntry">;
 

@@ -1,4 +1,5 @@
 import notifee from "@notifee/react-native";
+
 import { showTimerCompleteNotification } from "../../../../src/features/timer/services/timerNotification";
 
 jest.mock("@notifee/react-native", () => ({

@@ -1,10 +1,11 @@
+import { format } from "date-fns";
 import React, { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { FlatList, StyleSheet, View } from "react-native";
 import { IconButton, Text, useTheme } from "react-native-paper";
-import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
-import type { GameSnapshot } from "../logic/gameTypes";
+
 import { spacing } from "../../../app/spacing";
+import type { GameSnapshot } from "../logic/gameTypes";
 
 interface TreeNode {
   snapshot: GameSnapshot;
@@ -197,7 +198,7 @@ export function SnapshotTree({
 
 // Exported for testing
 export { buildTree, flattenTree };
-export type { TreeNode, FlatTreeNode, SnapshotTreeProps };
+export type { FlatTreeNode, SnapshotTreeProps,TreeNode };
 
 const styles = StyleSheet.create({
   emptyContainer: {

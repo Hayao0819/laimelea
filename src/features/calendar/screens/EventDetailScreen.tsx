@@ -1,29 +1,30 @@
-import React, { useMemo, useCallback } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
-import {
-  Text,
-  Card,
-  Button,
-  Chip,
-  Divider,
-  useTheme,
-} from "react-native-paper";
-import { useTranslation } from "react-i18next";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { format } from "date-fns";
 import { useAtomValue } from "jotai";
 import { useSetAtom } from "jotai";
-import { format } from "date-fns";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { spacing, radius } from "../../../app/spacing";
-import type { RootStackParamList } from "../../../navigation/types";
-import { calendarEventsAtom } from "../../../atoms/calendarAtoms";
+import React, { useCallback,useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { ScrollView, StyleSheet,View } from "react-native";
+import {
+  Button,
+  Card,
+  Chip,
+  Divider,
+  Text,
+  useTheme,
+} from "react-native-paper";
+
+import { radius,spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
+import { calendarEventsAtom } from "../../../atoms/calendarAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
-import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
-import type { CalendarEvent } from "../../../models/CalendarEvent";
 import type { Alarm } from "../../../models/Alarm";
+import type { CalendarEvent } from "../../../models/CalendarEvent";
+import type { RootStackParamList } from "../../../navigation/types";
+import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 

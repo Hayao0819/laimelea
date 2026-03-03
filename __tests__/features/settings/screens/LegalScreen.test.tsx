@@ -1,7 +1,8 @@
+import { act,fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { LegalScreen } from "../../../../src/features/settings/screens/LegalScreen";
 
 const mockNavigate = jest.fn();

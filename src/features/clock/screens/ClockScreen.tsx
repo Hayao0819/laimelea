@@ -1,12 +1,13 @@
-import React, { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { useCurrentTime } from "../../../hooks/useCurrentTime";
-import { primaryTimeDisplayAtom } from "../../../atoms/settingsAtoms";
+import React, { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+
 import { spacing } from "../../../app/spacing";
-import { CustomDayIndicator } from "../components/CustomDayIndicator";
+import { primaryTimeDisplayAtom } from "../../../atoms/settingsAtoms";
+import { useCurrentTime } from "../../../hooks/useCurrentTime";
 import { AnalogClock } from "../components/AnalogClock";
+import { CustomDayIndicator } from "../components/CustomDayIndicator";
 import { DigitalClock } from "../components/DigitalClock";
 import { TimeToggle } from "../components/TimeToggle";
 

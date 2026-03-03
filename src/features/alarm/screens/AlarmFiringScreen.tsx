@@ -1,22 +1,24 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { View, StyleSheet } from "react-native";
-import { Text, useTheme } from "react-native-paper";
-import { useAtom, useAtomValue } from "jotai";
-import { useTranslation } from "react-i18next";
+import "../strategies"; // ensure strategies are registered
+
+import notifee from "@notifee/react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import notifee from "@notifee/react-native";
-import type { RootStackParamList } from "../../../navigation/types";
+import { useAtom, useAtomValue } from "jotai";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Text, useTheme } from "react-native-paper";
+
+import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
+import type { Alarm } from "../../../models/Alarm";
+import type { RootStackParamList } from "../../../navigation/types";
+import { DismissalContainer } from "../components/dismissal/DismissalContainer";
 import { scheduleAlarm } from "../services/alarmScheduler";
 import { GradualVolumeManager } from "../services/gradualVolumeManager";
-import { DismissalContainer } from "../components/dismissal/DismissalContainer";
-import "../strategies"; // ensure strategies are registered
-import type { Alarm } from "../../../models/Alarm";
-import { spacing } from "../../../app/spacing";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmFiring">;
 

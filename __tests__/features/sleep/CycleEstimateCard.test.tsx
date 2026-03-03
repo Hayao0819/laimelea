@@ -1,10 +1,11 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { CycleEstimateCard } from "../../../src/features/sleep/components/CycleEstimateCard";
-import { cycleEstimationAtom } from "../../../src/atoms/sleepAtoms";
+
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
+import { cycleEstimationAtom } from "../../../src/atoms/sleepAtoms";
+import { CycleEstimateCard } from "../../../src/features/sleep/components/CycleEstimateCard";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import type { CycleEstimation } from "../../../src/models/SleepSession";
 

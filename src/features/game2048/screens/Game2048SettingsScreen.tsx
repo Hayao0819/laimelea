@@ -1,4 +1,6 @@
+import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
   List,
@@ -7,16 +9,14 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
 import {
-  settingsAtom,
-  hasGameStartedAtom,
   currentGameAtom,
-  updateSettingsAtom,
+  hasGameStartedAtom,
+  settingsAtom,
   switchBoardSizeAtom,
+  updateSettingsAtom,
 } from "../atoms/game2048Atoms";
 import type { BoardSize } from "../logic/gameTypes";
 

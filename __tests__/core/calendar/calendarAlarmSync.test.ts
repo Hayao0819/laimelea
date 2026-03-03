@@ -1,10 +1,10 @@
+import type { AlarmCreationDefaults } from "../../../src/core/calendar/calendarAlarmSync";
 import {
-  syncCalendarAlarms,
   createAlarmFromEvent,
+  syncCalendarAlarms,
 } from "../../../src/core/calendar/calendarAlarmSync";
 import type { Alarm } from "../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../src/models/CalendarEvent";
-import type { AlarmCreationDefaults } from "../../../src/core/calendar/calendarAlarmSync";
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {

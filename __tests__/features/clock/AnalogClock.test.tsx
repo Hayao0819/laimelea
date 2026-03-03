@@ -1,6 +1,7 @@
-import React from "react";
 import { render } from "@testing-library/react-native";
+import React from "react";
 import { PaperProvider } from "react-native-paper";
+
 import { AnalogClock } from "../../../src/features/clock/components/AnalogClock";
 import type { CustomTimeValue } from "../../../src/models/CustomTime";
 

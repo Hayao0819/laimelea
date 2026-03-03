@@ -1,13 +1,14 @@
 import { atom } from "jotai";
 import { atomWithStorage, unwrap } from "jotai/utils";
+
 import { createAsyncStorage } from "../core/storage/asyncStorageAdapter";
 import { STORAGE_KEYS } from "../core/storage/keys";
-import {
-  DEFAULT_SETTINGS,
-  DEFAULT_ALARM_DEFAULTS,
-} from "../models/Settings";
-import type { AppSettings } from "../models/Settings";
 import type { CycleConfig } from "../models/CustomTime";
+import type { AppSettings } from "../models/Settings";
+import {
+  DEFAULT_ALARM_DEFAULTS,
+  DEFAULT_SETTINGS,
+} from "../models/Settings";
 
 export const settingsAtom = atomWithStorage<AppSettings>(
   STORAGE_KEYS.SETTINGS,

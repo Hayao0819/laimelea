@@ -1,13 +1,13 @@
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, act, waitFor } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
 
-import { SetupScreen } from "../../../src/features/setup/screens/SetupScreen";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { createPlatformServices } from "../../../src/core/platform/factory";
-import type { AppSettings } from "../../../src/models/Settings";
 import type { PlatformServices } from "../../../src/core/platform/types";
+import { SetupScreen } from "../../../src/features/setup/screens/SetupScreen";
+import type { AppSettings } from "../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

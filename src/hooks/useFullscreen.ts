@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+
 import NativeFullscreenModule from "../core/platform/native/NativeFullscreenModule";
 
 export function useFullscreen() {

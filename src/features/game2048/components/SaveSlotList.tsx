@@ -1,4 +1,6 @@
+import { format } from "date-fns";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { FlatList, StyleSheet, View } from "react-native";
 import {
   Button,
@@ -9,10 +11,9 @@ import {
   Portal,
   Text,
 } from "react-native-paper";
-import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
-import type { GameSnapshot } from "../logic/gameTypes";
+
 import { spacing } from "../../../app/spacing";
+import type { GameSnapshot } from "../logic/gameTypes";
 
 interface SnapshotItemProps {
   snapshot: GameSnapshot;

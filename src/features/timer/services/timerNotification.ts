@@ -1,4 +1,5 @@
 import notifee from "@notifee/react-native";
+
 import { TIMER_CHANNEL_ID } from "../../../core/notifications/notifeeSetup";
 
 export async function showTimerCompleteNotification(

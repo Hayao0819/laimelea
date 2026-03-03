@@ -1,9 +1,10 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { ManualSleepEntryScreen } from "../../../src/features/sleep/screens/ManualSleepEntryScreen";
+
 import { sleepSessionsAtom } from "../../../src/atoms/sleepAtoms";
+import { ManualSleepEntryScreen } from "../../../src/features/sleep/screens/ManualSleepEntryScreen";
 import type { SleepSession } from "../../../src/models/SleepSession";
 
 // Replace atomWithStorage with plain atom to avoid async initialization issues

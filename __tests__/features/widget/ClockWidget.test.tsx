@@ -1,8 +1,9 @@
-import React from "react";
 import { render } from "@testing-library/react-native";
+import React from "react";
+
 import { ClockWidget } from "../../../src/features/widget/ClockWidget";
-import type { CycleConfig } from "../../../src/models/CustomTime";
 import type { Alarm } from "../../../src/models/Alarm";
+import type { CycleConfig } from "../../../src/models/CustomTime";
 import type { WidgetSettings } from "../../../src/models/Settings";
 import { DEFAULT_WIDGET_SETTINGS } from "../../../src/models/Settings";
 

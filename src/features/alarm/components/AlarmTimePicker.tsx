@@ -1,8 +1,9 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { TextInput, Text } from "react-native-paper";
-import { spacing } from "../../../app/spacing";
 import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Text,TextInput } from "react-native-paper";
+
+import { spacing } from "../../../app/spacing";
 
 interface TimeValue {
   hours: number;

@@ -1,20 +1,21 @@
+import { act,fireEvent, render } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { CalendarScreen } from "../../../src/features/calendar/screens/CalendarScreen";
+
+import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import {
   calendarSelectedDateAtom,
   calendarViewModeAtom,
 } from "../../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
-import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
-import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
 import { createPlatformServices } from "../../../src/core/platform/factory";
+import type { PlatformServices } from "../../../src/core/platform/types";
+import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
+import { CalendarScreen } from "../../../src/features/calendar/screens/CalendarScreen";
 import type { Alarm } from "../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../src/models/CalendarEvent";
-import type { PlatformServices } from "../../../src/core/platform/types";
+import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("@react-native-google-signin/google-signin", () => ({
   GoogleSignin: {

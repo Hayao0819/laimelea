@@ -1,6 +1,7 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { DaySelector } from "../../../src/features/calendar/components/DaySelector";
 
 jest.mock("react-i18next", () => ({

@@ -1,5 +1,6 @@
-import { element, by, expect } from "detox";
-import { launchAppFresh, completeSetup, waitVisible } from "./utils/helpers";
+import { by, element, expect } from "detox";
+
+import { completeSetup, launchAppFresh, waitVisible } from "./utils/helpers";
 
 describe("Desk Clock Screen", () => {
   beforeAll(async () => {

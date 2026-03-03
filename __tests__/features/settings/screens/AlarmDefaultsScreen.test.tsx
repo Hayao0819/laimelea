@@ -1,14 +1,15 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { AlarmDefaultsScreen } from "../../../../src/features/settings/screens/AlarmDefaultsScreen";
+
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
-import {
-  DEFAULT_SETTINGS,
-  DEFAULT_ALARM_DEFAULTS,
-} from "../../../../src/models/Settings";
+import { AlarmDefaultsScreen } from "../../../../src/features/settings/screens/AlarmDefaultsScreen";
 import type { AppSettings } from "../../../../src/models/Settings";
+import {
+  DEFAULT_ALARM_DEFAULTS,
+  DEFAULT_SETTINGS,
+} from "../../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

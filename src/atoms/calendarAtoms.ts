@@ -1,6 +1,7 @@
 import { atom } from "jotai";
-import type { CalendarEvent } from "../models/CalendarEvent";
+
 import type { CalendarInfo } from "../core/platform/types";
+import type { CalendarEvent } from "../models/CalendarEvent";
 
 export type CalendarViewMode = "month" | "week" | "agenda";
 export const calendarViewModeAtom = atom<CalendarViewMode>("agenda");

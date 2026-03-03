@@ -1,11 +1,11 @@
+import {
+  downloadBackup,
+  findBackupFile,
+  getFileMetadata,
+  uploadBackup,
+} from "../../../../src/core/drive/huaweiDriveApi";
 import { createHmsBackupService } from "../../../../src/core/platform/hms/backupService";
 import type { PlatformAuthService } from "../../../../src/core/platform/types";
-import {
-  findBackupFile,
-  uploadBackup,
-  downloadBackup,
-  getFileMetadata,
-} from "../../../../src/core/drive/huaweiDriveApi";
 
 jest.mock("../../../../src/core/drive/huaweiDriveApi", () => ({
   ...jest.requireActual("../../../../src/core/drive/huaweiDriveApi"),

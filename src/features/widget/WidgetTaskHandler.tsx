@@ -1,9 +1,10 @@
 import React from "react";
 import { registerWidgetTaskHandler } from "react-native-android-widget";
-import { ClockWidget } from "./ClockWidget";
-import type { WidgetSize } from "./ClockWidget";
-import { loadSettings, loadAlarms } from "./services/widgetData";
+
 import { DEFAULT_WIDGET_SETTINGS } from "../../models/Settings";
+import type { WidgetSize } from "./ClockWidget";
+import { ClockWidget } from "./ClockWidget";
+import { loadAlarms,loadSettings } from "./services/widgetData";
 
 const WIDGET_NAMES: Record<string, WidgetSize> = {
   ClockWidgetSmallProvider: "small",

@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from "react";
-import { View, StyleSheet, useWindowDimensions } from "react-native";
-import { Button, Text, useTheme } from "react-native-paper";
+import React, { useCallback,useState } from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet, useWindowDimensions,View } from "react-native";
+import { Button, Text, useTheme } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
 
 interface Props {

@@ -1,17 +1,17 @@
+import { format } from "date-fns";
+import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, List, Snackbar } from "react-native-paper";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
 
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
-import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
+import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
 import {
-  resolvedStoreAtom,
   game2048StoreAtom,
+  resolvedStoreAtom,
 } from "../../game2048/atoms/game2048Atoms";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { useSnackbar } from "../hooks/useSnackbar";

@@ -1,10 +1,11 @@
-import React from "react";
-import { render, fireEvent, act, waitFor } from "@testing-library/react-native";
-import { Linking } from "react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
-import { PaperProvider } from "react-native-paper";
-import { AboutScreen } from "../../../../src/features/settings/screens/AboutScreen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
+import React from "react";
+import { Linking } from "react-native";
+import { PaperProvider } from "react-native-paper";
+
+import { AboutScreen } from "../../../../src/features/settings/screens/AboutScreen";
 
 const mockNavigate = jest.fn();
 

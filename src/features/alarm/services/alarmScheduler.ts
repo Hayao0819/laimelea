@@ -1,8 +1,9 @@
 import notifee, {
-  TriggerType,
   AndroidCategory,
   type TimestampTrigger,
+  TriggerType,
 } from "@notifee/react-native";
+
 import { ALARM_CHANNEL_ID } from "../../../core/notifications/notifeeSetup";
 import type { Alarm } from "../../../models/Alarm";
 

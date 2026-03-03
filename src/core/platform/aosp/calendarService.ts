@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "../../../models/CalendarEvent";
-import type { CalendarInfo, PlatformCalendarService } from "../types";
 import { getNativeCalendarModule } from "../native/calendarModule";
+import type { CalendarInfo, PlatformCalendarService } from "../types";
 
 export function createAospCalendarService(): PlatformCalendarService {
   return {

@@ -1,10 +1,10 @@
+import { format } from "date-fns";
+import { enUS } from "date-fns/locale/en-US";
+import { ja } from "date-fns/locale/ja";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet } from "react-native";
 import { Text } from "react-native-paper";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale/ja";
-import { enUS } from "date-fns/locale/en-US";
-import { useTranslation } from "react-i18next";
 
 interface Props {
   realTimeMs: number;

@@ -1,8 +1,9 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Button } from "react-native-paper";
-import { spacing } from "../../../../app/spacing";
 import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Button } from "react-native-paper";
+
+import { spacing } from "../../../../app/spacing";
 import type { DismissalComponentProps } from "../../strategies/types";
 
 export function SimpleDismissal({

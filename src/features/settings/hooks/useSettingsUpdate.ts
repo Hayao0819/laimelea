@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from "react";
 import { useAtom } from "jotai";
+import { useCallback, useMemo } from "react";
+
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 import type { AppSettings, WidgetSettings } from "../../../models/Settings";
 import {

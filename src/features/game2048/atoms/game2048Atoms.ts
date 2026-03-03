@@ -1,14 +1,8 @@
 import { atom } from "jotai";
 import { atomWithStorage, unwrap } from "jotai/utils";
+
 import { createAsyncStorage } from "../../../core/storage/asyncStorageAdapter";
 import { STORAGE_KEYS } from "../../../core/storage/keys";
-import type {
-  BoardSize,
-  Game2048Settings,
-  Game2048Store,
-  GameSnapshot,
-  GameState,
-} from "../logic/gameTypes";
 import {
   createDefaultStore,
   createNewGame,
@@ -16,6 +10,13 @@ import {
   getMaxTile,
   MAX_HISTORY_SIZE,
 } from "../logic/gameEngine";
+import type {
+  BoardSize,
+  Game2048Settings,
+  Game2048Store,
+  GameSnapshot,
+  GameState,
+} from "../logic/gameTypes";
 
 const DEFAULT_STORE = createDefaultStore();
 

@@ -1,36 +1,37 @@
-import React, { useState, useMemo, useCallback, useLayoutEffect } from "react";
-import { View, ScrollView, StyleSheet, Alert } from "react-native";
-import {
-  Text,
-  TextInput,
-  SegmentedButtons,
-  List,
-  Switch,
-  Surface,
-  Button,
-  IconButton,
-  Divider,
-  Portal,
-  Dialog,
-  RadioButton,
-  Snackbar,
-  useTheme,
-} from "react-native-paper";
-import { useAtom, useAtomValue } from "jotai";
-import { useTranslation } from "react-i18next";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../../navigation/types";
+import { useAtom, useAtomValue } from "jotai";
+import React, { useCallback, useLayoutEffect,useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert,ScrollView, StyleSheet, View } from "react-native";
+import {
+  Button,
+  Dialog,
+  Divider,
+  IconButton,
+  List,
+  Portal,
+  RadioButton,
+  SegmentedButtons,
+  Snackbar,
+  Surface,
+  Switch,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
+
+import { radius,spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { customToReal, realToCustom } from "../../../core/time/conversions";
-import { scheduleAlarm, cancelAlarm } from "../services/alarmScheduler";
-import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
-import { AlarmTimePicker } from "../components/AlarmTimePicker";
-import { getAllStrategies, getStrategy } from "../strategies";
 import type { Alarm } from "../../../models/Alarm";
 import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
-import { spacing, radius } from "../../../app/spacing";
+import type { RootStackParamList } from "../../../navigation/types";
+import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
+import { AlarmTimePicker } from "../components/AlarmTimePicker";
+import { cancelAlarm,scheduleAlarm } from "../services/alarmScheduler";
+import { getAllStrategies, getStrategy } from "../strategies";
 
 const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
 const SNOOZE_MAX_OPTIONS = [1, 2, 3, 5, 10];

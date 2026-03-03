@@ -1,14 +1,15 @@
-import { useCallback, useRef } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useCallback, useRef } from "react";
+
+import { platformServicesAtom } from "../atoms/platformAtoms";
 import {
-  sleepSessionsAtom,
   cycleEstimationAtom,
-  sleepLoadingAtom,
+  sleepCacheStaleAtom,
   sleepErrorAtom,
   sleepLastSyncAtom,
-  sleepCacheStaleAtom,
+  sleepLoadingAtom,
+  sleepSessionsAtom,
 } from "../atoms/sleepAtoms";
-import { platformServicesAtom } from "../atoms/platformAtoms";
 import { estimateCycle } from "../features/sleep/services/cycleDetector";
 import type { SleepSession } from "../models/SleepSession";
 import type { CycleEstimation } from "../models/SleepSession";

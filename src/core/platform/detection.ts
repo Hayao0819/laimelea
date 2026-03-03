@@ -1,6 +1,7 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import type { PlatformType } from "./types";
+
 import NativeDeviceInfoModule from "./native/NativeDeviceInfoModule";
+import type { PlatformType } from "./types";
 
 export function getDeviceManufacturer(): string | null {
   return NativeDeviceInfoModule?.getManufacturer() ?? null;

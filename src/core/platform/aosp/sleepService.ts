@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { STORAGE_KEYS } from "../../storage/keys";
+
 import type { SleepSession } from "../../../models/SleepSession";
+import { STORAGE_KEYS } from "../../storage/keys";
 import type { PlatformSleepService } from "../types";
 
 export function createAospSleepService(): PlatformSleepService {

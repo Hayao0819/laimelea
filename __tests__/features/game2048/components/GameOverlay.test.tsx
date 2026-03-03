@@ -1,6 +1,7 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { GameOverlay } from "../../../../src/features/game2048/components/GameOverlay";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({

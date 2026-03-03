@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, SegmentedButtons, Text } from "react-native-paper";
-import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
-import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { TimezonePickerSheet } from "../components/TimezonePickerSheet";
+import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
 export function TimezoneSettingsScreen() {
   const { t } = useTranslation();

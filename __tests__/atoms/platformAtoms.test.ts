@@ -1,7 +1,8 @@
 import { createStore } from "jotai";
+
 import {
-  platformTypeAtom,
   platformServicesAtom,
+  platformTypeAtom,
 } from "../../src/atoms/platformAtoms";
 import type { PlatformType } from "../../src/core/platform/types";
 

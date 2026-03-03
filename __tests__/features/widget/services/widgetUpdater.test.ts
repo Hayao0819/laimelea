@@ -3,15 +3,16 @@ import {
   requestWidgetUpdate,
   type WidgetInfo,
 } from "react-native-android-widget";
+
+import { ClockWidget } from "../../../../src/features/widget/ClockWidget";
 import {
-  loadSettings,
   loadAlarms,
+  loadSettings,
 } from "../../../../src/features/widget/services/widgetData";
+import { requestClockWidgetUpdate } from "../../../../src/features/widget/services/widgetUpdater";
+import type { Alarm } from "../../../../src/models/Alarm";
 import { DEFAULT_WIDGET_SETTINGS } from "../../../../src/models/Settings";
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
-import { requestClockWidgetUpdate } from "../../../../src/features/widget/services/widgetUpdater";
-import { ClockWidget } from "../../../../src/features/widget/ClockWidget";
-import type { Alarm } from "../../../../src/models/Alarm";
 
 jest.mock("../../../../src/features/widget/services/widgetData", () => ({
   loadSettings: jest.fn(),

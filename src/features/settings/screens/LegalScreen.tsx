@@ -1,8 +1,8 @@
-import React, { useCallback } from "react";
-import { ScrollView, StyleSheet, Linking } from "react-native";
-import { List } from "react-native-paper";
-import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
+import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { Linking,ScrollView, StyleSheet } from "react-native";
+import { List } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
 

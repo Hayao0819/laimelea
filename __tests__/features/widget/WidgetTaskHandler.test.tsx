@@ -1,15 +1,16 @@
 import { registerWidgetTaskHandler } from "react-native-android-widget";
+
 import {
-  loadSettings,
   loadAlarms,
+  loadSettings,
 } from "../../../src/features/widget/services/widgetData";
 import { registerClockWidgetHandler } from "../../../src/features/widget/WidgetTaskHandler";
+import type { Alarm } from "../../../src/models/Alarm";
+import type { AppSettings } from "../../../src/models/Settings";
 import {
   DEFAULT_SETTINGS,
   DEFAULT_WIDGET_SETTINGS,
 } from "../../../src/models/Settings";
-import type { AppSettings } from "../../../src/models/Settings";
-import type { Alarm } from "../../../src/models/Alarm";
 
 jest.mock("react-native-android-widget", () => ({
   registerWidgetTaskHandler: jest.fn(),

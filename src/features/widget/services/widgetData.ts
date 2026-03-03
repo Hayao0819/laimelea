@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { STORAGE_KEYS } from "../../../core/storage/keys";
-import { DEFAULT_SETTINGS } from "../../../models/Settings";
-import type { AppSettings } from "../../../models/Settings";
 import type { Alarm } from "../../../models/Alarm";
+import type { AppSettings } from "../../../models/Settings";
+import { DEFAULT_SETTINGS } from "../../../models/Settings";
 
 export async function loadSettings(): Promise<AppSettings> {
   try {

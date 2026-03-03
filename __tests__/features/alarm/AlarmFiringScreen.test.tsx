@@ -1,14 +1,15 @@
-import React from "react";
-import { render, fireEvent, act, waitFor } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
-import { PaperProvider } from "react-native-paper";
 import notifee from "@notifee/react-native";
-import { AlarmFiringScreen } from "../../../src/features/alarm/screens/AlarmFiringScreen";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
+import React from "react";
+import { PaperProvider } from "react-native-paper";
+
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+import { AlarmFiringScreen } from "../../../src/features/alarm/screens/AlarmFiringScreen";
 import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
 import type { Alarm } from "../../../src/models/Alarm";
+import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

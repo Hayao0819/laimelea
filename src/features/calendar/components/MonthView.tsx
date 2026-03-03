@@ -1,16 +1,17 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  useWindowDimensions,
   ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { Text, useTheme } from "react-native-paper";
-import { useTranslation } from "react-i18next";
+
 import { spacing } from "../../../app/spacing";
-import { EventCard } from "./EventCard";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import { EventCard } from "./EventCard";
 
 interface MonthViewProps {
   events: CalendarEvent[];

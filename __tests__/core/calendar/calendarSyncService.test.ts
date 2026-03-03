@@ -1,6 +1,6 @@
 import { syncCalendarEvents } from "../../../src/core/calendar/calendarSyncService";
-import type { CalendarEvent } from "../../../src/models/CalendarEvent";
 import type { PlatformCalendarService } from "../../../src/core/platform/types";
+import type { CalendarEvent } from "../../../src/models/CalendarEvent";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const SYNC_WINDOW_DAYS = 14;

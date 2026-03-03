@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from "react";
-import { View, StyleSheet } from "react-native";
-import { Button, Text, TextInput, HelperText } from "react-native-paper";
-import { spacing } from "../../../../app/spacing";
+import React, { useCallback,useState } from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Button, HelperText,Text, TextInput } from "react-native-paper";
+
+import { spacing } from "../../../../app/spacing";
 import { generateMathProblem } from "../../services/mathProblemGenerator";
 import type { DismissalComponentProps } from "../../strategies/types";
 

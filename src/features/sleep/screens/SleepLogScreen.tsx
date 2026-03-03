@@ -1,32 +1,33 @@
+import { useFocusEffect,useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { format } from "date-fns";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  View,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
-  Pressable,
+  View,
 } from "react-native";
 import {
-  Text,
+  Button,
   Card,
+  Chip,
+  Dialog,
   FAB,
   Portal,
-  Dialog,
-  Button,
   Snackbar,
-  Chip,
+  Text,
   useTheme,
 } from "react-native-paper";
-import { useTranslation } from "react-i18next";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { format } from "date-fns";
+
 import { spacing } from "../../../app/spacing";
 import { useSleepSync } from "../../../hooks/useSleepSync";
+import type { SleepSession } from "../../../models/SleepSession";
+import type { RootStackParamList } from "../../../navigation/types";
 import { CycleEstimateCard } from "../components/CycleEstimateCard";
 import { SleepDriftChart } from "../components/SleepDriftChart";
-import type { SleepSession } from "../../../models/SleepSession";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

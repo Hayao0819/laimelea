@@ -1,12 +1,13 @@
+import { act,fireEvent, render } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { AlarmListScreen } from "../../../src/features/alarm/screens/AlarmListScreen";
+
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+import { AlarmListScreen } from "../../../src/features/alarm/screens/AlarmListScreen";
 import type { Alarm } from "../../../src/models/Alarm";
+import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
   requestClockWidgetUpdate: jest.fn(),

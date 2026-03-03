@@ -1,4 +1,6 @@
+import { useAtomValue } from "jotai";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
   Checkbox,
@@ -7,8 +9,6 @@ import {
   Snackbar,
   Text,
 } from "react-native-paper";
-import { useAtomValue } from "jotai";
-import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
 import { calendarListAtom } from "../../../atoms/calendarAtoms";

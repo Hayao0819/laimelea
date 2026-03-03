@@ -1,7 +1,8 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Card, IconButton, Text, useTheme } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Card, IconButton, Text, useTheme } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
 import type { TimerState } from "../../../models/Timer";
 import { CircularProgress } from "./CircularProgress";

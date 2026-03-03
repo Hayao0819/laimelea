@@ -1,11 +1,11 @@
-import { registerStrategy } from "./registry";
-import { simpleStrategy } from "./simpleStrategy";
-import { shakeStrategy } from "./shakeStrategy";
 import { mathStrategy } from "./mathStrategy";
+import { registerStrategy } from "./registry";
+import { shakeStrategy } from "./shakeStrategy";
+import { simpleStrategy } from "./simpleStrategy";
 
 registerStrategy(simpleStrategy);
 registerStrategy(shakeStrategy);
 registerStrategy(mathStrategy);
 
-export { registerStrategy, getStrategy, getAllStrategies } from "./registry";
-export type { DismissalStrategy, DismissalComponentProps } from "./types";
+export { getAllStrategies,getStrategy, registerStrategy } from "./registry";
+export type { DismissalComponentProps,DismissalStrategy } from "./types";

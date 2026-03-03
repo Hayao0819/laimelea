@@ -1,23 +1,23 @@
-import React, { useEffect, useMemo } from "react";
-import { useColorScheme } from "react-native";
-import { PaperProvider } from "react-native-paper";
 import {
-  DefaultTheme as NavLightTheme,
   DarkTheme as NavDarkTheme,
+  DefaultTheme as NavLightTheme,
   NavigationContainer,
 } from "@react-navigation/native";
 import { useAtomValue, useSetAtom } from "jotai";
+import React, { useEffect, useMemo } from "react";
+import { useColorScheme } from "react-native";
+import { PaperProvider } from "react-native-paper";
 
-import { lightTheme, darkTheme } from "./theme";
-import { settingsAtom } from "../atoms/settingsAtoms";
 import { platformTypeAtom } from "../atoms/platformAtoms";
-import { detectPlatform } from "../core/platform/detection";
+import { settingsAtom } from "../atoms/settingsAtoms";
+import i18n, { resolveLanguage } from "../core/i18n";
 import {
   createAlarmChannel,
   createTimerChannel,
   ensureNotificationPermissions,
 } from "../core/notifications/notifeeSetup";
-import i18n, { resolveLanguage } from "../core/i18n";
+import { detectPlatform } from "../core/platform/detection";
+import { darkTheme,lightTheme } from "./theme";
 
 interface ProvidersProps {
   children: React.ReactNode;

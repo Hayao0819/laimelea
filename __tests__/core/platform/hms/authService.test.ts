@@ -1,5 +1,5 @@
-import { createHmsAuthService } from "../../../../src/core/platform/hms/authService";
 import { HMS_AUTH_CONFIG } from "../../../../src/core/platform/hms/authConfig";
+import { createHmsAuthService } from "../../../../src/core/platform/hms/authService";
 import { STORAGE_KEYS } from "../../../../src/core/storage/keys";
 
 const mockStore: Record<string, string> = {};

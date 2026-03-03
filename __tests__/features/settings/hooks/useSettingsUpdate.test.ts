@@ -1,14 +1,15 @@
+import { act,renderHook } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { renderHook, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
+
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
+import { useSettingsUpdate } from "../../../../src/features/settings/hooks/useSettingsUpdate";
+import { requestClockWidgetUpdate } from "../../../../src/features/widget/services/widgetUpdater";
+import type { AppSettings } from "../../../../src/models/Settings";
 import {
   DEFAULT_SETTINGS,
   DEFAULT_WIDGET_SETTINGS,
 } from "../../../../src/models/Settings";
-import type { AppSettings } from "../../../../src/models/Settings";
-import { useSettingsUpdate } from "../../../../src/features/settings/hooks/useSettingsUpdate";
-import { requestClockWidgetUpdate } from "../../../../src/features/widget/services/widgetUpdater";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,

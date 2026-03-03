@@ -1,15 +1,16 @@
 import React from "react";
 import { FlexWidget, TextWidget } from "react-native-android-widget";
 import type { ColorProp } from "react-native-android-widget/lib/typescript/widgets/utils/style.props";
-import type { CycleConfig, CustomTimeValue } from "../../models/CustomTime";
-import type { Alarm } from "../../models/Alarm";
-import type { WidgetSettings } from "../../models/Settings";
-import { DEFAULT_WIDGET_SETTINGS } from "../../models/Settings";
+
 import { realToCustom } from "../../core/time/conversions";
 import {
-  formatCustomTimeShort,
   formatCustomDay,
+  formatCustomTimeShort,
 } from "../../core/time/formatting";
+import type { Alarm } from "../../models/Alarm";
+import type { CustomTimeValue,CycleConfig } from "../../models/CustomTime";
+import type { WidgetSettings } from "../../models/Settings";
+import { DEFAULT_WIDGET_SETTINGS } from "../../models/Settings";
 
 export type WidgetSize = "small" | "medium" | "large";
 

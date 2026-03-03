@@ -1,4 +1,4 @@
-import { device, element, by, waitFor } from "detox";
+import { by, device, element, waitFor } from "detox";
 
 /**
  * Launch app with a fresh state (clear AsyncStorage).

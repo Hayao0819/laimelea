@@ -1,6 +1,7 @@
+import { act,render } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
+
 import { settingsAtom } from "../../src/atoms/settingsAtoms";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 

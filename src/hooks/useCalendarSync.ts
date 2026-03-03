@@ -1,12 +1,13 @@
-import { useCallback, useRef } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useCallback, useRef } from "react";
+
 import {
-  calendarEventsAtom,
-  calendarLoadingAtom,
-  calendarLastSyncAtom,
-  calendarSyncErrorAtom,
   calendarCacheStaleAtom,
+  calendarEventsAtom,
+  calendarLastSyncAtom,
   calendarListAtom,
+  calendarLoadingAtom,
+  calendarSyncErrorAtom,
 } from "../atoms/calendarAtoms";
 import { platformServicesAtom } from "../atoms/platformAtoms";
 import { resolvedSettingsAtom } from "../atoms/settingsAtoms";

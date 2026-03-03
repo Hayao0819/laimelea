@@ -1,9 +1,10 @@
+import { fireEvent,render } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { DeskClockScreen } from "../../../src/features/clock/screens/DeskClockScreen";
+
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
+import { DeskClockScreen } from "../../../src/features/clock/screens/DeskClockScreen";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 const mockGoBack = jest.fn();

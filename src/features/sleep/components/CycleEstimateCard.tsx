@@ -1,11 +1,12 @@
-import React, { useCallback } from "react";
-import { View, StyleSheet } from "react-native";
-import { Card, Text, Chip, Button, useTheme } from "react-native-paper";
-import { useTranslation } from "react-i18next";
 import { useAtom, useAtomValue } from "jotai";
+import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Button, Card, Chip, Text, useTheme } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
-import { cycleEstimationAtom } from "../../../atoms/sleepAtoms";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { cycleEstimationAtom } from "../../../atoms/sleepAtoms";
 
 const CONFIDENCE_COLORS: Record<
   "low" | "medium" | "high",

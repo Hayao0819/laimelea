@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet } from "react-native";
-import { Button, ProgressBar, Text } from "react-native-paper";
-import { spacing } from "../../../../app/spacing";
+import React, { useEffect,useState } from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Button, ProgressBar, Text } from "react-native-paper";
 import RNShake from "react-native-shake";
+
+import { spacing } from "../../../../app/spacing";
 import type { DismissalComponentProps } from "../../strategies/types";
 
 const REQUIRED_SHAKES = 3;

@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, FlatList, StyleSheet } from "react-native";
-import { Snackbar, Text } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { FlatList, StyleSheet,View } from "react-native";
+import { Snackbar, Text } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
 import { useTimers } from "../../../hooks/useTimers";
-import { TimerCard } from "./TimerCard";
-import { NumpadInput } from "./NumpadInput";
 import type { TimerState } from "../../../models/Timer";
+import { NumpadInput } from "./NumpadInput";
+import { TimerCard } from "./TimerCard";
 
 export function CountdownTimer() {
   const { t } = useTranslation();

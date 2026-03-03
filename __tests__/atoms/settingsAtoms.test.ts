@@ -1,18 +1,19 @@
 import { createStore } from "jotai";
+
 import {
-  settingsAtom,
-  resolvedSettingsAtom,
-  settingsLoadedAtom,
   cycleConfigAtom,
-  setupCompleteAtom,
   primaryTimeDisplayAtom,
+  resolvedSettingsAtom,
+  settingsAtom,
+  settingsLoadedAtom,
+  setupCompleteAtom,
 } from "../../src/atoms/settingsAtoms";
-import {
-  DEFAULT_SETTINGS,
-  DEFAULT_ALARM_DEFAULTS,
-} from "../../src/models/Settings";
-import type { AppSettings, AlarmDefaults } from "../../src/models/Settings";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../src/core/time/constants";
+import type { AlarmDefaults,AppSettings } from "../../src/models/Settings";
+import {
+  DEFAULT_ALARM_DEFAULTS,
+  DEFAULT_SETTINGS,
+} from "../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

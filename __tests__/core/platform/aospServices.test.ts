@@ -1,6 +1,6 @@
 import { createAospAuthService } from "../../../src/core/platform/aosp/authService";
-import { createAospCalendarService } from "../../../src/core/platform/aosp/calendarService";
 import { createAospBackupService } from "../../../src/core/platform/aosp/backupService";
+import { createAospCalendarService } from "../../../src/core/platform/aosp/calendarService";
 import { createAospSleepService } from "../../../src/core/platform/aosp/sleepService";
 import { STORAGE_KEYS } from "../../../src/core/storage/keys";
 

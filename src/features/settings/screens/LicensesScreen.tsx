@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
-import { FlatList, StyleSheet, Linking, View } from "react-native";
-import { List, Divider, Text } from "react-native-paper";
 import { useTranslation } from "react-i18next";
+import { FlatList, Linking, StyleSheet, View } from "react-native";
+import { Divider, List, Text } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
 import licensesData from "../../../generated/licenses.json";

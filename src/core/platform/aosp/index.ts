@@ -1,4 +1,4 @@
 export { createAospAuthService } from "./authService";
-export { createAospCalendarService } from "./calendarService";
 export { createAospBackupService } from "./backupService";
+export { createAospCalendarService } from "./calendarService";
 export { createAospSleepService } from "./sleepService";

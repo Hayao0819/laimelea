@@ -1,10 +1,11 @@
 import {
+  getGrantedPermissions,
   initialize,
   readRecords,
   requestPermission,
-  getGrantedPermissions,
   SleepStageType,
 } from "react-native-health-connect";
+
 import type { SleepSession } from "../../../models/SleepSession";
 import type { SleepStageType as AppSleepStageType } from "../../../models/SleepSession";
 import type { PlatformSleepService } from "../types";

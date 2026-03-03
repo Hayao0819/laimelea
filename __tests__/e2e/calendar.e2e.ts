@@ -1,7 +1,8 @@
-import { element, by, expect, waitFor } from "detox";
+import { by, element, expect, waitFor } from "detox";
+
 import {
-  launchAppFresh,
   completeSetup,
+  launchAppFresh,
   navigateToTab,
   waitVisible,
 } from "./utils/helpers";

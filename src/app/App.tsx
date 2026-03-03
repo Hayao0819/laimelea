@@ -1,7 +1,8 @@
 import React, { Suspense } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { Providers } from "./Providers";
+
 import { RootNavigator } from "../navigation/RootNavigator";
+import { Providers } from "./Providers";
 
 function LoadingScreen() {
   return (

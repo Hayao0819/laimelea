@@ -1,6 +1,6 @@
 import {
-  generateBulkAlarms,
   ANDROID_ALARM_TRIGGER_LIMIT,
+  generateBulkAlarms,
 } from "../../../../src/features/alarm/services/bulkAlarmCreator";
 import type { BulkAlarmParams } from "../../../../src/models/Alarm";
 import type { CycleConfig } from "../../../../src/models/CustomTime";

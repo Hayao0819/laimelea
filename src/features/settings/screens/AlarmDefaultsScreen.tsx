@@ -1,11 +1,11 @@
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, SegmentedButtons, Switch, Text } from "react-native-paper";
-import { useTranslation } from "react-i18next";
 
 import { spacing } from "../../../app/spacing";
-import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
+import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
 const GRADUAL_VOLUME_OPTIONS = [0, 15, 30, 60];
 const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];

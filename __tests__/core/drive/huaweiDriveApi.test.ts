@@ -1,10 +1,10 @@
 import {
-  findBackupFile,
-  uploadBackup,
   downloadBackup,
-  getFileMetadata,
   DriveAuthExpiredError,
   DriveScopeDeniedError,
+  findBackupFile,
+  getFileMetadata,
+  uploadBackup,
 } from "../../../src/core/drive/huaweiDriveApi";
 
 const mockFetch = jest.fn();

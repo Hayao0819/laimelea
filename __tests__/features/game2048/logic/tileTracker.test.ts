@@ -1,10 +1,10 @@
 import {
-  slideRowTracked,
   computeMoveAnimation,
   initTilesFromBoard,
-  trackMove,
   resetIdCounter,
+  slideRowTracked,
   type TrackedTile,
+  trackMove,
 } from "../../../../src/features/game2048/logic/tileTracker";
 
 beforeEach(() => {

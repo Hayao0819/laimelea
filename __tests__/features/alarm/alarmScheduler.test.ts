@@ -1,8 +1,9 @@
 import notifee from "@notifee/react-native";
+
 import {
-  scheduleAlarm,
   cancelAlarm,
   rescheduleAllAlarms,
+  scheduleAlarm,
 } from "../../../src/features/alarm/services/alarmScheduler";
 import type { Alarm } from "../../../src/models/Alarm";
 

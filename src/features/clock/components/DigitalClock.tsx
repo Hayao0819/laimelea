@@ -1,11 +1,12 @@
-import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Text } from "react-native-paper";
-import { useAtomValue } from "jotai";
-import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
-import { formatCustomTime } from "../../../core/time/formatting";
+import { useAtomValue } from "jotai";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet,View } from "react-native";
+import { Text } from "react-native-paper";
+
 import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { formatCustomTime } from "../../../core/time/formatting";
 import type { CustomTimeValue } from "../../../models/CustomTime";
 
 interface Props {

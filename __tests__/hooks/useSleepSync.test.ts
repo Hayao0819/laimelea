@@ -1,9 +1,10 @@
+import { act,renderHook } from "@testing-library/react-native";
+import { atom,createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { renderHook, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore, atom } from "jotai";
+
+import type { PlatformServices } from "../../src/core/platform/types";
 import type { SleepSession } from "../../src/models/SleepSession";
 import type { CycleEstimation } from "../../src/models/SleepSession";
-import type { PlatformServices } from "../../src/core/platform/types";
 
 // Replace atomWithStorage atoms with plain atoms for testing.
 // Variables prefixed with "mock" are allowed in jest.mock factory.

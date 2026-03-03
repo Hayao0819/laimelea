@@ -1,16 +1,17 @@
+import { useNavigation } from "@react-navigation/native";
+import { format } from "date-fns";
+import { useAtomValue } from "jotai";
 import React, { useCallback } from "react";
-import { View, StyleSheet, StatusBar, useWindowDimensions } from "react-native";
+import { useTranslation } from "react-i18next";
+import { StatusBar, StyleSheet, useWindowDimensions,View } from "react-native";
 import { IconButton } from "react-native-paper";
 import { Text } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
-import { useTranslation } from "react-i18next";
-import { useAtomValue } from "jotai";
-import { format } from "date-fns";
+
+import { spacing } from "../../../app/spacing";
+import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { formatCustomTime } from "../../../core/time/formatting";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
 import { useFullscreen } from "../../../hooks/useFullscreen";
-import { formatCustomTime } from "../../../core/time/formatting";
-import { settingsAtom } from "../../../atoms/settingsAtoms";
-import { spacing } from "../../../app/spacing";
 
 export function DeskClockScreen() {
   const navigation = useNavigation();

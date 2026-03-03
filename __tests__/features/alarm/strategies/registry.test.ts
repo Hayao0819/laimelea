@@ -1,8 +1,8 @@
 import {
-  registerStrategy,
-  getStrategy,
-  getAllStrategies,
   clearStrategies,
+  getAllStrategies,
+  getStrategy,
+  registerStrategy,
 } from "../../../../src/features/alarm/strategies/registry";
 import type { DismissalStrategy } from "../../../../src/features/alarm/strategies/types";
 

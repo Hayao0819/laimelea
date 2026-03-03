@@ -1,7 +1,7 @@
 import {
   createAospAuthService,
-  createAospCalendarService,
   createAospBackupService,
+  createAospCalendarService,
   createAospSleepService,
 } from "./aosp";
 import {

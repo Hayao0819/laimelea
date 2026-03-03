@@ -1,6 +1,7 @@
+import { act,renderHook } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { renderHook, act } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
+
 import { useStopwatch } from "../../src/hooks/useStopwatch";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({

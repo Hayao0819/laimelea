@@ -1,15 +1,15 @@
-import React, { useCallback } from "react";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Appbar, BottomNavigation } from "react-native-paper";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { Appbar, BottomNavigation } from "react-native-paper";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
-import { ClockScreen } from "../features/clock/screens/ClockScreen";
 import { AlarmListScreen } from "../features/alarm/screens/AlarmListScreen";
 import { CalendarScreen } from "../features/calendar/screens/CalendarScreen";
+import { ClockScreen } from "../features/clock/screens/ClockScreen";
 import { SleepLogScreen } from "../features/sleep/screens/SleepLogScreen";
 import { TimerScreen } from "../features/timer/screens/TimerScreen";
 import type { BottomTabParamList, RootStackParamList } from "./types";

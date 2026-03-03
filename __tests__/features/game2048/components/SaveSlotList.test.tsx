@@ -1,6 +1,7 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { SaveSlotList } from "../../../../src/features/game2048/components/SaveSlotList";
 import type { GameSnapshot } from "../../../../src/features/game2048/logic/gameTypes";
 

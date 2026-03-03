@@ -1,9 +1,10 @@
+import { fireEvent,render } from "@testing-library/react-native";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { AlarmCard } from "../../../src/features/alarm/components/AlarmCard";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 import type { Alarm } from "../../../src/models/Alarm";
+import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,

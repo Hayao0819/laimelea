@@ -1,11 +1,12 @@
-import React from "react";
 import { render } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
+import { createStore,Provider as JotaiProvider } from "jotai";
+import React from "react";
 import { PaperProvider } from "react-native-paper";
-import { ClockScreen } from "../../../src/features/clock/screens/ClockScreen";
+
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+import { ClockScreen } from "../../../src/features/clock/screens/ClockScreen";
 import type { AppSettings } from "../../../src/models/Settings";
+import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

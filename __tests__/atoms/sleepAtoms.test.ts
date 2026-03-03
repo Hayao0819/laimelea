@@ -1,12 +1,13 @@
 import { createStore } from "jotai";
+
 import {
-  sleepSessionsAtom,
   cycleEstimationAtom,
-  sleepLoadingAtom,
+  SLEEP_CACHE_TTL_MS,
+  sleepCacheStaleAtom,
   sleepErrorAtom,
   sleepLastSyncAtom,
-  sleepCacheStaleAtom,
-  SLEEP_CACHE_TTL_MS,
+  sleepLoadingAtom,
+  sleepSessionsAtom,
 } from "../../src/atoms/sleepAtoms";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({

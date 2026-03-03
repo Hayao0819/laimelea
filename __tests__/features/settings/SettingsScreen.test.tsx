@@ -1,9 +1,10 @@
-import React from "react";
 import { render } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
+import { createStore,Provider as JotaiProvider } from "jotai";
+import React from "react";
 import { PaperProvider } from "react-native-paper";
-import { SettingsScreen } from "../../../src/features/settings/screens/SettingsScreen";
+
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
+import { SettingsScreen } from "../../../src/features/settings/screens/SettingsScreen";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 const mockNavigate = jest.fn();

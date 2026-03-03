@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
 import { useAtom } from "jotai";
+import { useCallback, useEffect, useRef } from "react";
+
 import { timersAtom } from "../atoms/timerAtoms";
 import { showTimerCompleteNotification } from "../features/timer/services/timerNotification";
 import type { TimerState } from "../models/Timer";

@@ -1,11 +1,11 @@
+import {
+  downloadBackup,
+  findBackupFile,
+  getFileMetadata,
+  uploadBackup,
+} from "../../../../src/core/drive/googleDriveApi";
 import { createGmsBackupService } from "../../../../src/core/platform/gms/backupService";
 import type { PlatformAuthService } from "../../../../src/core/platform/types";
-import {
-  findBackupFile,
-  uploadBackup,
-  downloadBackup,
-  getFileMetadata,
-} from "../../../../src/core/drive/googleDriveApi";
 
 jest.mock("../../../../src/core/drive/googleDriveApi", () => ({
   ...jest.requireActual("../../../../src/core/drive/googleDriveApi"),

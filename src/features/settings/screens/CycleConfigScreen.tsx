@@ -1,12 +1,12 @@
+import { format } from "date-fns";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, List, Text, TextInput } from "react-native-paper";
-import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
 
 import { spacing } from "../../../app/spacing";
-import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
+import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
 export function CycleConfigScreen() {
   const { t } = useTranslation();

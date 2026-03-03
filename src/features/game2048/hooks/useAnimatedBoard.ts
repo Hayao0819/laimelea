@@ -1,9 +1,10 @@
 import { useRef } from "react";
+
 import type { Direction } from "../logic/gameTypes";
 import {
   initTilesFromBoard,
-  trackMove,
   type TrackedTile,
+  trackMove,
 } from "../logic/tileTracker";
 
 export interface TileRenderData {

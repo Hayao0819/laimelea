@@ -1,5 +1,6 @@
-import { useEffect } from "react";
 import { useAtom, useAtomValue } from "jotai";
+import { useEffect } from "react";
+
 import { currentTimeMsAtom } from "../atoms/clockAtoms";
 import { settingsAtom } from "../atoms/settingsAtoms";
 import { realToCustom } from "../core/time/conversions";

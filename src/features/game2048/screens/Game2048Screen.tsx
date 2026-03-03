@@ -1,31 +1,31 @@
+import { useNavigation } from "@react-navigation/native";
+import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Button, IconButton, useTheme } from "react-native-paper";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useTranslation } from "react-i18next";
-import { useNavigation } from "@react-navigation/native";
 
 import { spacing } from "../../../app/spacing";
 import {
-  game2048StoreAtom,
-  currentGameAtom,
   bestScoresAtom,
   canUndoAtom,
-  snapshotsAtom,
-  pushHistoryAtom,
-  undoAtom,
-  newGameAtom,
-  settingsAtom,
-  saveSnapshotAtom,
+  currentGameAtom,
+  game2048StoreAtom,
   loadSnapshotAtom,
   milestoneAutoSaveAtom,
+  newGameAtom,
+  pushHistoryAtom,
+  saveSnapshotAtom,
+  settingsAtom,
+  snapshotsAtom,
+  undoAtom,
 } from "../atoms/game2048Atoms";
-import { move } from "../logic/gameEngine";
-import type { Direction, Game2048Store, GameSnapshot } from "../logic/gameTypes";
 import { GameBoard } from "../components/GameBoard";
 import { GameHeader } from "../components/GameHeader";
 import { GameOverlay } from "../components/GameOverlay";
 import { SaveSlotList } from "../components/SaveSlotList";
+import { move } from "../logic/gameEngine";
+import type { Direction, Game2048Store, GameSnapshot } from "../logic/gameTypes";
 
 export function Game2048Screen() {
   const { t } = useTranslation();

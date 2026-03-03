@@ -1,8 +1,8 @@
+import { fireEvent,render } from "@testing-library/react-native";
+import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { PaperProvider } from "react-native-paper";
-import { Game2048SettingsScreen } from "../../../../src/features/game2048/screens/Game2048SettingsScreen";
+
 import {
   game2048StoreAtom,
   resolvedStoreAtom,
@@ -12,6 +12,7 @@ import {
   createNewGame,
 } from "../../../../src/features/game2048/logic/gameEngine";
 import type { Game2048Store } from "../../../../src/features/game2048/logic/gameTypes";
+import { Game2048SettingsScreen } from "../../../../src/features/game2048/screens/Game2048SettingsScreen";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};

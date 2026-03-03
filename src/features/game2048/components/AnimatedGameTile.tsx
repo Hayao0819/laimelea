@@ -1,15 +1,16 @@
 import React, { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
-  withDelay,
   Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
 } from "react-native-reanimated";
-import { GameTile } from "./GameTile";
+
 import type { TileRenderData } from "../hooks/useAnimatedBoard";
+import { GameTile } from "./GameTile";
 
 const SLIDE_DURATION = 120;
 const MERGE_POP_DURATION = 160;

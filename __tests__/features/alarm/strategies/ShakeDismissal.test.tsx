@@ -1,6 +1,7 @@
+import { act,render } from "@testing-library/react-native";
 import React from "react";
-import { render, act } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
+
 import { ShakeDismissal } from "../../../../src/features/alarm/components/dismissal/ShakeDismissal";
 
 let shakeCallback: (() => void) | null = null;

@@ -1,6 +1,7 @@
 import React from "react";
-import { Pressable, View, StyleSheet, type DimensionValue } from "react-native";
+import { type DimensionValue,Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
+
 import { spacing } from "../../../app/spacing";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 
