@@ -80,4 +80,40 @@ describe("LegalScreen", () => {
       "https://github.com/Hayao0819/laimelea/blob/master/docs/privacy-policy.md",
     );
   });
+
+  it("should display MIT License item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("mit-license-item")).toBeTruthy();
+  });
+
+  it("should display MIT-SUSHI License item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("mit-sushi-license-item")).toBeTruthy();
+  });
+
+  it("should open MIT License URL on press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const mitItem = getByTestId("mit-license-item");
+
+    await act(async () => {
+      fireEvent.press(mitItem);
+    });
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      "https://github.com/Hayao0819/laimelea/blob/master/LICENSE",
+    );
+  });
+
+  it("should open MIT-SUSHI License URL on press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const sushiItem = getByTestId("mit-sushi-license-item");
+
+    await act(async () => {
+      fireEvent.press(sushiItem);
+    });
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      "https://github.com/Hayao0819/laimelea/blob/master/LICENSE-SUSHI",
+    );
+  });
 });

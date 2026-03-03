@@ -164,4 +164,20 @@ describe("AboutScreen", () => {
       "https://github.com/Hayao0819/laimelea",
     );
   });
+
+  it("should display Twitter item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("twitter-item")).toBeTruthy();
+  });
+
+  it("should open Twitter URL on Twitter item press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const twitterItem = getByTestId("twitter-item");
+
+    await act(async () => {
+      fireEvent.press(twitterItem);
+    });
+
+    expect(openURLSpy).toHaveBeenCalledWith("https://twitter.com/Hayao0819");
+  });
 });

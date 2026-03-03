@@ -15,6 +15,7 @@ const TAP_TARGET = 7;
 const TAP_HINT_THRESHOLD = 5;
 const TAP_RESET_MS = 2000;
 const GITHUB_URL = "https://github.com/Hayao0819";
+const TWITTER_URL = "https://twitter.com/Hayao0819";
 const REPO_URL = "https://github.com/Hayao0819/laimelea";
 
 export function AboutScreen() {
@@ -118,6 +119,12 @@ export function AboutScreen() {
             onPress={() => handleOpenURL(GITHUB_URL)}
             right={renderChevron}
             testID="github-item"
+          />
+          <List.Item
+            title={t("settings.developerTwitter")}
+            onPress={() => handleOpenURL(TWITTER_URL)}
+            right={renderChevron}
+            testID="twitter-item"
           />
           <List.Item
             title={t("settings.sourceCode")}
