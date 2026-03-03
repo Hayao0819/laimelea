@@ -62,31 +62,32 @@ jest.mock("../../../src/features/alarm/services/gradualVolumeManager", () => ({
   })),
 }));
 
+let mockDismissalContainerProps: Record<string, unknown> = {};
+
 jest.mock(
   "../../../src/features/alarm/components/dismissal/DismissalContainer",
   () => ({
-    DismissalContainer: ({
-      onDismiss,
-      onSnooze,
-      canSnooze,
-    }: {
+    DismissalContainer: (props: {
       onDismiss: () => void;
       onSnooze: () => void;
       canSnooze: boolean;
+      difficulty: number;
+      method: string;
     }) => {
+      mockDismissalContainerProps = props;
       const ReactNative = require("react-native");
       return (
         <ReactNative.View testID="dismissal-container">
           <ReactNative.Button
             testID="dismiss-button"
             title="Dismiss"
-            onPress={onDismiss}
+            onPress={props.onDismiss}
           />
-          {canSnooze && (
+          {props.canSnooze && (
             <ReactNative.Button
               testID="snooze-button"
               title="Snooze"
-              onPress={onSnooze}
+              onPress={props.onSnooze}
             />
           )}
         </ReactNative.View>
@@ -145,6 +146,7 @@ describe("AlarmFiringScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAlarmId = "test-alarm-1";
+    mockDismissalContainerProps = {};
   });
 
   it('should render with testID "alarm-firing-screen" when alarm found', async () => {
@@ -265,5 +267,36 @@ describe("AlarmFiringScreen", () => {
     expect(queryByTestId("snooze-button")).toBeNull();
     // Dismiss button should still be present
     expect(queryByTestId("dismiss-button")).toBeTruthy();
+  });
+
+  describe("math difficulty", () => {
+    it("passes alarm mathDifficulty to DismissalContainer", async () => {
+      const alarm = makeAlarm({
+        mathDifficulty: 2,
+        dismissalMethod: "math",
+      });
+      await renderWithProviders(createStore(), [alarm]);
+
+      expect(mockDismissalContainerProps).toMatchObject({ difficulty: 2 });
+    });
+
+    it("defaults to difficulty 1 when mathDifficulty is undefined", async () => {
+      const alarm = makeAlarm({
+        mathDifficulty: undefined as any,
+      });
+      await renderWithProviders(createStore(), [alarm]);
+
+      expect(mockDismissalContainerProps).toMatchObject({ difficulty: 1 });
+    });
+
+    it("passes difficulty 3 for hard math alarm", async () => {
+      const alarm = makeAlarm({
+        mathDifficulty: 3,
+        dismissalMethod: "math",
+      });
+      await renderWithProviders(createStore(), [alarm]);
+
+      expect(mockDismissalContainerProps).toMatchObject({ difficulty: 3 });
+    });
   });
 });
