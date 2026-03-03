@@ -228,4 +228,35 @@ describe("createAlarmFromEvent", () => {
     expect(alarm.createdAt).toBeGreaterThanOrEqual(now);
     expect(alarm.updatedAt).toBe(alarm.createdAt);
   });
+
+  describe("mathDifficulty", () => {
+    it("should set mathDifficulty from defaults", () => {
+      const event = makeEvent();
+      const alarm = createAlarmFromEvent(event, -300000, defaultAlarmDefaults);
+
+      expect(alarm.mathDifficulty).toBe(1);
+    });
+
+    it("should respect mathDifficulty=2 in defaults", () => {
+      const event = makeEvent();
+      const customDefaults: AlarmCreationDefaults = {
+        ...defaultAlarmDefaults,
+        mathDifficulty: 2,
+      };
+      const alarm = createAlarmFromEvent(event, -300000, customDefaults);
+
+      expect(alarm.mathDifficulty).toBe(2);
+    });
+
+    it("should respect mathDifficulty=3 in defaults", () => {
+      const event = makeEvent();
+      const customDefaults: AlarmCreationDefaults = {
+        ...defaultAlarmDefaults,
+        mathDifficulty: 3,
+      };
+      const alarm = createAlarmFromEvent(event, -300000, customDefaults);
+
+      expect(alarm.mathDifficulty).toBe(3);
+    });
+  });
 });

@@ -211,4 +211,62 @@ describe("generateBulkAlarms", () => {
       expect(alarm.targetTimestampMs).toBeGreaterThan(0);
     }
   });
+
+  describe("new alarm params", () => {
+    it("should use snoozeDurationMin from params instead of defaults", () => {
+      const params = makeParams({ snoozeDurationMin: 10 });
+      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+
+      expect(result.alarms.length).toBeGreaterThan(0);
+      for (const alarm of result.alarms) {
+        expect(alarm.snoozeDurationMin).toBe(10);
+      }
+    });
+
+    it("should use snoozeMaxCount from params instead of defaults", () => {
+      const params = makeParams({ snoozeMaxCount: 5 });
+      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+
+      expect(result.alarms.length).toBeGreaterThan(0);
+      for (const alarm of result.alarms) {
+        expect(alarm.snoozeMaxCount).toBe(5);
+      }
+    });
+
+    it("should include mathDifficulty from params in generated alarms", () => {
+      const params = makeParams({ mathDifficulty: 2 });
+      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+
+      expect(result.alarms.length).toBeGreaterThan(0);
+      for (const alarm of result.alarms) {
+        expect(alarm.mathDifficulty).toBe(2);
+      }
+    });
+
+    it("should support mathDifficulty level 3", () => {
+      const params = makeParams({ mathDifficulty: 3 });
+      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+
+      expect(result.alarms.length).toBeGreaterThan(0);
+      for (const alarm of result.alarms) {
+        expect(alarm.mathDifficulty).toBe(3);
+      }
+    });
+
+    it("should propagate all new params to every generated alarm", () => {
+      const params = makeParams({
+        snoozeDurationMin: 15,
+        snoozeMaxCount: 10,
+        mathDifficulty: 3,
+      });
+      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+
+      expect(result.alarms.length).toBeGreaterThan(0);
+      for (const alarm of result.alarms) {
+        expect(alarm.snoozeDurationMin).toBe(15);
+        expect(alarm.snoozeMaxCount).toBe(10);
+        expect(alarm.mathDifficulty).toBe(3);
+      }
+    });
+  });
 });
