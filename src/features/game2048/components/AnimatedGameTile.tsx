@@ -93,7 +93,17 @@ export function AnimatedGameTile({
         scale.value = 1;
         break;
     }
-  }, [tile.key, tile.animationType, targetX, targetY, startX, startY, x, y, scale]);
+  }, [
+    tile.key,
+    tile.animationType,
+    targetX,
+    targetY,
+    startX,
+    startY,
+    x,
+    y,
+    scale,
+  ]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [

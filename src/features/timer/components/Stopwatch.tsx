@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, StyleSheet,View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Button, Divider, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";

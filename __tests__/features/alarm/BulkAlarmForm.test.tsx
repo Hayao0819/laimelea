@@ -1,4 +1,4 @@
-import { act,fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 

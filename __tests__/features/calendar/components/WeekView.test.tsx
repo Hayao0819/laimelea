@@ -1,5 +1,5 @@
-import { act,fireEvent, render } from "@testing-library/react-native";
-import { createStore,Provider as JotaiProvider } from "jotai";
+import { act, fireEvent, render } from "@testing-library/react-native";
+import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 

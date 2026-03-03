@@ -2,7 +2,7 @@
 import "../../../src/features/alarm/strategies";
 
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { createStore,Provider as JotaiProvider } from "jotai";
+import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { Alert } from "react-native";
 import { PaperProvider } from "react-native-paper";

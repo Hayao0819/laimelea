@@ -1,5 +1,5 @@
-import { act,renderHook } from "@testing-library/react-native";
-import { atom,createStore, Provider as JotaiProvider } from "jotai";
+import { act, renderHook } from "@testing-library/react-native";
+import { atom, createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 
 import type { PlatformServices } from "../../src/core/platform/types";

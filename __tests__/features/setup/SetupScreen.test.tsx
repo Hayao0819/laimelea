@@ -1,6 +1,6 @@
 import NetInfo from "@react-native-community/netinfo";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { createStore,Provider as JotaiProvider } from "jotai";
+import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 

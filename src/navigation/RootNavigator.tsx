@@ -3,7 +3,7 @@ import { useAtomValue } from "jotai";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { settingsLoadedAtom,setupCompleteAtom } from "../atoms/settingsAtoms";
+import { settingsLoadedAtom, setupCompleteAtom } from "../atoms/settingsAtoms";
 import { AlarmEditScreen } from "../features/alarm/screens/AlarmEditScreen";
 import { AlarmFiringScreen } from "../features/alarm/screens/AlarmFiringScreen";
 import { BulkAlarmScreen } from "../features/alarm/screens/BulkAlarmScreen";

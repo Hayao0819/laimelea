@@ -8,7 +8,7 @@ import {
   formatCustomTimeShort,
 } from "../../core/time/formatting";
 import type { Alarm } from "../../models/Alarm";
-import type { CustomTimeValue,CycleConfig } from "../../models/CustomTime";
+import type { CustomTimeValue, CycleConfig } from "../../models/CustomTime";
 import type { WidgetSettings } from "../../models/Settings";
 import { DEFAULT_WIDGET_SETTINGS } from "../../models/Settings";
 

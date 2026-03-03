@@ -3,9 +3,9 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { format } from "date-fns";
 import { useAtomValue } from "jotai";
 import { useSetAtom } from "jotai";
-import React, { useCallback,useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet,View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -15,7 +15,7 @@ import {
   useTheme,
 } from "react-native-paper";
 
-import { radius,spacing } from "../../../app/spacing";
+import { radius, spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { calendarEventsAtom } from "../../../atoms/calendarAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";

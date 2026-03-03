@@ -9,7 +9,7 @@ import {
   setupCompleteAtom,
 } from "../../src/atoms/settingsAtoms";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../src/core/time/constants";
-import type { AlarmDefaults,AppSettings } from "../../src/models/Settings";
+import type { AlarmDefaults, AppSettings } from "../../src/models/Settings";
 import {
   DEFAULT_ALARM_DEFAULTS,
   DEFAULT_SETTINGS,

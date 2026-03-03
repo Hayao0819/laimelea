@@ -1,7 +1,7 @@
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button, Card, Chip, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";

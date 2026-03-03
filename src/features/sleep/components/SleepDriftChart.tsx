@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Dimensions,StyleSheet, View } from "react-native";
+import { Dimensions, StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
 import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
 

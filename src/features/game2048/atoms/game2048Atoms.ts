@@ -201,12 +201,7 @@ export const milestoneAutoSaveAtom = atom(
 
     const snapshot: GameSnapshot = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name: generateSnapshotName(
-        newState,
-        false,
-        existingCount + 1,
-        maxTile,
-      ),
+      name: generateSnapshotName(newState, false, existingCount + 1, maxTile),
       state: { ...newState },
       timestamp: Date.now(),
       parentSnapshotId: store.activeSnapshotId,

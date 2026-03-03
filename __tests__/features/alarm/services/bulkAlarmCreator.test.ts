@@ -215,7 +215,12 @@ describe("generateBulkAlarms", () => {
   describe("new alarm params", () => {
     it("should use snoozeDurationMin from params instead of defaults", () => {
       const params = makeParams({ snoozeDurationMin: 10 });
-      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+      const result = generateBulkAlarms(
+        params,
+        defaultCycleConfig,
+        defaults,
+        0,
+      );
 
       expect(result.alarms.length).toBeGreaterThan(0);
       for (const alarm of result.alarms) {
@@ -225,7 +230,12 @@ describe("generateBulkAlarms", () => {
 
     it("should use snoozeMaxCount from params instead of defaults", () => {
       const params = makeParams({ snoozeMaxCount: 5 });
-      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+      const result = generateBulkAlarms(
+        params,
+        defaultCycleConfig,
+        defaults,
+        0,
+      );
 
       expect(result.alarms.length).toBeGreaterThan(0);
       for (const alarm of result.alarms) {
@@ -235,7 +245,12 @@ describe("generateBulkAlarms", () => {
 
     it("should include mathDifficulty from params in generated alarms", () => {
       const params = makeParams({ mathDifficulty: 2 });
-      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+      const result = generateBulkAlarms(
+        params,
+        defaultCycleConfig,
+        defaults,
+        0,
+      );
 
       expect(result.alarms.length).toBeGreaterThan(0);
       for (const alarm of result.alarms) {
@@ -245,7 +260,12 @@ describe("generateBulkAlarms", () => {
 
     it("should support mathDifficulty level 3", () => {
       const params = makeParams({ mathDifficulty: 3 });
-      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+      const result = generateBulkAlarms(
+        params,
+        defaultCycleConfig,
+        defaults,
+        0,
+      );
 
       expect(result.alarms.length).toBeGreaterThan(0);
       for (const alarm of result.alarms) {
@@ -259,7 +279,12 @@ describe("generateBulkAlarms", () => {
         snoozeMaxCount: 10,
         mathDifficulty: 3,
       });
-      const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+      const result = generateBulkAlarms(
+        params,
+        defaultCycleConfig,
+        defaults,
+        0,
+      );
 
       expect(result.alarms.length).toBeGreaterThan(0);
       for (const alarm of result.alarms) {

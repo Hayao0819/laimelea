@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { useAtomValue } from "jotai";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 
 import { settingsAtom } from "../../../atoms/settingsAtoms";

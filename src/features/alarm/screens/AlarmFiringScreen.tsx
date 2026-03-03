@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";

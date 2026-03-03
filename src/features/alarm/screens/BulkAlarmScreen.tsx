@@ -1,9 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
-import React, { useCallback, useLayoutEffect,useMemo, useState } from "react";
+import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert,ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { IconButton, Snackbar, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";

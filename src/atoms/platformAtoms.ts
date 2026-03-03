@@ -1,7 +1,7 @@
 import { atom } from "jotai";
 
 import { createPlatformServices } from "../core/platform/factory";
-import type { PlatformServices,PlatformType } from "../core/platform/types";
+import type { PlatformServices, PlatformType } from "../core/platform/types";
 
 export const platformTypeAtom = atom<PlatformType>("aosp");
 

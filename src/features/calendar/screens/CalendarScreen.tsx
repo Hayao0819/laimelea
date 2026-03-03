@@ -2,7 +2,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   Card,
   IconButton,

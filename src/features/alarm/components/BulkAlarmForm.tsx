@@ -1,6 +1,6 @@
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   Banner,
   Chip,
@@ -14,7 +14,7 @@ import {
   TextInput,
 } from "react-native-paper";
 
-import { radius,spacing } from "../../../app/spacing";
+import { radius, spacing } from "../../../app/spacing";
 import type { Alarm } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
 import { getAllStrategies, getStrategy } from "../strategies";

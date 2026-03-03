@@ -1,7 +1,7 @@
-import React, { useCallback,useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
-import { Button, HelperText,Text, TextInput } from "react-native-paper";
+import { StyleSheet, View } from "react-native";
+import { Button, HelperText, Text, TextInput } from "react-native-paper";
 
 import { spacing } from "../../../../app/spacing";
 import { generateMathProblem } from "../../services/mathProblemGenerator";

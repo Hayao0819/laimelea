@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Icon, Surface, Text, TextInput } from "react-native-paper";
 
-import { radius,spacing } from "../../../app/spacing";
+import { radius, spacing } from "../../../app/spacing";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../../core/time/constants";

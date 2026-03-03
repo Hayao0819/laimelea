@@ -17,7 +17,7 @@ import {
   ensureNotificationPermissions,
 } from "../core/notifications/notifeeSetup";
 import { detectPlatform } from "../core/platform/detection";
-import { darkTheme,lightTheme } from "./theme";
+import { darkTheme, lightTheme } from "./theme";
 
 interface ProvidersProps {
   children: React.ReactNode;

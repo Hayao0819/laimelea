@@ -1,9 +1,9 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
-import React, { useCallback, useLayoutEffect,useMemo, useState } from "react";
+import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert,ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import {
   Button,
   Dialog,
@@ -21,7 +21,7 @@ import {
   useTheme,
 } from "react-native-paper";
 
-import { radius,spacing } from "../../../app/spacing";
+import { radius, spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { customToReal, realToCustom } from "../../../core/time/conversions";
@@ -31,7 +31,7 @@ import type { RootStackParamList } from "../../../navigation/types";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
 import { DismissalPreview } from "../components/DismissalPreview";
-import { cancelAlarm,scheduleAlarm } from "../services/alarmScheduler";
+import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
 import { getAllStrategies, getStrategy } from "../strategies";
 
 const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
@@ -422,7 +422,10 @@ export function AlarmEditScreen() {
           )}
         </Surface>
 
-        <DismissalPreview method={dismissalMethod} difficulty={mathDifficulty} />
+        <DismissalPreview
+          method={dismissalMethod}
+          difficulty={mathDifficulty}
+        />
 
         <Button
           mode="contained-tonal"

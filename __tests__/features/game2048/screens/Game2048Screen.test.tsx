@@ -1,5 +1,5 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { createStore,Provider as JotaiProvider } from "jotai";
+import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 
@@ -285,7 +285,9 @@ describe("Game2048Screen", () => {
       await renderWithProviders(store);
 
       // Simulate what handleMove does: call milestoneAutoSaveAtom with a state that has a new max tile (16)
-      const { milestoneAutoSaveAtom } = require("../../../../src/features/game2048/atoms/game2048Atoms");
+      const {
+        milestoneAutoSaveAtom,
+      } = require("../../../../src/features/game2048/atoms/game2048Atoms");
       const newState = {
         board: [
           [16, 4, 0, 0],

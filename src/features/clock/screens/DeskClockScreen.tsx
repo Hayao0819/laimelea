@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { StatusBar, StyleSheet, useWindowDimensions,View } from "react-native";
+import { StatusBar, StyleSheet, useWindowDimensions, View } from "react-native";
 import { IconButton } from "react-native-paper";
 import { Text } from "react-native-paper";
 

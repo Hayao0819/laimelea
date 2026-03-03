@@ -1,9 +1,9 @@
-import { useFocusEffect,useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, StyleSheet,View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { FAB, Snackbar, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
@@ -14,7 +14,7 @@ import type { Alarm } from "../../../models/Alarm";
 import type { RootStackParamList } from "../../../navigation/types";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmCard } from "../components/AlarmCard";
-import { cancelAlarm,scheduleAlarm } from "../services/alarmScheduler";
+import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

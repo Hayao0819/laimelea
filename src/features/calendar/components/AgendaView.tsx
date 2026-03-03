@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { SectionList, StyleSheet,View } from "react-native";
+import { SectionList, StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";

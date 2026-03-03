@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Card, IconButton, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";

@@ -198,7 +198,7 @@ export function SnapshotTree({
 
 // Exported for testing
 export { buildTree, flattenTree };
-export type { FlatTreeNode, SnapshotTreeProps,TreeNode };
+export type { FlatTreeNode, SnapshotTreeProps, TreeNode };
 
 const styles = StyleSheet.create({
   emptyContainer: {

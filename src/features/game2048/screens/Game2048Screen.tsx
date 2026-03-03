@@ -25,7 +25,11 @@ import { GameHeader } from "../components/GameHeader";
 import { GameOverlay } from "../components/GameOverlay";
 import { SaveSlotList } from "../components/SaveSlotList";
 import { move } from "../logic/gameEngine";
-import type { Direction, Game2048Store, GameSnapshot } from "../logic/gameTypes";
+import type {
+  Direction,
+  Game2048Store,
+  GameSnapshot,
+} from "../logic/gameTypes";
 
 export function Game2048Screen() {
   const { t } = useTranslation();
@@ -111,7 +115,10 @@ export function Game2048Screen() {
     (snapshotId: string) => {
       setStore((prev) => {
         const s = prev as Game2048Store;
-        return { ...s, snapshots: s.snapshots.filter((sn) => sn.id !== snapshotId) };
+        return {
+          ...s,
+          snapshots: s.snapshots.filter((sn) => sn.id !== snapshotId),
+        };
       });
     },
     [setStore],

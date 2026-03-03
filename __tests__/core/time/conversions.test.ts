@@ -1,4 +1,4 @@
-import { customToReal,realToCustom } from "../../../src/core/time/conversions";
+import { customToReal, realToCustom } from "../../../src/core/time/conversions";
 import type { CycleConfig } from "../../../src/models/CustomTime";
 import type { CustomTimeValue } from "../../../src/models/CustomTime";
 

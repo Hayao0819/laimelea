@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet,View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Card, Icon, Switch, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
