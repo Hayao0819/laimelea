@@ -30,6 +30,7 @@ import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
 import type { RootStackParamList } from "../../../navigation/types";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
+import { DismissalPreview } from "../components/DismissalPreview";
 import { cancelAlarm,scheduleAlarm } from "../services/alarmScheduler";
 import { getAllStrategies, getStrategy } from "../strategies";
 
@@ -420,6 +421,8 @@ export function AlarmEditScreen() {
             </>
           )}
         </Surface>
+
+        <DismissalPreview method={dismissalMethod} difficulty={mathDifficulty} />
 
         <Button
           mode="contained-tonal"

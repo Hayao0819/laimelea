@@ -54,7 +54,9 @@
     "settingIn24h": "\ud83d\udd50 Setting in 24h Time",
     "testAlarm": "Test Alarm",
     "testAlarmScheduled": "Test alarm will fire in 10 seconds",
-    "testAlarmFailed": "Failed to schedule test alarm"
+    "testAlarmFailed": "Failed to schedule test alarm",
+    "dismissalPreview": "Preview",
+    "dismissalPreviewOf": "Preview of {{method}} dismissal method"
   },
   "dismissal": {
     "simple": "Tap to Dismiss",

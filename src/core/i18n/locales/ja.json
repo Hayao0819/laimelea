@@ -54,7 +54,9 @@
     "settingIn24h": "\ud83d\udd50 24時間で設定中",
     "testAlarm": "テストアラーム",
     "testAlarmScheduled": "10秒後にテストアラームが鳴ります",
-    "testAlarmFailed": "テストアラームのスケジュールに失敗しました"
+    "testAlarmFailed": "テストアラームのスケジュールに失敗しました",
+    "dismissalPreview": "プレビュー",
+    "dismissalPreviewOf": "{{method}} 解除方法のプレビュー"
   },
   "dismissal": {
     "simple": "タップで解除",
