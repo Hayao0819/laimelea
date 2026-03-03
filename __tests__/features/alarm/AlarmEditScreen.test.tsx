@@ -1,3 +1,6 @@
+// Import triggers side-effect strategy registrations
+import "../../../src/features/alarm/strategies";
+
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore,Provider as JotaiProvider } from "jotai";
 import React from "react";
@@ -378,6 +381,69 @@ describe("AlarmEditScreen", () => {
       });
 
       alertSpy.mockRestore();
+    });
+  });
+
+  describe("dismissal dialog and DismissalPreview", () => {
+    it("renders DismissalPreview with current method", async () => {
+      const { getByTestId } = await renderWithProviders();
+      expect(getByTestId("dismissal-preview")).toBeTruthy();
+      expect(getByTestId("dismissal-simple")).toBeTruthy();
+    });
+
+    it("opens dismissal dialog on dismissal item press", async () => {
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("dismissal-method-item"));
+
+      await waitFor(() => {
+        expect(getByTestId("dismissal-dialog")).toBeTruthy();
+      });
+    });
+
+    it("selects math dismissal method from dialog", async () => {
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("dismissal-method-item"));
+      await waitFor(() => {
+        expect(getByTestId("dismissal-dialog")).toBeTruthy();
+      });
+
+      await fireEvent.press(getByTestId("dismissal-option-math"));
+
+      await waitFor(() => {
+        expect(getByTestId("dismissal-math")).toBeTruthy();
+      });
+    });
+
+    it("shows math difficulty when math method is selected via dialog", async () => {
+      const { getByTestId, getByText } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("dismissal-method-item"));
+      await waitFor(() => {
+        expect(getByTestId("dismissal-dialog")).toBeTruthy();
+      });
+
+      await fireEvent.press(getByTestId("dismissal-option-math"));
+
+      await waitFor(() => {
+        expect(getByText("settings.mathDifficulty")).toBeTruthy();
+      });
+    });
+
+    it("updates DismissalPreview when method changes to shake", async () => {
+      const { getByTestId } = await renderWithProviders();
+
+      await fireEvent.press(getByTestId("dismissal-method-item"));
+      await waitFor(() => {
+        expect(getByTestId("dismissal-dialog")).toBeTruthy();
+      });
+
+      await fireEvent.press(getByTestId("dismissal-option-shake"));
+
+      await waitFor(() => {
+        expect(getByTestId("dismissal-shake")).toBeTruthy();
+      });
     });
   });
 });
