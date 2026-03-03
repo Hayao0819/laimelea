@@ -12,6 +12,7 @@ import {
   createDefaultStore,
   createDefaultSettings,
   generateSnapshotName,
+  getMaxTile,
   MAX_HISTORY_SIZE,
 } from "../../../src/features/game2048/logic/gameEngine";
 import type {
@@ -1040,6 +1041,43 @@ describe("move with luckyMode", () => {
   });
 });
 
+describe("getMaxTile", () => {
+  it("returns the maximum tile value from a normal board", () => {
+    const board = [
+      [2, 4, 8, 16],
+      [32, 64, 128, 256],
+      [512, 1024, 2048, 4096],
+      [8192, 2, 4, 8],
+    ];
+    expect(getMaxTile(board)).toBe(8192);
+  });
+
+  it("returns 0 for an all-zero board", () => {
+    expect(getMaxTile(createEmptyBoard(4))).toBe(0);
+  });
+
+  it("returns the value for a 1x1 board", () => {
+    expect(getMaxTile([[42]])).toBe(42);
+  });
+
+  it("returns correct value for a 3x3 board", () => {
+    const board = [
+      [2, 4, 8],
+      [16, 512, 64],
+      [128, 256, 32],
+    ];
+    expect(getMaxTile(board)).toBe(512);
+  });
+
+  it("handles board with all same values", () => {
+    const board = [
+      [4, 4],
+      [4, 4],
+    ];
+    expect(getMaxTile(board)).toBe(4);
+  });
+});
+
 describe("generateSnapshotName", () => {
   it("generates auto-save name with Game Over prefix", () => {
     const state = makeState(createEmptyBoard(4), { score: 1234 });
@@ -1084,6 +1122,31 @@ describe("generateSnapshotName", () => {
     const state = makeState(createEmptyBoard(4), { score: 0 });
     expect(generateSnapshotName(state, false, 1)).toBe("Save #1 · 0pt · 4×4");
   });
+
+  it("generates milestone name with Reached prefix when milestoneValue is provided", () => {
+    const state = makeState(createEmptyBoard(4), { score: 1500 });
+    const name = generateSnapshotName(state, false, 1, 2048);
+    expect(name).toBe("Reached 2048 #1 · 1500pt · 4×4");
+  });
+
+  it("milestone prefix overrides isAutoSave flag", () => {
+    const state = makeState(createEmptyBoard(4), { score: 500 });
+    const name = generateSnapshotName(state, true, 2, 512);
+    expect(name).toBe("Reached 512 #2 · 500pt · 4×4");
+  });
+
+  it("generates milestone name with correct board size", () => {
+    const state = makeState(
+      [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+      ],
+      { boardSize: 3, score: 300 },
+    );
+    const name = generateSnapshotName(state, false, 3, 256);
+    expect(name).toBe("Reached 256 #3 · 300pt · 3×3");
+  });
 });
 
 describe("createDefaultSettings", () => {
@@ -1107,6 +1170,11 @@ describe("createDefaultStore new fields", () => {
   it("has null activeSnapshotId", () => {
     const store = createDefaultStore();
     expect(store.activeSnapshotId).toBeNull();
+  });
+
+  it("has zero autoSaveMaxTile for all sizes", () => {
+    const store = createDefaultStore();
+    expect(store.autoSaveMaxTile).toEqual({ 3: 0, 4: 0, 5: 0, 6: 0 });
   });
 });
 

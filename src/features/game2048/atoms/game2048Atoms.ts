@@ -13,6 +13,7 @@ import {
   createDefaultStore,
   createNewGame,
   generateSnapshotName,
+  getMaxTile,
   MAX_HISTORY_SIZE,
 } from "../logic/gameEngine";
 
@@ -85,11 +86,16 @@ export const undoAtom = atom(null, (get, set) => {
 
 export const newGameAtom = atom(null, (get, set, size: BoardSize) => {
   const store = get(resolvedStoreAtom);
+  const newGame = createNewGame(size);
   set(game2048StoreAtom, {
     ...store,
-    currentGame: createNewGame(size),
+    currentGame: newGame,
     history: [],
     activeSnapshotId: null,
+    autoSaveMaxTile: {
+      ...store.autoSaveMaxTile,
+      [size]: getMaxTile(newGame.board),
+    },
   });
 });
 
@@ -171,6 +177,48 @@ export const loadSnapshotAtom = atom(
       currentGame: { ...snapshot.state },
       history: [],
       activeSnapshotId: snapshot.id,
+      autoSaveMaxTile: {
+        ...store.autoSaveMaxTile,
+        [snapshot.state.boardSize]: getMaxTile(snapshot.state.board),
+      },
+    });
+  },
+);
+
+export const milestoneAutoSaveAtom = atom(
+  null,
+  (get, set, newState: GameState) => {
+    const store = get(resolvedStoreAtom);
+    const maxTile = getMaxTile(newState.board);
+    const recorded = store.autoSaveMaxTile[newState.boardSize] ?? 0;
+
+    if (maxTile <= recorded) return;
+
+    const existingCount = store.snapshots.filter((s) =>
+      s.name.startsWith("Reached"),
+    ).length;
+
+    const snapshot: GameSnapshot = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: generateSnapshotName(
+        newState,
+        false,
+        existingCount + 1,
+        maxTile,
+      ),
+      state: { ...newState },
+      timestamp: Date.now(),
+      parentSnapshotId: store.activeSnapshotId,
+    };
+
+    set(game2048StoreAtom, {
+      ...store,
+      snapshots: [...store.snapshots, snapshot],
+      activeSnapshotId: snapshot.id,
+      autoSaveMaxTile: {
+        ...store.autoSaveMaxTile,
+        [newState.boardSize]: maxTile,
+      },
     });
   },
 );

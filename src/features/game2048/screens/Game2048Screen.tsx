@@ -18,6 +18,7 @@ import {
   settingsAtom,
   saveSnapshotAtom,
   loadSnapshotAtom,
+  milestoneAutoSaveAtom,
 } from "../atoms/game2048Atoms";
 import { move } from "../logic/gameEngine";
 import type { Direction, Game2048Store, GameSnapshot } from "../logic/gameTypes";
@@ -41,6 +42,7 @@ export function Game2048Screen() {
   const setStore = useSetAtom(game2048StoreAtom);
   const saveSnapshot = useSetAtom(saveSnapshotAtom);
   const loadSnapshot = useSetAtom(loadSnapshotAtom);
+  const milestoneAutoSave = useSetAtom(milestoneAutoSaveAtom);
 
   const [saveListVisible, setSaveListVisible] = useState(false);
   const [lastDirection, setLastDirection] = useState<Direction | null>(null);
@@ -70,9 +72,10 @@ export function Game2048Screen() {
         gameRef.current = result.state;
         setLastDirection(direction);
         pushHistory(result.state);
+        milestoneAutoSave(result.state);
       }
     },
-    [pushHistory, settings.luckyMode],
+    [pushHistory, milestoneAutoSave, settings.luckyMode],
   );
 
   const handleNewGame = useCallback(() => {

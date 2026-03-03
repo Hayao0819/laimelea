@@ -267,12 +267,29 @@ export function hasReachedWinTarget(state: GameState): boolean {
   return false;
 }
 
+export function getMaxTile(board: number[][]): number {
+  let max = 0;
+  for (const row of board) {
+    for (const cell of row) {
+      if (cell > max) {
+        max = cell;
+      }
+    }
+  }
+  return max;
+}
+
 export function generateSnapshotName(
   state: GameState,
   isAutoSave: boolean,
   index: number,
+  milestoneValue?: number,
 ): string {
-  const prefix = isAutoSave ? "Game Over" : "Save";
+  const prefix = milestoneValue
+    ? `Reached ${milestoneValue}`
+    : isAutoSave
+      ? "Game Over"
+      : "Save";
   return `${prefix} #${index} · ${state.score}pt · ${state.boardSize}×${state.boardSize}`;
 }
 
@@ -290,5 +307,6 @@ export function createDefaultStore(): Game2048Store {
     perSizeGames: {},
     settings: createDefaultSettings(),
     activeSnapshotId: null,
+    autoSaveMaxTile: { 3: 0, 4: 0, 5: 0, 6: 0 },
   };
 }

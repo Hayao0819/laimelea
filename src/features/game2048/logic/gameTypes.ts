@@ -35,4 +35,5 @@ export interface Game2048Store {
   >;
   settings: Game2048Settings;
   activeSnapshotId: string | null;
+  autoSaveMaxTile: Record<BoardSize, number>;
 }

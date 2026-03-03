@@ -260,6 +260,57 @@ describe("Game2048Screen", () => {
     });
   });
 
+  describe("milestone auto-save", () => {
+    it("should create milestone snapshot when milestoneAutoSaveAtom is triggered with a new max tile", async () => {
+      // Set up a store where the current max tile is 8
+      const store = createInitializedStore({
+        currentGame: {
+          board: [
+            [16, 4, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 2],
+          ],
+          score: 100,
+          boardSize: 4,
+          isGameOver: false,
+          hasWon: false,
+          wonAcknowledged: false,
+          moveCount: 10,
+        },
+        autoSaveMaxTile: { 3: 0, 4: 8, 5: 0, 6: 0 },
+      });
+
+      await renderWithProviders(store);
+
+      // Simulate what handleMove does: call milestoneAutoSaveAtom with a state that has a new max tile (16)
+      const { milestoneAutoSaveAtom } = require("../../../../src/features/game2048/atoms/game2048Atoms");
+      const newState = {
+        board: [
+          [16, 4, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 2],
+        ],
+        score: 100,
+        boardSize: 4 as const,
+        isGameOver: false,
+        hasWon: false,
+        wonAcknowledged: false,
+        moveCount: 11,
+      };
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const resolved = store.get(resolvedStoreAtom);
+      const milestoneSnapshots = resolved.snapshots.filter(
+        (s: { name: string }) => s.name.startsWith("Reached"),
+      );
+      expect(milestoneSnapshots).toHaveLength(1);
+      expect(milestoneSnapshots[0].name).toMatch(/^Reached 16/);
+      expect(resolved.autoSaveMaxTile[4]).toBe(16);
+    });
+  });
+
   describe("game overlay interactions", () => {
     it("should show game overlay when game over", async () => {
       const store = createGameOverStore();

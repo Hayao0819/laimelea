@@ -17,9 +17,11 @@ import {
   switchBoardSizeAtom,
   saveSnapshotAtom,
   loadSnapshotAtom,
+  milestoneAutoSaveAtom,
 } from "../../../../src/features/game2048/atoms/game2048Atoms";
 import {
   createDefaultStore,
+  getMaxTile,
   MAX_HISTORY_SIZE,
 } from "../../../../src/features/game2048/logic/gameEngine";
 import type {
@@ -710,6 +712,222 @@ describe("game2048Atoms", () => {
       store.set(loadSnapshotAtom, snapshot);
 
       expect(store.get(bestScoresAtom)).toEqual(scores);
+    });
+
+    it("should update autoSaveMaxTile for the loaded board size", () => {
+      const savedGame = makeGameState({
+        board: [
+          [2, 4, 8, 16],
+          [32, 64, 128, 256],
+          [512, 1024, 2048, 0],
+          [0, 0, 0, 0],
+        ],
+        boardSize: 4,
+      });
+      const snapshot: GameSnapshot = {
+        id: "snap-load-milestone",
+        name: "Save #1",
+        state: savedGame,
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 0, 5: 0, 6: 0 },
+      });
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.autoSaveMaxTile[4]).toBe(2048);
+      // Other sizes unaffected
+      expect(resolved.autoSaveMaxTile[3]).toBe(0);
+      expect(resolved.autoSaveMaxTile[5]).toBe(0);
+      expect(resolved.autoSaveMaxTile[6]).toBe(0);
+    });
+  });
+
+  describe("milestoneAutoSaveAtom", () => {
+    it("should create a snapshot when a new max tile is achieved", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 4, 5: 0, 6: 0 },
+      });
+
+      const newState = makeGameState({
+        board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 100,
+        boardSize: 4,
+      });
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.snapshots).toHaveLength(1);
+      expect(resolved.snapshots[0].name).toBe("Reached 16 #1 · 100pt · 4×4");
+      expect(resolved.snapshots[0].state).toEqual(newState);
+      expect(resolved.autoSaveMaxTile[4]).toBe(16);
+    });
+
+    it("should not create a snapshot when max tile has not increased", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 16, 5: 0, 6: 0 },
+      });
+
+      const newState = makeGameState({
+        board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 100,
+        boardSize: 4,
+      });
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.snapshots).toHaveLength(0);
+      expect(resolved.autoSaveMaxTile[4]).toBe(16);
+    });
+
+    it("should not create a snapshot when max tile is lower than recorded", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 32, 5: 0, 6: 0 },
+      });
+
+      const newState = makeGameState({
+        board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 50,
+        boardSize: 4,
+      });
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.snapshots).toHaveLength(0);
+    });
+
+    it("should increment Reached index correctly with existing milestone snapshots", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 8, 5: 0, 6: 0 },
+        snapshots: [
+          {
+            id: "existing-milestone",
+            name: "Reached 8 #1 · 50pt · 4×4",
+            state: makeGameState(),
+            timestamp: 1000,
+            parentSnapshotId: null,
+          },
+        ],
+      });
+
+      const newState = makeGameState({
+        board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 100,
+        boardSize: 4,
+      });
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.snapshots).toHaveLength(2);
+      expect(resolved.snapshots[1].name).toBe("Reached 16 #2 · 100pt · 4×4");
+    });
+
+    it("should update activeSnapshotId to the new milestone snapshot", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 2, 5: 0, 6: 0 },
+      });
+
+      const newState = makeGameState({
+        board: [
+          [4, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        boardSize: 4,
+      });
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.activeSnapshotId).toBe(resolved.snapshots[0].id);
+    });
+
+    it("should track milestones per board size independently", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 64, 4: 4, 5: 0, 6: 0 },
+      });
+
+      // New max on size 4 but not on size 3
+      const newState = makeGameState({
+        board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 100,
+        boardSize: 4,
+      });
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.snapshots).toHaveLength(1);
+      expect(resolved.autoSaveMaxTile[4]).toBe(16);
+      // Size 3 should be unaffected
+      expect(resolved.autoSaveMaxTile[3]).toBe(64);
+    });
+  });
+
+  describe("newGameAtom autoSaveMaxTile reset", () => {
+    it("should reset autoSaveMaxTile to initial board maxTile on new game", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 512, 4: 2048, 5: 4096, 6: 8192 },
+      });
+
+      store.set(newGameAtom, 4);
+
+      const resolved = store.get(resolvedStoreAtom);
+      const initialMaxTile = getMaxTile(resolved.currentGame.board);
+      expect(resolved.autoSaveMaxTile[4]).toBe(initialMaxTile);
+      // Initial tiles are 2 or 4, so maxTile should be 2 or 4
+      expect([2, 4]).toContain(resolved.autoSaveMaxTile[4]);
+      // Other sizes should remain unchanged
+      expect(resolved.autoSaveMaxTile[3]).toBe(512);
+      expect(resolved.autoSaveMaxTile[5]).toBe(4096);
+      expect(resolved.autoSaveMaxTile[6]).toBe(8192);
+    });
+
+    it("should reset autoSaveMaxTile only for the specified board size", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 100, 4: 200, 5: 300, 6: 400 },
+      });
+
+      store.set(newGameAtom, 3);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect([2, 4]).toContain(resolved.autoSaveMaxTile[3]);
+      expect(resolved.autoSaveMaxTile[4]).toBe(200);
+      expect(resolved.autoSaveMaxTile[5]).toBe(300);
+      expect(resolved.autoSaveMaxTile[6]).toBe(400);
     });
   });
 });
