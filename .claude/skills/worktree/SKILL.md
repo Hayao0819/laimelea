@@ -61,6 +61,22 @@ git branch -d "$BRANCH_NAME"
 
 1. 必要に応じてブランチのマージもユーザーに提案する
 2. **マージ完了後は `claude/` ブランチを必ず削除する** — 作業完了済みのブランチを残さない
+3. **rebase を使った場合**: コミットハッシュが変わるため `git branch -d` は「not fully merged」エラーになる。`git branch -D`（強制削除）を使うこと
+
+### 3.5. マージ/リベース後の検証
+
+作業をメインブランチに統合した後、`project-reviewer` サブエージェントを起動して品質を確認する:
+
+```yaml
+Task tool:
+  subagent_type: "project-reviewer"
+  description: "Post-merge validation"
+  prompt: |
+    マージ/リベース後の統合状態を検証してください。
+    全チェック（tsc, eslint, treefmt, jest, nix flake check）を実行し、結果を報告してください。
+```
+
+問題があればオーケストレーターが修正し、再度 reviewer で通過を確認する。
 
 ### 4. エラー時の対応
 

@@ -11,20 +11,40 @@ allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), 
 
 ## 実行フロー
 
-### Step 1: 実装計画の読み取り
+### Step 1: 実装計画の読み取り（Exploreサブエージェントに委譲）
 
-以下のソースから実装計画を読み取ってください:
-
-1. **アーキテクチャドキュメント**: `docs/architecture.md` — フェーズ定義と詳細設計
-2. **メモリ**: auto-memory `MEMORY.md`（会話コンテキストに自動ロード済み）— 実装状況と残タスク
-3. **引数で指定されたファイル**: `$ARGUMENTS` にファイルパスやフェーズ番号が含まれる場合、そのファイル/セクションを読む
+**コンテキスト節約のため、architecture.md等の大きなドキュメントはオーケストレーターが直接Readしない。** Explore サブエージェントに必要な情報だけを抽出させる。
 
 `$ARGUMENTS` の解釈:
 
-- 数字（例: `11`）→ Phase番号。architecture.mdから該当フェーズを読む
-- ファイルパス → そのファイルを実装計画として読む
+- 数字（例: `11`）→ Phase番号
+- ファイルパス → そのファイルを実装計画として使用
 - テキスト → タスク説明としてそのまま使用
 - 空 → ユーザーに何を実装するか質問する
+
+```yaml
+Task tool:
+  subagent_type: "Explore"
+  description: "Extract implementation plan"
+  prompt: |
+    以下の情報を抽出し、簡潔にまとめて返してください。
+
+    ## 対象
+    <$ARGUMENTSに応じて: Phase番号、ファイルパス、タスク説明>
+
+    ## 読むべきソース
+    1. `docs/architecture.md` — 該当フェーズのセクションのみ抽出
+    2. 関連する既存コードのパターン把握（対象ディレクトリの構造、型定義、隣接ファイル）
+
+    ## 出力フォーマット（これ以外の情報は含めない）
+    - 実装すべき機能の要約（5行以内）
+    - 作成/変更が必要なファイル一覧（パスのみ）
+    - 参照すべき既存ファイル一覧（パス + 参考にすべき点を1行で）
+    - 主要な型定義・インターフェース（コードブロック）
+    - テスト要件（箇条書き）
+```
+
+**MEMORY.md** はコンテキストに自動ロード済みなので直接参照する。
 
 ### Step 2: タスク分解
 
@@ -107,6 +127,14 @@ Task tool:
     ### 受け入れ基準
     - [ ] <条件1>
     - [ ] <条件2>
+
+    ### 最終報告（必ずこの形式で返すこと）
+    以下のフォーマットのみ返す。コマンド出力やコード全文は含めない:
+    - **結果**: 成功 / 失敗（失敗理由）
+    - **作成ファイル**: パスの箇条書き
+    - **変更ファイル**: パスの箇条書き
+    - **テスト**: X passed, Y failed, Z skipped
+    - **コミット**: ハッシュ（1行）
   model: "opus"
 ```
 
@@ -116,45 +144,64 @@ Task tool:
 
 全ワーカーの完了後:
 
-1. 各ワーカーの結果を収集（成功/失敗、変更内容、テスト結果）
+1. 各ワーカーの結果を収集（成功/失敗、変更ファイル、テスト結果）
 2. 失敗したタスクがあれば原因を分析し、リトライまたはユーザーに報告
 3. **成功したタスクのみ** Step 6 のマージ対象とする
 
-### Step 6: 自動リベース
+### Step 6: 自動リベース（バッチ実行）
 
-gitログをリニアに保つため、merge ではなく rebase を使用する。
+gitログをリニアに保つため、merge ではなく rebase を使用する。**コンテキスト節約のため、全ブランチのリベース・クリーンアップを1つの bash コマンドにまとめる。**
+
+リベース順序を BRANCHES 配列で定義する。依存関係がある場合は基盤タスク（モデル、ユーティリティ等）を先に配置する。
 
 ```bash
-# 各ブランチを順次リベース
-# 1. ブランチのコミットを現在の HEAD 上にリベース
-git rebase <branch-name>
-
-# 2. リベース成功後、worktreeを削除
-git worktree remove .worktree/<task-name>
-
-# 3. マージ済みブランチを削除（claude/ ブランチは作業完了後に必ず削除する）
-git branch -d <branch-name>
+# BRANCHES を実際のブランチ名・タスク名で埋める
+BRANCHES=("claude/feat/task-a:task-a" "claude/feat/task-b:task-b")
+for entry in "${BRANCHES[@]}"; do
+  branch="${entry%%:*}"; task="${entry##*:}"
+  echo "=== Rebasing $branch ==="
+  if ! git rebase "$branch"; then
+    echo "CONFLICT in $branch"; git rebase --abort; exit 1
+  fi
+  git worktree remove ".worktree/$task" 2>/dev/null
+  # rebase後はハッシュが変わるため -D（強制削除）を使う
+  git branch -D "$branch"
+done && echo "ALL REBASES OK"
 ```
 
-**リベース順序**: 依存関係がある場合は、基盤タスク（モデル、ユーティリティ等）を先にリベースする。独立タスクの順序は任意。
+**コンフリクト発生時**: スクリプトが `CONFLICT in <branch>` で停止するので、どのブランチで発生したかをユーザーに報告し指示を待つ。**コンフリクトを自動解決しないこと。**
 
-**コンフリクト発生時**:
+### Step 7: リベース後検証（project-reviewer）
 
-1. `git rebase --abort` でリベースを取り消す
-2. コンフリクトの内容をユーザーに報告する（どのファイルで、どのブランチ間で発生したか）
-3. ユーザーの指示を待つ（手動解決 or リトライ）
-4. **コンフリクトを自動解決しようとしないこと** — 意図しないコード消失のリスクがある
+全ブランチのリベースが完了したら:
 
-### Step 7: リベース後検証
+#### 7a. 自動修正可能な問題を先に解消
 
-全ブランチのリベースが完了したら、統合状態で品質ゲートを実行:
+reviewerを起動する前に、フォーマット・リントの自動修正をまとめて実行する。コンテキスト節約のため1コマンドにチェーンする:
 
-1. `treefmt` — フォーマット
-2. `pnpm eslint .` — リント
-3. `pnpm tsc --noEmit` — 型チェック
-4. `pnpm jest` — テスト
+```bash
+treefmt && pnpm eslint . --fix && pnpm eslint . && pnpm tsc --noEmit
+```
 
-問題があれば修正してコミットする。全ゲート通過後、最終結果をユーザーに報告:
+エラーがあればこの時点で手動修正する。自動修正で変更があれば `chore: fix lint and formatting` でコミットする。
+
+#### 7b. project-reviewer で最終検証
+
+```yaml
+Task tool:
+  subagent_type: "project-reviewer"
+  description: "Post-rebase validation"
+  prompt: |
+    リベース後の統合状態を検証してください。
+    全チェック（tsc, eslint, treefmt, jest, nix flake check）を実行し、結果を報告してください。
+```
+
+- **ALL CHECKS PASSED** → Step 8 へ進む
+- **FAIL あり** → オーケストレーターが問題を修正し、再度 reviewer で確認
+
+**重要**: `project-reviewer` はファイルを一切変更しない読み取り専用エージェント。
+
+全ゲート通過後、最終結果をユーザーに報告:
 
 - マージされたブランチ一覧
 - 変更ファイル数・追加行数の概要

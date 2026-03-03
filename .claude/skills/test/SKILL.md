@@ -189,6 +189,13 @@ Task tool:
     - [ ] テスト対象の主要なロジック/分岐がカバーされていること
     - [ ] 既存テストのパターンに準拠していること
     - [ ] treefmt + eslint + tsc がパスすること
+
+    ### 最終報告（必ずこの形式で返すこと）
+    以下のフォーマットのみ返す。コマンド出力やコード全文は含めない:
+    - **結果**: 成功 / 失敗（失敗理由）
+    - **作成ファイル**: パスの箇条書き
+    - **テスト数**: X passed, Y failed, Z skipped
+    - **コミット**: ハッシュ（1行）
   model: "opus"
 ```
 
@@ -244,12 +251,19 @@ Task tool:
     - [ ] testID追加が必要な場合、ソースコードも修正していること
     - [ ] treefmt + eslint + tsc がパスすること
     - [ ] `pnpm jest __tests__/e2e/<feature>.e2e.ts` で構文エラーがないこと（Detox実行は不要）
+
+    ### 最終報告（必ずこの形式で返すこと）
+    以下のフォーマットのみ返す。コマンド出力やコード全文は含めない:
+    - **結果**: 成功 / 失敗（失敗理由）
+    - **作成/変更ファイル**: パスの箇条書き
+    - **テスト数**: X passed, Y failed, Z skipped
+    - **コミット**: ハッシュ（1行）
   model: "opus"
 ```
 
 **重要**: オーケストレーターは各セクションを具体的に埋めること。特に「参照テスト」にはモックパターンの参考元を、「テスト内容」/「テストシナリオ」には具体的なテストケース名を列挙すること。
 
-### Step 6: 結果収集とリベース
+### Step 6: 結果収集とリベース（バッチ実行）
 
 全ワーカーの完了後:
 
@@ -257,60 +271,50 @@ Task tool:
 2. 失敗したタスクがあれば原因を分析し、リトライまたはユーザーに報告
 3. **成功したタスクのみ** リベース対象とする
 
-```bash
-# 1. 成功した各ブランチを順次リベース
-git rebase <branch-name>
-
-# 2. リベース成功後、worktreeを削除
-git worktree remove .worktree/<task-name>
-
-# 3. マージ済みブランチを削除（claude/ ブランチは作業完了後に必ず削除する）
-git branch -d <branch-name>
-```
-
-**コンフリクト発生時**:
-
-1. `git rebase --abort` でリベースを取り消す
-2. コンフリクトの内容をユーザーに報告する
-3. ユーザーの指示を待つ
-4. **コンフリクトを自動解決しようとしないこと**
-
-### Step 7: 統合テスト実行と修正
-
-全ブランチのリベース完了後、統合状態で全テストを実行:
+**コンテキスト節約のため、全ブランチのリベース・クリーンアップを1つの bash にまとめる:**
 
 ```bash
-# 1. フォーマット
-treefmt
-
-# 2. リント
-pnpm eslint . --fix
-pnpm eslint .
-
-# 3. 型チェック
-pnpm tsc --noEmit
-
-# 4. 全単体テスト実行
-pnpm jest
-
-# 5. E2Eテスト実行（エミュレータ起動中の場合のみ）
-pnpm e2e:test
+BRANCHES=("claude/test/task-a:task-a" "claude/test/task-b:task-b")
+for entry in "${BRANCHES[@]}"; do
+  branch="${entry%%:*}"; task="${entry##*:}"
+  echo "=== Rebasing $branch ==="
+  if ! git rebase "$branch"; then
+    echo "CONFLICT in $branch"; git rebase --abort; exit 1
+  fi
+  git worktree remove ".worktree/$task" 2>/dev/null
+  git branch -D "$branch"  # rebase後はハッシュが変わるため -D を使う
+done && echo "ALL REBASES OK"
 ```
 
-**単体テスト失敗時の修正フロー**:
+**コンフリクト発生時**: スクリプトが停止するのでユーザーに報告し指示を待つ。**自動解決しないこと。**
 
-1. 失敗したテストのエラーメッセージを分析
-2. 原因を特定（テストコードの問題 or プロダクションコードの問題）
-3. **テストコードの問題**: テストを修正（モック不足、非同期処理の漏れ、期待値の誤り等）
-4. **プロダクションコードの問題**: ユーザーに報告し、修正方針を確認（テストがバグを発見した可能性）
-5. 修正後、再度全テストを実行
-6. 全テスト通過まで繰り返す
+### Step 7: 統合検証（project-reviewer）
 
-**E2Eテストの検証**:
+#### 7a. 自動修正可能な問題を先に解消
 
-- E2Eテストの実行にはエミュレータが起動中かつビルド済みAPKが必要
-- エミュレータが利用できない場合は `pnpm tsc --noEmit` で型チェックのみ行い、E2Eテストの実行はスキップしてユーザーに手動実行を依頼する
-- E2Eテスト失敗時は、テストコード（セレクタの誤り、タイミングの問題、前提条件の不備）を優先的に確認する
+```bash
+treefmt && pnpm eslint . --fix && pnpm eslint . && pnpm tsc --noEmit
+```
+
+エラーがあれば手動修正し、自動修正で変更があればコミットする。
+
+#### 7b. project-reviewer で最終検証
+
+```yaml
+Task tool:
+  subagent_type: "project-reviewer"
+  description: "Post-merge test validation"
+  prompt: |
+    テストブランチのリベース後の統合状態を検証してください。
+    全チェック（tsc, eslint, treefmt, jest, nix flake check）を実行し、結果を報告してください。
+```
+
+- **ALL CHECKS PASSED** → Step 8 へ進む
+- **FAIL あり** → オーケストレーターが問題を修正し、再度 reviewer で確認
+
+**単体テスト失敗時**: エラーメッセージを分析し、テストコードの問題は修正、プロダクションコードの問題はユーザーに報告。修正後 reviewer で再確認。
+
+**E2Eテスト**: エミュレータ未起動時は型チェックのみ、手動実行を依頼する。
 
 ### Step 8: 最終報告
 
