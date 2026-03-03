@@ -166,7 +166,6 @@ export function NumpadInput({ onStart }: Props) {
             key={min}
             mode="outlined"
             onPress={() => handlePreset(min)}
-            compact
             style={styles.presetButton}
             testID={`preset-${min}`}
             accessibilityLabel={t("timer.presetMin", { min })}
@@ -217,12 +216,13 @@ const styles = StyleSheet.create({
   },
   presets: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
     marginTop: spacing.base,
   },
   presetButton: {
-    minWidth: 0,
+    minWidth: 72,
   },
   startButton: {
     marginTop: spacing.base,
