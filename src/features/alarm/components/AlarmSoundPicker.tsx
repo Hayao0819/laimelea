@@ -27,9 +27,11 @@ export function AlarmSoundPicker({
 
   useEffect(() => {
     if (visible) {
-      RingtoneService.getAlarmRingtones().then(setRingtones).catch(() => {
-        setRingtones([]);
-      });
+      RingtoneService.getAlarmRingtones()
+        .then(setRingtones)
+        .catch(() => {
+          setRingtones([]);
+        });
     }
   }, [visible]);
 

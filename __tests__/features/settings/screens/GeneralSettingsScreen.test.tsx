@@ -37,12 +37,9 @@ jest.mock("../../../../src/core/i18n", () => ({
   resolveLanguage: (setting: string) => (setting === "auto" ? "en" : setting),
 }));
 
-jest.mock(
-  "../../../../src/features/widget/services/widgetUpdater",
-  () => ({
-    requestClockWidgetUpdate: jest.fn(),
-  }),
-);
+jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
+}));
 
 function renderScreen(overrides: Partial<AppSettings> = {}) {
   const store = createStore();

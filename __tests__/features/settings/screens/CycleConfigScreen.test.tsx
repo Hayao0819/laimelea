@@ -34,12 +34,9 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-jest.mock(
-  "../../../../src/features/widget/services/widgetUpdater",
-  () => ({
-    requestClockWidgetUpdate: jest.fn(),
-  }),
-);
+jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
+}));
 
 const mockWidgetUpdate = requestClockWidgetUpdate as jest.MockedFunction<
   typeof requestClockWidgetUpdate

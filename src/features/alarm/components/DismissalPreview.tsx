@@ -17,14 +17,11 @@ export function DismissalPreview({ alarm }: DismissalPreviewProps) {
   const handlePress = useCallback(() => {
     // Navigate to AlarmFiring in preview mode.
     // The isPreview and alarm params will be added by alarm-firing-enhance worker.
-    (navigation.navigate as (...args: unknown[]) => void)(
-      "AlarmFiring",
-      {
-        alarmId: alarm.id ?? "preview",
-        isPreview: true,
-        alarm,
-      },
-    );
+    (navigation.navigate as (...args: unknown[]) => void)("AlarmFiring", {
+      alarmId: alarm.id ?? "preview",
+      isPreview: true,
+      alarm,
+    });
   }, [navigation, alarm]);
 
   return (

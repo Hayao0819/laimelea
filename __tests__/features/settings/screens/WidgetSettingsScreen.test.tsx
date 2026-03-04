@@ -1,9 +1,4 @@
-import {
-  act,
-  fireEvent,
-  render,
-  waitFor,
-} from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -45,12 +40,9 @@ jest.mock("react-i18next", () => ({
 }));
 
 const mockWidgetUpdate = jest.fn();
-jest.mock(
-  "../../../../src/features/widget/services/widgetUpdater",
-  () => ({
-    requestClockWidgetUpdate: (...args: unknown[]) => mockWidgetUpdate(...args),
-  }),
-);
+jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: (...args: unknown[]) => mockWidgetUpdate(...args),
+}));
 
 function renderScreen(settingsOverride?: Partial<AppSettings>) {
   const store = createStore();
@@ -148,13 +140,14 @@ describe("WidgetSettingsScreen", () => {
     expect(getValid("widget-bg-color-input").props.value).toBe("#123ABC");
 
     // Invalid hex "#GGG" should reset to default after blur
-    const { getByTestId: getInvalid, store: invalidStore } =
-      await renderScreen({
+    const { getByTestId: getInvalid, store: invalidStore } = await renderScreen(
+      {
         widgetSettings: {
           ...DEFAULT_WIDGET_SETTINGS,
           textColor: "#GGG",
         },
-      });
+      },
+    );
 
     expect(getInvalid("widget-text-color-input").props.value).toBe("#GGG");
 

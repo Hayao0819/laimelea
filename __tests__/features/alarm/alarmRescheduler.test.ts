@@ -13,9 +13,7 @@ jest.mock("@notifee/react-native", () => ({
     createTriggerNotification: jest.fn().mockResolvedValue("trigger-id"),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
     cancelNotification: jest.fn().mockResolvedValue(undefined),
-    requestPermission: jest
-      .fn()
-      .mockResolvedValue({ authorizationStatus: 1 }),
+    requestPermission: jest.fn().mockResolvedValue({ authorizationStatus: 1 }),
     onForegroundEvent: jest.fn().mockReturnValue(() => {}),
     onBackgroundEvent: jest.fn(),
   },
@@ -183,7 +181,10 @@ describe("alarmRescheduler", () => {
 
         const alarm = makeAlarm({
           targetTimestampMs: pastTime,
-          repeat: { type: "customCycleInterval", customCycleIntervalDays: cycleDays },
+          repeat: {
+            type: "customCycleInterval",
+            customCycleIntervalDays: cycleDays,
+          },
         });
 
         const result = calculateNextAlarmTime(alarm);
@@ -215,8 +216,7 @@ describe("alarmRescheduler", () => {
       await rescheduleAllEnabledAlarms(alarms);
 
       expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(2);
-      const calls = (notifee.createTriggerNotification as jest.Mock).mock
-        .calls;
+      const calls = (notifee.createTriggerNotification as jest.Mock).mock.calls;
       expect(calls[0][0].id).toBe("a1");
       expect(calls[1][0].id).toBe("a3");
     });

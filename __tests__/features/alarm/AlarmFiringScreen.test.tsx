@@ -462,9 +462,7 @@ describe("AlarmFiringScreen", () => {
       });
 
       await waitFor(() => {
-        expect(notifee.cancelNotification).toHaveBeenCalledWith(
-          "test-alarm-1",
-        );
+        expect(notifee.cancelNotification).toHaveBeenCalledWith("test-alarm-1");
         expect(mockGoBack).toHaveBeenCalled();
       });
     });

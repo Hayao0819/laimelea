@@ -84,12 +84,14 @@ const { Providers } = require("../../src/app/Providers");
 let appStateCallback: ((state: AppStateStatus) => void) | null = null;
 const mockRemove = jest.fn();
 
-jest.spyOn(AppState, "addEventListener").mockImplementation(
-  (_type: string, listener: (state: AppStateStatus) => void) => {
-    appStateCallback = listener;
-    return { remove: mockRemove };
-  },
-);
+jest
+  .spyOn(AppState, "addEventListener")
+  .mockImplementation(
+    (_type: string, listener: (state: AppStateStatus) => void) => {
+      appStateCallback = listener;
+      return { remove: mockRemove };
+    },
+  );
 
 function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   return {
@@ -119,10 +121,7 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   };
 }
 
-function renderProviders(
-  store = createStore(),
-  initialAlarms: Alarm[] = [],
-) {
+function renderProviders(store = createStore(), initialAlarms: Alarm[] = []) {
   store.set(mockSettingsAtom, DEFAULT_SETTINGS);
   store.set(mockAlarmsAtom, initialAlarms);
   return render(

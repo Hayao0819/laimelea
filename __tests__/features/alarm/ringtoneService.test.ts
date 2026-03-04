@@ -72,7 +72,9 @@ describe("ringtoneService", () => {
     });
 
     it("playRingtone should resolve without error", async () => {
-      await expect(playRingtone("content://ringtone/1")).resolves.toBeUndefined();
+      await expect(
+        playRingtone("content://ringtone/1"),
+      ).resolves.toBeUndefined();
     });
 
     it("stopRingtone should resolve without error", async () => {

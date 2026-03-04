@@ -15,7 +15,10 @@ import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
 import type { Alarm } from "../../../models/Alarm";
-import type { AlarmFiringParams, RootStackParamList } from "../../../navigation/types";
+import type {
+  AlarmFiringParams,
+  RootStackParamList,
+} from "../../../navigation/types";
 import { DismissalContainer } from "../components/dismissal/DismissalContainer";
 import { scheduleAlarm } from "../services/alarmScheduler";
 import { GradualVolumeManager } from "../services/gradualVolumeManager";

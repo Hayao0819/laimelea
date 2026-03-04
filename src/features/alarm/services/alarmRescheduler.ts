@@ -73,7 +73,12 @@ function calculateNextWeekdayTime(
 
     const candidate = new Date(now);
     candidate.setDate(nowDate.getDate() + offset);
-    candidate.setHours(targetHours, targetMinutes, targetSeconds, targetMilliseconds);
+    candidate.setHours(
+      targetHours,
+      targetMinutes,
+      targetSeconds,
+      targetMilliseconds,
+    );
     const candidateMs = candidate.getTime();
 
     if (candidateMs > now) {
@@ -99,7 +104,12 @@ function calculateNextWeekdayTime(
 
     const candidate = new Date(now);
     candidate.setDate(nowDate.getDate() + offset);
-    candidate.setHours(targetHours, targetMinutes, targetSeconds, targetMilliseconds);
+    candidate.setHours(
+      targetHours,
+      targetMinutes,
+      targetSeconds,
+      targetMilliseconds,
+    );
     const candidateMs = candidate.getTime();
 
     if (candidateMs > now) {

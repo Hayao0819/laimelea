@@ -20,7 +20,10 @@ const WEEKDAY_KEYS = [
   "weekday.sat",
 ] as const;
 
-export function WeekdayChips({ selectedDays, onDaysChange }: WeekdayChipsProps) {
+export function WeekdayChips({
+  selectedDays,
+  onDaysChange,
+}: WeekdayChipsProps) {
   const { t } = useTranslation();
 
   const handleToggle = useCallback(

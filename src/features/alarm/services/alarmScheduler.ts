@@ -30,9 +30,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
   };
 
   const sound = resolveSound(alarm.soundUri);
-  const vibrationPattern = alarm.vibrationEnabled
-    ? [300, 500, 200, 500]
-    : [];
+  const vibrationPattern = alarm.vibrationEnabled ? [300, 500, 200, 500] : [];
 
   const triggerId = await notifee.createTriggerNotification(
     {
