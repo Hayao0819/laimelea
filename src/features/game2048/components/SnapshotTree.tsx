@@ -124,7 +124,7 @@ function TreeNodeRow({
         <View style={styles.nodeInfo}>
           <Text
             variant="bodyMedium"
-            style={isActive ? { fontWeight: "bold" } : undefined}
+            style={isActive ? styles.activeNodeName : undefined}
             numberOfLines={1}
           >
             {snapshot.name}
@@ -224,5 +224,8 @@ const styles = StyleSheet.create({
   nodeInfo: {
     flex: 1,
     marginLeft: spacing.xs,
+  },
+  activeNodeName: {
+    fontWeight: "bold",
   },
 });

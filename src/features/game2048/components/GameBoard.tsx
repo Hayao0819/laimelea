@@ -33,6 +33,16 @@ export function GameBoard({
 
   const tiles = useAnimatedBoard(board, direction, boardSize);
 
+  const boardDynamicStyle = useMemo(
+    () => ({
+      width: boardWidth,
+      height: boardWidth,
+      borderRadius: cellSize * 0.12,
+      backgroundColor: theme.dark ? "#2A3A28" : "#6B8E63",
+    }),
+    [boardWidth, cellSize, theme.dark],
+  );
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -75,15 +85,7 @@ export function GameBoard({
 
   return (
     <View
-      style={[
-        styles.board,
-        {
-          width: boardWidth,
-          height: boardWidth,
-          borderRadius: cellSize * 0.12,
-          backgroundColor: theme.dark ? "#2A3A28" : "#6B8E63",
-        },
-      ]}
+      style={[styles.board, boardDynamicStyle]}
       testID="game-board"
       {...panResponder.panHandlers}
     >

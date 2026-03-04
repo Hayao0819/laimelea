@@ -36,11 +36,7 @@ export function GameOverlay({
     <View
       style={[
         styles.overlay,
-        {
-          backgroundColor: theme.dark
-            ? "rgba(26, 28, 25, 0.8)"
-            : "rgba(203, 232, 193, 0.8)",
-        },
+        theme.dark ? styles.overlayDark : styles.overlayLight,
       ]}
       testID="game-overlay"
     >
@@ -92,5 +88,11 @@ const styles = StyleSheet.create({
   buttons: {
     gap: 12,
     alignItems: "center",
+  },
+  overlayDark: {
+    backgroundColor: "rgba(26, 28, 25, 0.8)",
+  },
+  overlayLight: {
+    backgroundColor: "rgba(203, 232, 193, 0.8)",
   },
 });
