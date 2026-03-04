@@ -1,6 +1,7 @@
 module.exports = {
   preset: "react-native",
   testPathIgnorePatterns: ["/node_modules/", "/__tests__/e2e/", "\\.worktree/"],
+  modulePathIgnorePatterns: ["<rootDir>/\\.worktree/"],
   transformIgnorePatterns: [
     "node_modules/(?!((jest-)?react-native(-.*)?|@react-native(-community)?|@react-navigation|react-native-reanimated|react-native-worklets)/)",
   ],

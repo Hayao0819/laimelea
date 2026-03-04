@@ -2,6 +2,9 @@ const reactNativeConfig = require("@react-native/eslint-config/flat");
 const simpleImportSort = require("eslint-plugin-simple-import-sort");
 
 module.exports = [
+  {
+    ignores: [".worktree/**"],
+  },
   ...reactNativeConfig,
   {
     plugins: {

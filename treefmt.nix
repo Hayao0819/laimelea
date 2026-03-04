@@ -7,6 +7,7 @@
   programs.prettier = {
     enable = true;
     excludes = [
+      ".worktree/**"
       "node_modules/**"
       "android/**"
       "infra/**"
@@ -19,6 +20,7 @@
     options = [ "--fix" ];
     includes = [ "*.md" ];
     excludes = [
+      ".worktree/**"
       "node_modules/**"
       "android/**"
     ];
