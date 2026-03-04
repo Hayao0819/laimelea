@@ -75,6 +75,28 @@ nix flake check
 
 Report: pass/fail, any errors.
 
+### 6. E2E Tests (opt-in)
+
+**呼び出し元が明示的にE2Eテストを要求した場合のみ実行する。** デフォルトではスキップ。
+
+前提条件:
+
+- APK がビルド済みであること (`android/app/build/outputs/apk/debug/app-debug.apk` が存在)
+- `nix develop` 環境内であること
+
+```bash
+# 1. E2E エミュレータプール起動
+./scripts/e2e-emulators.sh start 3
+
+# 2. 並列テスト実行
+pnpm detox test --configuration android.e2e.debug --maxWorkers=3
+
+# 3. プール停止（成否に関わらず必ず実行）
+./scripts/e2e-emulators.sh stop
+```
+
+APK が存在しない場合は E2E テストをスキップし、その旨を報告する。詳細は [Parallel E2E Testing](../../docs/llm/parallel-e2e.md) を参照。
+
 ## Output Format
 
 After running all checks, provide a summary report in this format:
@@ -105,6 +127,10 @@ After running all checks, provide a summary report in this format:
 ### Nix Flake Check
 - Status: ✅ PASS / ❌ FAIL
 - Details: [errors if any]
+
+### E2E Tests (if requested)
+- Status: ✅ PASS / ❌ FAIL / ⏭️ SKIPPED
+- Details: [test results or skip reason]
 
 ### Overall
 - Status: ✅ ALL CHECKS PASSED / ❌ [N] CHECK(S) FAILED

@@ -12,6 +12,7 @@ AI assistant guidance for Laimelea project.
 ### Guides
 
 - [Nix Language](docs/llm/nix-language.md) - Language quick reference
+- [Parallel E2E Testing](docs/llm/parallel-e2e.md) - Parallel emulator pool for Detox
 
 ## Essential Rules
 
@@ -128,6 +129,17 @@ Task tool → subagent_type: "emulator-operator"
 - **フロー**: Explore分析 → タスク分解 → Worker並列作成 → マージ → 全テスト実行・修正
 - **引数**: パス、ファイル、キーワード、または空（全体分析）
 - `/implement` 完了後に自動提案される
+
+## Parallel E2E Testing
+
+`scripts/e2e-emulators.sh` でヘッドレスエミュレータプールを起動し、Detox で並列実行する。
+
+- **ポート範囲**: 5580-5598（偶数、最大10台）。既存エミュレータ (5554等) には影響しない
+- **Detox設定**: `android.e2e.debug` configuration (`e2e-pool` device, regex `emulator-558[0-9]`)
+- **推奨台数**: 3台（RAM 6GB程度）。16GB以上のマシンなら4-5台も可
+- **コマンド**: `pnpm e2e:pool:start` → `pnpm e2e:parallel` → `pnpm e2e:pool:stop`
+
+詳細は [Parallel E2E Testing](docs/llm/parallel-e2e.md) を参照。
 
 ## Commit Messages
 

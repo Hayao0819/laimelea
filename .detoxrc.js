@@ -40,6 +40,12 @@ module.exports = {
         adbName: ".*",
       },
     },
+    "e2e-pool": {
+      type: "android.attached",
+      device: {
+        adbName: "emulator-558[0-9]",
+      },
+    },
   },
   configurations: {
     "android.emu.debug": {
@@ -52,6 +58,10 @@ module.exports = {
     },
     "android.att.debug": {
       device: "attached",
+      app: "android.debug",
+    },
+    "android.e2e.debug": {
+      device: "e2e-pool",
       app: "android.debug",
     },
   },
