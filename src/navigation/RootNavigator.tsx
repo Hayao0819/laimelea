@@ -18,7 +18,6 @@ import { BackupScreen } from "../features/settings/screens/BackupScreen";
 import { CalendarSettingsScreen } from "../features/settings/screens/CalendarSettingsScreen";
 import { CycleConfigScreen } from "../features/settings/screens/CycleConfigScreen";
 import { GeneralSettingsScreen } from "../features/settings/screens/GeneralSettingsScreen";
-import { LegalScreen } from "../features/settings/screens/LegalScreen";
 import { LicensesScreen } from "../features/settings/screens/LicensesScreen";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen";
 import { TimezoneSettingsScreen } from "../features/settings/screens/TimezoneSettingsScreen";
@@ -98,11 +97,6 @@ export function RootNavigator() {
             name="SettingsAbout"
             component={AboutScreen}
             options={{ title: t("settings.about") }}
-          />
-          <Stack.Screen
-            name="SettingsLegal"
-            component={LegalScreen}
-            options={{ title: t("settings.legal") }}
           />
           <Stack.Screen
             name="SettingsLicenses"

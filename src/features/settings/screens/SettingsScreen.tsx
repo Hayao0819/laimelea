@@ -83,13 +83,6 @@ export function SettingsScreen() {
     [],
   );
 
-  const renderLegalIcon = useCallback(
-    (props: { color: string; style?: object }) => (
-      <List.Icon {...props} icon="gavel" />
-    ),
-    [],
-  );
-
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -169,13 +162,6 @@ export function SettingsScreen() {
             right={renderChevron}
             onPress={() => navigation.navigate("SettingsAbout")}
             testID="settings-about-item"
-          />
-          <List.Item
-            title={t("settings.legal")}
-            left={renderLegalIcon}
-            right={renderChevron}
-            onPress={() => navigation.navigate("SettingsLegal")}
-            testID="settings-legal-item"
           />
         </List.Section>
       </ScrollView>

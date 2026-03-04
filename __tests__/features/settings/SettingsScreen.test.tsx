@@ -84,7 +84,6 @@ describe("SettingsScreen (hub)", () => {
     expect(getByTestId("settings-widget-item")).toBeTruthy();
     expect(getByTestId("settings-backup-item")).toBeTruthy();
     expect(getByTestId("settings-about-item")).toBeTruthy();
-    expect(getByTestId("settings-legal-item")).toBeTruthy();
   });
 
   it("should show cycle config description with hours and minutes", async () => {

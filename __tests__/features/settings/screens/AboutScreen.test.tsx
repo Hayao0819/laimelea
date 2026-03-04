@@ -181,4 +181,80 @@ describe("AboutScreen", () => {
 
     expect(openURLSpy).toHaveBeenCalledWith("https://twitter.com/Hayao0819");
   });
+
+  it("should display section headings", async () => {
+    const { getByText } = await renderWithProviders();
+    expect(getByText("settings.aboutApp")).toBeTruthy();
+    expect(getByText("settings.aboutDeveloper")).toBeTruthy();
+  });
+
+  it("should display MIT License item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("mit-license-item")).toBeTruthy();
+  });
+
+  it("should display MIT-SUSHI License item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("mit-sushi-license-item")).toBeTruthy();
+  });
+
+  it("should display privacy policy item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("privacy-policy-item")).toBeTruthy();
+  });
+
+  it("should display open source licenses item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("licenses-item")).toBeTruthy();
+  });
+
+  it("should open MIT License URL on press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const mitItem = getByTestId("mit-license-item");
+
+    await act(async () => {
+      fireEvent.press(mitItem);
+    });
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      "https://github.com/Hayao0819/laimelea/blob/master/LICENSE",
+    );
+  });
+
+  it("should open MIT-SUSHI License URL on press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const sushiItem = getByTestId("mit-sushi-license-item");
+
+    await act(async () => {
+      fireEvent.press(sushiItem);
+    });
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      "https://github.com/Hayao0819/laimelea/blob/master/LICENSE-SUSHI",
+    );
+  });
+
+  it("should open privacy policy URL on press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const privacyItem = getByTestId("privacy-policy-item");
+
+    await act(async () => {
+      fireEvent.press(privacyItem);
+    });
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      "https://github.com/Hayao0819/laimelea/blob/master/docs/privacy-policy.md",
+    );
+  });
+
+  it("should navigate to SettingsLicenses on open source licenses press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const licensesItem = getByTestId("licenses-item");
+
+    await act(async () => {
+      fireEvent.press(licensesItem);
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsLicenses");
+  });
 });

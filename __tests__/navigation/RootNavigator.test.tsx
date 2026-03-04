@@ -157,11 +157,6 @@ jest.mock("../../src/features/settings/screens/AboutScreen", () => {
   return { AboutScreen: () => <Text>About</Text> };
 });
 
-jest.mock("../../src/features/settings/screens/LegalScreen", () => {
-  const { Text } = require("react-native");
-  return { LegalScreen: () => <Text>Legal</Text> };
-});
-
 jest.mock("../../src/features/settings/screens/LicensesScreen", () => {
   const { Text } = require("react-native");
   return { LicensesScreen: () => <Text>Licenses</Text> };
