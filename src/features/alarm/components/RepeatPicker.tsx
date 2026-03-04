@@ -135,9 +135,21 @@ export function RepeatPicker({ repeat, onRepeatChange }: RepeatPickerProps) {
             value={mode}
             onValueChange={handleModeChange}
             buttons={[
-              { value: "none", label: t("alarm.repeatNone") },
-              { value: "weekdays", label: t("alarm.repeatWeekdays") },
-              { value: "interval", label: t("alarm.repeatInterval") },
+              {
+                value: "none",
+                label: t("alarm.repeatNone"),
+                testID: "repeat-mode-none",
+              },
+              {
+                value: "weekdays",
+                label: t("alarm.repeatWeekdays"),
+                testID: "repeat-mode-weekdays",
+              },
+              {
+                value: "interval",
+                label: t("alarm.repeatInterval"),
+                testID: "repeat-mode-interval",
+              },
             ]}
             style={styles.segmentedButtons}
           />
