@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -135,5 +135,82 @@ describe("SettingsScreen (hub)", () => {
       </JotaiProvider>,
     );
     expect(queryByText("auto")).toBeNull();
+  });
+
+  it("should navigate to SettingsCycleConfig on cycle config press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-cycle-config-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsCycleConfig");
+  });
+
+  it("should navigate to SettingsGeneral on general press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-general-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsGeneral");
+  });
+
+  it("should navigate to SettingsTimezone on timezone press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-timezone-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsTimezone");
+  });
+
+  it("should navigate to SettingsAlarmDefaults on alarm defaults press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-alarm-defaults-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsAlarmDefaults");
+  });
+
+  it("should navigate to SettingsCalendar on calendar press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-calendar-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsCalendar");
+  });
+
+  it("should navigate to SettingsWidget on widget press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-widget-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsWidget");
+  });
+
+  it("should navigate to SettingsBackup on backup press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-backup-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsBackup");
+  });
+
+  it("should navigate to SettingsAbout on about press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-about-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsAbout");
+  });
+
+  it("should not display legal menu item", async () => {
+    const { queryByTestId } = await renderWithProviders();
+    expect(queryByTestId("settings-legal-item")).toBeNull();
   });
 });
