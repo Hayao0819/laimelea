@@ -146,9 +146,14 @@ function renderWithProviders(
 
 describe("AlarmFiringScreen", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     mockRouteParams = { alarmId: "test-alarm-1" };
     mockDismissalContainerProps = {};
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should render with testID "alarm-firing-screen" when alarm found', async () => {
@@ -395,12 +400,7 @@ describe("AlarmFiringScreen", () => {
 
   describe("auto-silence timeout edge cases", () => {
     beforeEach(() => {
-      jest.useFakeTimers();
       mockRouteParams = { alarmId: "test-alarm-1" };
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
     });
 
     it("does not set timeout when autoSilenceMin is 0", async () => {
@@ -445,12 +445,7 @@ describe("AlarmFiringScreen", () => {
 
   describe("auto-silence timeout", () => {
     beforeEach(() => {
-      jest.useFakeTimers();
       mockRouteParams = { alarmId: "test-alarm-1" };
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
     });
 
     it("should auto-dismiss after autoSilenceMin minutes", async () => {
