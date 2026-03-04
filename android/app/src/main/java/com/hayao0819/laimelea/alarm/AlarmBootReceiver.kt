@@ -24,7 +24,7 @@ class AlarmBootReceiver : BroadcastReceiver() {
 
 class AlarmBootService : HeadlessJsTaskService() {
 
-    override fun getTaskConfig(intent: Intent): HeadlessJsTaskConfig {
+    override fun getTaskConfig(intent: Intent?): HeadlessJsTaskConfig {
         return HeadlessJsTaskConfig(
             TASK_NAME,
             Arguments.createMap().apply {
