@@ -182,10 +182,34 @@ describe("AboutScreen", () => {
     expect(openURLSpy).toHaveBeenCalledWith("https://twitter.com/Hayao0819");
   });
 
-  it("should display section headings", async () => {
+  it("should display aboutApp section heading", async () => {
     const { getByText } = await renderWithProviders();
     expect(getByText("settings.aboutApp")).toBeTruthy();
+  });
+
+  it("should display aboutDeveloper section heading", async () => {
+    const { getByText } = await renderWithProviders();
     expect(getByText("settings.aboutDeveloper")).toBeTruthy();
+  });
+
+  it("should display games section heading when unlocked", async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
+      String(Date.now()),
+    );
+
+    const { getByText } = await renderWithProviders();
+
+    await waitFor(() => {
+      expect(getByText("settings.games")).toBeTruthy();
+    });
+  });
+
+  it("should not display games section heading when locked", async () => {
+    const { queryByText } = await renderWithProviders();
+
+    await act(async () => {});
+
+    expect(queryByText("settings.games")).toBeNull();
   });
 
   it("should display MIT License item", async () => {

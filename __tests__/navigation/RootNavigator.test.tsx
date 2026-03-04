@@ -44,6 +44,9 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
+// Collected screen names from the last MockNavigator render.
+let registeredScreenNames: string[] = [];
+
 // Mock @react-navigation/native-stack to provide a minimal navigator
 // that renders the first matching Screen's component.
 jest.mock("@react-navigation/native-stack", () => {
@@ -83,6 +86,8 @@ jest.mock("@react-navigation/native-stack", () => {
         );
       }
     });
+
+    registeredScreenNames = screens.map((s) => s.name);
 
     if (screens.length === 0) return null;
 
@@ -167,6 +172,16 @@ jest.mock("../../src/features/game2048/screens/Game2048Screen", () => {
   return { Game2048Screen: () => <Text>Game2048</Text> };
 });
 
+jest.mock("../../src/features/game2048/screens/Game2048SettingsScreen", () => {
+  const { Text } = require("react-native");
+  return { Game2048SettingsScreen: () => <Text>Game2048Settings</Text> };
+});
+
+jest.mock("../../src/features/game2048/screens/Game2048TreeScreen", () => {
+  const { Text } = require("react-native");
+  return { Game2048TreeScreen: () => <Text>Game2048Tree</Text> };
+});
+
 jest.mock("../../src/features/alarm/screens/AlarmEditScreen", () => {
   const { Text } = require("react-native");
   return { AlarmEditScreen: () => <Text>AlarmEdit</Text> };
@@ -206,6 +221,10 @@ function renderNavigator(store: ReturnType<typeof createStore>) {
     </JotaiProvider>,
   );
 }
+
+beforeEach(() => {
+  registeredScreenNames = [];
+});
 
 describe("RootNavigator", () => {
   describe("when settings are still loading", () => {
@@ -255,6 +274,16 @@ describe("RootNavigator", () => {
       await act(async () => {});
 
       expect(queryByText("MainTabs")).toBeNull();
+    });
+
+    it("should not have SettingsLegal screen registered", async () => {
+      const store = createStore();
+      store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: true });
+
+      await renderNavigator(store);
+      await act(async () => {});
+
+      expect(registeredScreenNames).not.toContain("SettingsLegal");
     });
   });
 });
