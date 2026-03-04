@@ -393,6 +393,56 @@ describe("AlarmFiringScreen", () => {
     });
   });
 
+  describe("auto-silence timeout edge cases", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      mockRouteParams = { alarmId: "test-alarm-1" };
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("does not set timeout when autoSilenceMin is 0", async () => {
+      const alarm = makeAlarm({ autoSilenceMin: 0 });
+      await renderWithProviders(createStore(), [alarm]);
+
+      await act(async () => {
+        jest.advanceTimersByTime(60 * 60 * 1000);
+      });
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    it("does not set timeout when autoSilenceMin is negative", async () => {
+      const alarm = makeAlarm({ autoSilenceMin: -5 });
+      await renderWithProviders(createStore(), [alarm]);
+
+      await act(async () => {
+        jest.advanceTimersByTime(60 * 60 * 1000);
+      });
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    it("does not set timeout in preview mode", async () => {
+      mockRouteParams = {
+        isPreview: true,
+        alarm: makeAlarm({ autoSilenceMin: 5 }),
+      };
+      await renderWithProviders(createStore());
+
+      await act(async () => {
+        jest.advanceTimersByTime(10 * 60 * 1000);
+      });
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+  });
+
   describe("auto-silence timeout", () => {
     beforeEach(() => {
       jest.useFakeTimers();
