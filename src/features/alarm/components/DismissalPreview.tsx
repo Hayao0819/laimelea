@@ -1,68 +1,51 @@
-import React from "react";
+import { useNavigation } from "@react-navigation/native";
+import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
-import { Surface, Text, useTheme } from "react-native-paper";
+import { StyleSheet } from "react-native";
+import { Button } from "react-native-paper";
 
-import { radius, spacing } from "../../../app/spacing";
-import type { DismissalMethod } from "../../../models/Settings";
-import { getStrategy } from "../strategies";
-import { DismissalContainer } from "./dismissal/DismissalContainer";
+import type { Alarm } from "../../../models/Alarm";
 
 interface DismissalPreviewProps {
-  method: DismissalMethod;
-  difficulty: number;
+  alarm: Partial<Alarm> & { dismissalMethod: Alarm["dismissalMethod"] };
 }
 
-export function DismissalPreview({
-  method,
-  difficulty,
-}: DismissalPreviewProps) {
+export function DismissalPreview({ alarm }: DismissalPreviewProps) {
   const { t } = useTranslation();
-  const theme = useTheme();
-  const strategy = getStrategy(method);
+  const navigation = useNavigation();
 
-  if (!strategy) return null;
+  const handlePress = useCallback(() => {
+    // Navigate to AlarmFiring in preview mode.
+    // The isPreview and alarm params will be added by alarm-firing-enhance worker.
+    (navigation.navigate as (...args: unknown[]) => void)(
+      "AlarmFiring",
+      {
+        alarmId: alarm.id ?? "preview",
+        isPreview: true,
+        alarm,
+      },
+    );
+  }, [navigation, alarm]);
 
   return (
-    <Surface style={styles.container} elevation={0}>
-      <Text
-        variant="labelMedium"
-        style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
-      >
-        {t("alarm.dismissalPreview")}
-      </Text>
-      <View
-        style={styles.preview}
-        pointerEvents="none"
-        accessibilityLabel={t("alarm.dismissalPreviewOf", {
-          method: t(strategy.displayName),
-        })}
-        testID="dismissal-preview"
-      >
-        <DismissalContainer
-          method={method}
-          difficulty={difficulty}
-          onDismiss={() => {}}
-          onSnooze={() => {}}
-          canSnooze={true}
-        />
-      </View>
-    </Surface>
+    <Button
+      mode="contained-tonal"
+      onPress={handlePress}
+      icon="eye"
+      style={styles.button}
+      testID="preview-button"
+      accessibilityLabel={t("alarm.showPreview")}
+    >
+      {t("alarm.showPreview")}
+    </Button>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: radius.md,
-    padding: spacing.base,
-    overflow: "hidden",
-  },
-  label: {
-    marginBottom: spacing.sm,
-  },
-  preview: {
-    alignItems: "center",
-    opacity: 0.8,
-    transform: [{ scale: 0.85 }],
+  button: {
+    marginTop: 0,
   },
 });
+
+// Re-export old props type for backwards compatibility in tests
+export type { DismissalPreviewProps };

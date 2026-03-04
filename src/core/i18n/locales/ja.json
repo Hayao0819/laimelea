@@ -56,7 +56,24 @@
     "testAlarmScheduled": "10秒後にテストアラームが鳴ります",
     "testAlarmFailed": "テストアラームのスケジュールに失敗しました",
     "dismissalPreview": "プレビュー",
-    "dismissalPreviewOf": "{{method}} 解除方法のプレビュー"
+    "dismissalPreviewOf": "{{method}} 解除方法のプレビュー",
+    "repeatNone": "なし",
+    "repeatWeekdays": "曜日指定",
+    "repeatInterval": "間隔指定",
+    "repeatIntervalHours": "間隔（時間）",
+    "soundDefault": "デフォルト",
+    "soundSilent": "サイレント",
+    "soundSelect": "アラーム音を選択",
+    "showPreview": "プレビューを表示"
+  },
+  "weekday": {
+    "sun": "日",
+    "mon": "月",
+    "tue": "火",
+    "wed": "水",
+    "thu": "木",
+    "fri": "金",
+    "sat": "土"
   },
   "dismissal": {
     "simple": "タップで解除",

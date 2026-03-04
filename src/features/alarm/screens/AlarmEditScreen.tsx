@@ -25,21 +25,33 @@ import { radius, spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { customToReal, realToCustom } from "../../../core/time/conversions";
-import type { Alarm } from "../../../models/Alarm";
+import type { Alarm, AlarmRepeat } from "../../../models/Alarm";
 import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
 import type { RootStackParamList } from "../../../navigation/types";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
+import { AlarmSoundPicker } from "../components/AlarmSoundPicker";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
 import { DismissalPreview } from "../components/DismissalPreview";
+import { RepeatPicker } from "../components/RepeatPicker";
 import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
 import { getAllStrategies, getStrategy } from "../strategies";
 
 const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
 const SNOOZE_MAX_OPTIONS = [1, 2, 3, 5, 10];
+const SILENT_URI = "__silent__";
 
 function cycleNext<T>(options: T[], current: T): T {
   const idx = options.indexOf(current);
   return options[(idx + 1) % options.length];
+}
+
+function getSoundDescription(
+  soundUri: string | null,
+  t: (key: string) => string,
+): string {
+  if (soundUri === null) return t("alarm.soundDefault");
+  if (soundUri === SILENT_URI) return t("alarm.soundSilent");
+  return soundUri;
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmEdit">;
@@ -94,7 +106,14 @@ export function AlarmEditScreen() {
   const [dismissalMethod, setDismissalMethod] = useState<DismissalMethod>(
     existingAlarm?.dismissalMethod ?? defaults.dismissalMethod,
   );
+  const [repeat, setRepeat] = useState<AlarmRepeat | null>(
+    existingAlarm?.repeat ?? null,
+  );
+  const [soundUri, setSoundUri] = useState<string | null>(
+    existingAlarm?.soundUri ?? null,
+  );
   const [dismissalDialogVisible, setDismissalDialogVisible] = useState(false);
+  const [soundDialogVisible, setSoundDialogVisible] = useState(false);
   const [testSnackbarVisible, setTestSnackbarVisible] = useState(false);
 
   const computeTargetTimestamp = useCallback(() => {
@@ -123,7 +142,7 @@ export function AlarmEditScreen() {
       enabled: true,
       targetTimestampMs,
       setInTimeSystem: timeSystem,
-      repeat: existingAlarm?.repeat ?? null,
+      repeat,
       dismissalMethod,
       gradualVolumeDurationSec:
         existingAlarm?.gradualVolumeDurationSec ??
@@ -132,7 +151,7 @@ export function AlarmEditScreen() {
       snoozeMaxCount: snoozeMax,
       snoozeCount: 0,
       autoSilenceMin,
-      soundUri: existingAlarm?.soundUri ?? null,
+      soundUri,
       vibrationEnabled: vibration,
       notifeeTriggerId: null,
       skipNextOccurrence: false,
@@ -168,11 +187,13 @@ export function AlarmEditScreen() {
     existingAlarm,
     label,
     timeSystem,
+    repeat,
     dismissalMethod,
     defaults,
     snoozeDuration,
     snoozeMax,
     autoSilenceMin,
+    soundUri,
     vibration,
     mathDifficulty,
     alarms,
@@ -309,6 +330,36 @@ export function AlarmEditScreen() {
     [],
   );
 
+  const renderSoundIcon = useCallback(
+    (props: { color: string; style: object }) => (
+      <List.Icon {...props} icon="music-note" />
+    ),
+    [],
+  );
+
+  const currentAlarmState = useMemo(
+    () => ({
+      id: existingAlarm?.id ?? "preview",
+      dismissalMethod,
+      mathDifficulty,
+      label,
+      soundUri,
+      vibrationEnabled: vibration,
+      snoozeDurationMin: snoozeDuration,
+      snoozeMaxCount: snoozeMax,
+    }),
+    [
+      existingAlarm?.id,
+      dismissalMethod,
+      mathDifficulty,
+      label,
+      soundUri,
+      vibration,
+      snoozeDuration,
+      snoozeMax,
+    ],
+  );
+
   const theme = useTheme();
 
   return (
@@ -366,6 +417,7 @@ export function AlarmEditScreen() {
             testID="dismissal-method-item"
           />
           <Divider />
+          <RepeatPicker repeat={repeat} onRepeatChange={setRepeat} />
           <List.Item
             title={t("settings.snoozeDuration")}
             description={`${snoozeDuration} min`}
@@ -392,6 +444,14 @@ export function AlarmEditScreen() {
             title={t("alarm.vibration")}
             left={renderVibrateIcon}
             right={renderVibrationSwitch}
+          />
+          <Divider />
+          <List.Item
+            title={t("alarm.sound")}
+            description={getSoundDescription(soundUri, t)}
+            left={renderSoundIcon}
+            onPress={() => setSoundDialogVisible(true)}
+            testID="sound-picker-item"
           />
           <Divider />
           <List.Item
@@ -422,10 +482,7 @@ export function AlarmEditScreen() {
           )}
         </Surface>
 
-        <DismissalPreview
-          method={dismissalMethod}
-          difficulty={mathDifficulty}
-        />
+        <DismissalPreview alarm={currentAlarmState} />
 
         <Button
           mode="contained-tonal"
@@ -476,6 +533,15 @@ export function AlarmEditScreen() {
             </RadioButton.Group>
           </Dialog.Content>
         </Dialog>
+        <AlarmSoundPicker
+          soundUri={soundUri}
+          onSoundChange={(uri) => {
+            setSoundUri(uri);
+            setSoundDialogVisible(false);
+          }}
+          visible={soundDialogVisible}
+          onDismiss={() => setSoundDialogVisible(false)}
+        />
         <Snackbar
           visible={testSnackbarVisible}
           onDismiss={() => setTestSnackbarVisible(false)}

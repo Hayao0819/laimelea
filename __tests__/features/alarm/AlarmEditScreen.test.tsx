@@ -79,17 +79,27 @@ jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
   rescheduleAllAlarms: jest.fn().mockResolvedValue(undefined),
 }));
 
+// Mock the ringtone service for AlarmSoundPicker
+jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
+  RingtoneService: {
+    getAlarmRingtones: jest.fn().mockResolvedValue([]),
+    playPreview: jest.fn().mockResolvedValue(undefined),
+    stopPreview: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 const mockScheduleAlarm = scheduleAlarm as jest.MockedFunction<
   typeof scheduleAlarm
 >;
 
 const mockGoBack = jest.fn();
 const mockSetOptions = jest.fn();
+const mockNavigate = jest.fn();
 const mockRouteParams: { alarmId?: string } = {};
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
-    navigate: jest.fn(),
+    navigate: mockNavigate,
     goBack: mockGoBack,
     setOptions: mockSetOptions,
   }),
@@ -384,13 +394,7 @@ describe("AlarmEditScreen", () => {
     });
   });
 
-  describe("dismissal dialog and DismissalPreview", () => {
-    it("renders DismissalPreview with current method", async () => {
-      const { getByTestId } = await renderWithProviders();
-      expect(getByTestId("dismissal-preview")).toBeTruthy();
-      expect(getByTestId("dismissal-simple")).toBeTruthy();
-    });
-
+  describe("dismissal dialog", () => {
     it("opens dismissal dialog on dismissal item press", async () => {
       const { getByTestId } = await renderWithProviders();
 
@@ -402,7 +406,7 @@ describe("AlarmEditScreen", () => {
     });
 
     it("selects math dismissal method from dialog", async () => {
-      const { getByTestId } = await renderWithProviders();
+      const { getByTestId, getByText } = await renderWithProviders();
 
       await fireEvent.press(getByTestId("dismissal-method-item"));
       await waitFor(() => {
@@ -412,7 +416,7 @@ describe("AlarmEditScreen", () => {
       await fireEvent.press(getByTestId("dismissal-option-math"));
 
       await waitFor(() => {
-        expect(getByTestId("dismissal-math")).toBeTruthy();
+        expect(getByText("settings.mathDifficulty")).toBeTruthy();
       });
     });
 
@@ -430,20 +434,54 @@ describe("AlarmEditScreen", () => {
         expect(getByText("settings.mathDifficulty")).toBeTruthy();
       });
     });
+  });
 
-    it("updates DismissalPreview when method changes to shake", async () => {
+  describe("DismissalPreview", () => {
+    it("renders preview button", async () => {
+      const { getByTestId } = await renderWithProviders();
+      expect(getByTestId("preview-button")).toBeTruthy();
+    });
+
+    it("preview button navigates to AlarmFiring", async () => {
       const { getByTestId } = await renderWithProviders();
 
-      await fireEvent.press(getByTestId("dismissal-method-item"));
-      await waitFor(() => {
-        expect(getByTestId("dismissal-dialog")).toBeTruthy();
-      });
+      await fireEvent.press(getByTestId("preview-button"));
 
-      await fireEvent.press(getByTestId("dismissal-option-shake"));
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "AlarmFiring",
+        expect.objectContaining({
+          isPreview: true,
+          alarmId: "preview",
+        }),
+      );
+    });
+  });
 
-      await waitFor(() => {
-        expect(getByTestId("dismissal-shake")).toBeTruthy();
-      });
+  describe("repeat picker", () => {
+    it("should render repeat picker item", async () => {
+      const { getByTestId } = await renderWithProviders();
+      expect(getByTestId("repeat-picker-item")).toBeTruthy();
+    });
+
+    it("should load existing alarm repeat value", async () => {
+      mockRouteParams.alarmId = "existing-alarm";
+      const { getByText } = await renderWithProviders(createStore(), [
+        makeAlarm({ repeat: { type: "weekdays", weekdays: [1, 3] } }),
+      ]);
+
+      expect(getByText("weekday.mon, weekday.wed")).toBeTruthy();
+    });
+  });
+
+  describe("sound picker", () => {
+    it("should render sound picker item", async () => {
+      const { getByTestId } = await renderWithProviders();
+      expect(getByTestId("sound-picker-item")).toBeTruthy();
+    });
+
+    it("should show default sound description when soundUri is null", async () => {
+      const { getByText } = await renderWithProviders();
+      expect(getByText("alarm.soundDefault")).toBeTruthy();
     });
   });
 });

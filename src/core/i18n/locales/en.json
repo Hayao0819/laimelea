@@ -56,7 +56,24 @@
     "testAlarmScheduled": "Test alarm will fire in 10 seconds",
     "testAlarmFailed": "Failed to schedule test alarm",
     "dismissalPreview": "Preview",
-    "dismissalPreviewOf": "Preview of {{method}} dismissal method"
+    "dismissalPreviewOf": "Preview of {{method}} dismissal method",
+    "repeatNone": "None",
+    "repeatWeekdays": "Weekdays",
+    "repeatInterval": "Interval",
+    "repeatIntervalHours": "Interval (hours)",
+    "soundDefault": "Default",
+    "soundSilent": "Silent",
+    "soundSelect": "Select Alarm Sound",
+    "showPreview": "Show Preview"
+  },
+  "weekday": {
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat"
   },
   "dismissal": {
     "simple": "Tap to Dismiss",
