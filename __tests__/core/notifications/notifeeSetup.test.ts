@@ -36,7 +36,7 @@ describe("notifeeSetup", () => {
   });
 
   describe("createAlarmChannel", () => {
-    it("should create a channel with HIGH importance", async () => {
+    it("should create a channel with HIGH importance and DND bypass", async () => {
       await createAlarmChannel();
 
       expect(notifee.createChannel).toHaveBeenCalledWith(
@@ -46,6 +46,7 @@ describe("notifeeSetup", () => {
           importance: 4, // HIGH
           sound: "default",
           vibration: true,
+          bypassDnd: true,
         }),
       );
     });

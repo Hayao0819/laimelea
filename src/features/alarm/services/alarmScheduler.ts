@@ -7,12 +7,32 @@ import notifee, {
 import { ALARM_CHANNEL_ID } from "../../../core/notifications/notifeeSetup";
 import type { Alarm } from "../../../models/Alarm";
 
+function resolveSound(soundUri: string | null): string {
+  if (!soundUri) {
+    return "default";
+  }
+  try {
+    // Basic URI validation: must contain a scheme separator
+    if (soundUri.includes("://") || soundUri.includes(":")) {
+      return soundUri;
+    }
+    return "default";
+  } catch {
+    return "default";
+  }
+}
+
 export async function scheduleAlarm(alarm: Alarm): Promise<string> {
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp: alarm.targetTimestampMs,
     alarmManager: { allowWhileIdle: true },
   };
+
+  const sound = resolveSound(alarm.soundUri);
+  const vibrationPattern = alarm.vibrationEnabled
+    ? [300, 500, 200, 500]
+    : [];
 
   const triggerId = await notifee.createTriggerNotification(
     {
@@ -29,8 +49,8 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
         },
         pressAction: { id: "default" },
         loopSound: true,
-        sound: "default",
-        vibrationPattern: [300, 500, 200, 500],
+        sound,
+        vibrationPattern,
         autoCancel: false,
         ongoing: true,
       },

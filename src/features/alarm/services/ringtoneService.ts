@@ -1,23 +1,57 @@
-/**
- * RingtoneService stub - will be fully implemented by the android-native-modules worker.
- * This provides the interface that AlarmSoundPicker depends on.
- */
+import { NativeModules } from "react-native";
 
 export interface RingtoneInfo {
-  uri: string;
   title: string;
+  uri: string;
 }
 
-export const RingtoneService = {
-  async getAlarmRingtones(): Promise<RingtoneInfo[]> {
+interface RingtoneModuleSpec {
+  getAlarmRingtones(): Promise<RingtoneInfo[]>;
+  playRingtone(uri: string): Promise<void>;
+  stopRingtone(): Promise<void>;
+  getDefaultAlarmUri(): Promise<string>;
+}
+
+function getModule(): RingtoneModuleSpec | undefined {
+  return NativeModules.RingtoneModule as RingtoneModuleSpec | undefined;
+}
+
+export async function getAlarmRingtones(): Promise<RingtoneInfo[]> {
+  const mod = getModule();
+  if (!mod) {
     return [];
-  },
+  }
+  return mod.getAlarmRingtones();
+}
 
-  async playPreview(_uri: string): Promise<void> {
-    // No-op until native module is available
-  },
+export async function playRingtone(uri: string): Promise<void> {
+  const mod = getModule();
+  if (!mod) {
+    return;
+  }
+  return mod.playRingtone(uri);
+}
 
-  async stopPreview(): Promise<void> {
-    // No-op until native module is available
-  },
+export async function stopRingtone(): Promise<void> {
+  const mod = getModule();
+  if (!mod) {
+    return;
+  }
+  return mod.stopRingtone();
+}
+
+export async function getDefaultAlarmUri(): Promise<string> {
+  const mod = getModule();
+  if (!mod) {
+    return "default";
+  }
+  return mod.getDefaultAlarmUri();
+}
+
+/** Object-style API for component usage */
+export const RingtoneService = {
+  getAlarmRingtones,
+  playPreview: playRingtone,
+  stopPreview: stopRingtone,
+  getDefaultAlarmUri,
 };

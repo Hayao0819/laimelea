@@ -4,10 +4,11 @@ import {
   NavigationContainer,
 } from "@react-navigation/native";
 import { useAtomValue, useSetAtom } from "jotai";
-import React, { useEffect, useMemo } from "react";
-import { useColorScheme } from "react-native";
+import React, { useEffect, useMemo, useRef } from "react";
+import { AppState, useColorScheme } from "react-native";
 import { PaperProvider } from "react-native-paper";
 
+import { alarmsAtom } from "../atoms/alarmAtoms";
 import { platformTypeAtom } from "../atoms/platformAtoms";
 import { settingsAtom } from "../atoms/settingsAtoms";
 import i18n, { resolveLanguage } from "../core/i18n";
@@ -17,6 +18,7 @@ import {
   ensureNotificationPermissions,
 } from "../core/notifications/notifeeSetup";
 import { detectPlatform } from "../core/platform/detection";
+import { rescheduleAllEnabledAlarms } from "../features/alarm/services/alarmRescheduler";
 import { darkTheme, lightTheme } from "./theme";
 
 interface ProvidersProps {
@@ -26,7 +28,10 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   const systemColorScheme = useColorScheme();
   const settings = useAtomValue(settingsAtom);
+  const alarms = useAtomValue(alarmsAtom);
   const setPlatformType = useSetAtom(platformTypeAtom);
+  const alarmsRef = useRef(alarms);
+  alarmsRef.current = alarms;
 
   useEffect(() => {
     createAlarmChannel();
@@ -34,6 +39,20 @@ export function Providers({ children }: ProvidersProps) {
     ensureNotificationPermissions();
     detectPlatform().then(setPlatformType);
   }, [setPlatformType]);
+
+  useEffect(() => {
+    rescheduleAllEnabledAlarms(alarmsRef.current);
+
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        rescheduleAllEnabledAlarms(alarmsRef.current);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const lang = resolveLanguage(settings.language);

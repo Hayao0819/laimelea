@@ -13,6 +13,7 @@ export async function createAlarmChannel(): Promise<string> {
     importance: AndroidImportance.HIGH,
     sound: "default",
     vibration: true,
+    bypassDnd: true,
   });
 }
 

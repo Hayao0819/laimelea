@@ -96,6 +96,53 @@ describe("alarmScheduler", () => {
         .mock.calls[0];
       expect(notification.title).toBe("Alarm");
     });
+
+    it("should use soundUri when provided", async () => {
+      const alarm = makeAlarm({ soundUri: "content://media/ringtone/5" });
+      await scheduleAlarm(alarm);
+
+      const [notification] = (notifee.createTriggerNotification as jest.Mock)
+        .mock.calls[0];
+      expect(notification.android.sound).toBe("content://media/ringtone/5");
+    });
+
+    it("should use 'default' sound when soundUri is null", async () => {
+      const alarm = makeAlarm({ soundUri: null });
+      await scheduleAlarm(alarm);
+
+      const [notification] = (notifee.createTriggerNotification as jest.Mock)
+        .mock.calls[0];
+      expect(notification.android.sound).toBe("default");
+    });
+
+    it("should fallback to 'default' sound for invalid URI", async () => {
+      const alarm = makeAlarm({ soundUri: "not-a-valid-uri" });
+      await scheduleAlarm(alarm);
+
+      const [notification] = (notifee.createTriggerNotification as jest.Mock)
+        .mock.calls[0];
+      expect(notification.android.sound).toBe("default");
+    });
+
+    it("should set vibrationPattern when vibrationEnabled is true", async () => {
+      const alarm = makeAlarm({ vibrationEnabled: true });
+      await scheduleAlarm(alarm);
+
+      const [notification] = (notifee.createTriggerNotification as jest.Mock)
+        .mock.calls[0];
+      expect(notification.android.vibrationPattern).toEqual([
+        300, 500, 200, 500,
+      ]);
+    });
+
+    it("should set empty vibrationPattern when vibrationEnabled is false", async () => {
+      const alarm = makeAlarm({ vibrationEnabled: false });
+      await scheduleAlarm(alarm);
+
+      const [notification] = (notifee.createTriggerNotification as jest.Mock)
+        .mock.calls[0];
+      expect(notification.android.vibrationPattern).toEqual([]);
+    });
   });
 
   describe("cancelAlarm", () => {
