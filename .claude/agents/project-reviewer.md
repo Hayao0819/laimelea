@@ -79,7 +79,7 @@ Report: pass/fail, any errors.
 
 After running all checks, provide a summary report in this format:
 
-```
+```text
 ## 🔍 Project Review Report
 
 ### TypeScript Type Check
