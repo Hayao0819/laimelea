@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
       android:name=".MainApplication"
@@ -84,5 +85,19 @@
               android:name="android.appwidget.provider"
               android:resource="@xml/clock_widget_large_info" />
       </receiver>
+
+      <receiver
+          android:name=".alarm.AlarmBootReceiver"
+          android:exported="true"
+          android:directBootAware="true">
+          <intent-filter>
+              <action android:name="android.intent.action.BOOT_COMPLETED" />
+          </intent-filter>
+      </receiver>
+
+      <service
+          android:name=".alarm.AlarmBootService"
+          android:exported="false"
+          android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>
