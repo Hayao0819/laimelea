@@ -64,7 +64,10 @@
     "soundDefault": "Default",
     "soundSilent": "Silent",
     "soundSelect": "Select Alarm Sound",
-    "showPreview": "Show Preview"
+    "showPreview": "Show Preview",
+    "preview": "Preview",
+    "previewBadge": "Preview Mode",
+    "closePreview": "Close"
   },
   "weekday": {
     "sun": "Sun",

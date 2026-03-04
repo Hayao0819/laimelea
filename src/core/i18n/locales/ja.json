@@ -64,7 +64,10 @@
     "soundDefault": "デフォルト",
     "soundSilent": "サイレント",
     "soundSelect": "アラーム音を選択",
-    "showPreview": "プレビューを表示"
+    "showPreview": "プレビューを表示",
+    "preview": "プレビュー",
+    "previewBadge": "プレビューモード",
+    "closePreview": "閉じる"
   },
   "weekday": {
     "sun": "日",

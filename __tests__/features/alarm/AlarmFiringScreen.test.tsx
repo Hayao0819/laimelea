@@ -8,6 +8,7 @@ import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { AlarmFiringScreen } from "../../../src/features/alarm/screens/AlarmFiringScreen";
 import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
+import { GradualVolumeManager } from "../../../src/features/alarm/services/gradualVolumeManager";
 import type { Alarm } from "../../../src/models/Alarm";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
@@ -38,11 +39,11 @@ jest.mock("react-i18next", () => ({
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
-let mockAlarmId = "test-alarm-1";
+let mockRouteParams: Record<string, unknown> = { alarmId: "test-alarm-1" };
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack }),
-  useRoute: () => ({ params: { alarmId: mockAlarmId } }),
+  useRoute: () => ({ params: mockRouteParams }),
 }));
 
 jest.mock("@notifee/react-native", () => ({
@@ -146,7 +147,7 @@ function renderWithProviders(
 describe("AlarmFiringScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAlarmId = "test-alarm-1";
+    mockRouteParams = { alarmId: "test-alarm-1" };
     mockDismissalContainerProps = {};
   });
 
@@ -182,7 +183,7 @@ describe("AlarmFiringScreen", () => {
   });
 
   it('should show "Alarm not found" when alarm id doesn\'t match', async () => {
-    mockAlarmId = "non-existent-alarm";
+    mockRouteParams = { alarmId: "non-existent-alarm" };
     const { getByText, queryByTestId } = await renderWithProviders(
       createStore(),
       [makeAlarm()],
@@ -298,6 +299,173 @@ describe("AlarmFiringScreen", () => {
       await renderWithProviders(createStore(), [alarm]);
 
       expect(mockDismissalContainerProps).toMatchObject({ difficulty: 3 });
+    });
+  });
+
+  describe("preview mode", () => {
+    beforeEach(() => {
+      mockRouteParams = { isPreview: true, alarm: makeAlarm() };
+    });
+
+    it("should not start GradualVolumeManager in preview mode", async () => {
+      await renderWithProviders(createStore());
+
+      expect(GradualVolumeManager).not.toHaveBeenCalled();
+    });
+
+    it("should display preview badge", async () => {
+      const { getByTestId } = await renderWithProviders(createStore());
+
+      expect(getByTestId("preview-badge")).toBeTruthy();
+    });
+
+    it("should display close preview button", async () => {
+      const { getByTestId } = await renderWithProviders(createStore());
+
+      expect(getByTestId("close-preview-button")).toBeTruthy();
+    });
+
+    it("should navigate back when close preview button is pressed", async () => {
+      const { getByTestId } = await renderWithProviders(createStore());
+
+      await act(async () => {
+        fireEvent.press(getByTestId("close-preview-button"));
+      });
+
+      expect(mockGoBack).toHaveBeenCalled();
+    });
+
+    it("should not call notifee.cancelNotification on dismiss", async () => {
+      const { getByTestId } = await renderWithProviders(createStore());
+
+      await act(async () => {
+        fireEvent.press(getByTestId("dismiss-button"));
+      });
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(mockGoBack).toHaveBeenCalled();
+    });
+
+    it("should not call notifee.cancelNotification on snooze", async () => {
+      const { getByTestId } = await renderWithProviders(createStore());
+
+      await act(async () => {
+        fireEvent.press(getByTestId("snooze-button"));
+      });
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(scheduleAlarm).not.toHaveBeenCalled();
+      expect(mockGoBack).toHaveBeenCalled();
+    });
+
+    it("should not modify alarms atom on dismiss", async () => {
+      const store = createStore();
+      const storedAlarm = makeAlarm();
+      const { getByTestId } = await renderWithProviders(store, [storedAlarm]);
+
+      await act(async () => {
+        fireEvent.press(getByTestId("dismiss-button"));
+      });
+
+      const updatedAlarms = await store.get(alarmsAtom);
+      expect(updatedAlarms[0].lastFiredAt).toBeNull();
+    });
+
+    it("should render alarm from params, not from store", async () => {
+      const previewAlarm = makeAlarm({
+        id: "preview-only",
+        label: "Preview Alarm",
+      });
+      mockRouteParams = { isPreview: true, alarm: previewAlarm };
+
+      const { getByText } = await renderWithProviders(createStore());
+
+      expect(getByText("Preview Alarm")).toBeTruthy();
+    });
+
+    it("should not show preview badge in normal mode", async () => {
+      mockRouteParams = { alarmId: "test-alarm-1" };
+      const { queryByTestId } = await renderWithProviders(createStore(), [
+        makeAlarm(),
+      ]);
+
+      expect(queryByTestId("preview-badge")).toBeNull();
+    });
+  });
+
+  describe("auto-silence timeout", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      mockRouteParams = { alarmId: "test-alarm-1" };
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("should auto-dismiss after autoSilenceMin minutes", async () => {
+      const alarm = makeAlarm({ autoSilenceMin: 5 });
+      await renderWithProviders(createStore(), [alarm]);
+
+      await act(async () => {
+        jest.advanceTimersByTime(5 * 60 * 1000);
+      });
+
+      await waitFor(() => {
+        expect(notifee.cancelNotification).toHaveBeenCalledWith(
+          "test-alarm-1",
+        );
+        expect(mockGoBack).toHaveBeenCalled();
+      });
+    });
+
+    it("should not auto-dismiss when autoSilenceMin is 0", async () => {
+      const alarm = makeAlarm({ autoSilenceMin: 0 });
+      await renderWithProviders(createStore(), [alarm]);
+
+      await act(async () => {
+        jest.advanceTimersByTime(60 * 60 * 1000);
+      });
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    it("should not set auto-silence timeout in preview mode", async () => {
+      mockRouteParams = {
+        isPreview: true,
+        alarm: makeAlarm({ autoSilenceMin: 1 }),
+      };
+      await renderWithProviders(createStore());
+
+      await act(async () => {
+        jest.advanceTimersByTime(2 * 60 * 1000);
+      });
+
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    it("should not auto-dismiss before the timeout elapses", async () => {
+      const alarm = makeAlarm({ autoSilenceMin: 10 });
+      await renderWithProviders(createStore(), [alarm]);
+
+      // Advance to just before the timeout
+      await act(async () => {
+        jest.advanceTimersByTime(10 * 60 * 1000 - 1);
+      });
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
+
+      // Now advance past the threshold
+      await act(async () => {
+        jest.advanceTimersByTime(1);
+      });
+
+      await waitFor(() => {
+        expect(notifee.cancelNotification).toHaveBeenCalled();
+        expect(mockGoBack).toHaveBeenCalled();
+      });
     });
   });
 });
