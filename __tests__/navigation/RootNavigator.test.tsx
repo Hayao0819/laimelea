@@ -162,6 +162,11 @@ jest.mock("../../src/features/settings/screens/AboutScreen", () => {
   return { AboutScreen: () => <Text>About</Text> };
 });
 
+jest.mock("../../src/features/settings/screens/LegalScreen", () => {
+  const { Text } = require("react-native");
+  return { LegalScreen: () => <Text>Legal</Text> };
+});
+
 jest.mock("../../src/features/settings/screens/LicensesScreen", () => {
   const { Text } = require("react-native");
   return { LicensesScreen: () => <Text>Licenses</Text> };
@@ -276,14 +281,14 @@ describe("RootNavigator", () => {
       expect(queryByText("MainTabs")).toBeNull();
     });
 
-    it("should not have SettingsLegal screen registered", async () => {
+    it("should have SettingsLegal screen registered", async () => {
       const store = createStore();
       store.set(settingsAtom, { ...DEFAULT_SETTINGS, setupComplete: true });
 
       await renderNavigator(store);
       await act(async () => {});
 
-      expect(registeredScreenNames).not.toContain("SettingsLegal");
+      expect(registeredScreenNames).toContain("SettingsLegal");
     });
   });
 });

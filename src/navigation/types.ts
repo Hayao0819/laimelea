@@ -29,6 +29,7 @@ export type RootStackParamList = {
   SettingsWidget: undefined;
   SettingsBackup: undefined;
   SettingsAbout: undefined;
+  SettingsLegal: undefined;
   SettingsLicenses: undefined;
   Game2048: undefined;
   Game2048Settings: undefined;

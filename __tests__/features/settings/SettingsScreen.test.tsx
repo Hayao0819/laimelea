@@ -209,8 +209,17 @@ describe("SettingsScreen (hub)", () => {
     expect(mockNavigate).toHaveBeenCalledWith("SettingsAbout");
   });
 
-  it("should not display legal menu item", async () => {
-    const { queryByTestId } = await renderWithProviders();
-    expect(queryByTestId("settings-legal-item")).toBeNull();
+  it("should display legal menu item", async () => {
+    const { getByTestId } = await renderWithProviders();
+    expect(getByTestId("settings-legal-item")).toBeTruthy();
+  });
+
+  it("should navigate to SettingsLegal on legal press", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const item = getByTestId("settings-legal-item");
+    await act(async () => {
+      fireEvent.press(item);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("SettingsLegal");
   });
 });
