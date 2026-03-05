@@ -1,4 +1,4 @@
-import { by, element, expect, waitFor } from "detox";
+import { by, device, element, expect, waitFor } from "detox";
 
 import {
   completeSetup,
@@ -16,6 +16,10 @@ describe("Timer", () => {
   });
 
   describe("Countdown", () => {
+    afterAll(async () => {
+      await device.enableSynchronization();
+    });
+
     it("shows empty state", async () => {
       await expect(element(by.id("no-timers-text"))).toBeVisible();
     });
@@ -26,6 +30,8 @@ describe("Timer", () => {
       await element(by.id("numpad-3")).tap();
       await element(by.id("numpad-0")).tap();
 
+      // Disable sync before starting timer (100ms setInterval blocks Espresso idle)
+      await device.disableSynchronization();
       await element(by.id("numpad-start")).tap();
 
       // Timer card should appear with label "Timer 1"
@@ -39,6 +45,7 @@ describe("Timer", () => {
 
     it("pauses running timer", async () => {
       await element(by.label("pause timer")).tap();
+      await device.enableSynchronization();
 
       // Resume button should appear
       await waitFor(element(by.label("resume timer")))
@@ -47,6 +54,7 @@ describe("Timer", () => {
     });
 
     it("resumes paused timer", async () => {
+      await device.disableSynchronization();
       await element(by.label("resume timer")).tap();
 
       // Pause button should appear again
@@ -58,6 +66,7 @@ describe("Timer", () => {
     it("resets timer", async () => {
       // Pause first
       await element(by.label("pause timer")).tap();
+      await device.enableSynchronization();
       await waitFor(element(by.label("resume timer")))
         .toBeVisible()
         .withTimeout(3000);
@@ -80,6 +89,7 @@ describe("Timer", () => {
     });
 
     it("creates timer via preset button", async () => {
+      await device.disableSynchronization();
       await element(by.id("preset-1")).tap();
 
       // Timer should appear
@@ -92,6 +102,7 @@ describe("Timer", () => {
       // Delete the preset timer first
       // Pause it first
       await element(by.label("pause timer")).tap();
+      await device.enableSynchronization();
       await waitFor(element(by.label("delete timer")))
         .toBeVisible()
         .withTimeout(3000);
@@ -107,6 +118,7 @@ describe("Timer", () => {
       await element(by.id("numpad-backspace")).tap();
 
       // Start with remaining digits (50 → 50s)
+      await device.disableSynchronization();
       await element(by.id("numpad-start")).tap();
 
       await waitFor(element(by.text("Timer 3")))
@@ -115,6 +127,7 @@ describe("Timer", () => {
 
       // Cleanup
       await element(by.label("pause timer")).tap();
+      await device.enableSynchronization();
       await waitFor(element(by.label("delete timer")))
         .toBeVisible()
         .withTimeout(3000);

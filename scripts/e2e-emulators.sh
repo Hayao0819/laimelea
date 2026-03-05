@@ -120,6 +120,25 @@ cmd_start() {
     fi
   done
 
+  # Prepare emulators for E2E testing
+  for serial in "${serials[@]}"; do
+    # adb reverse for Metro bundler
+    adb -s "$serial" reverse tcp:8081 tcp:8081 &>/dev/null || true
+    # Disable animations (required for Espresso/Detox)
+    adb -s "$serial" shell settings put global window_animation_scale 0 &>/dev/null || true
+    adb -s "$serial" shell settings put global transition_animation_scale 0 &>/dev/null || true
+    adb -s "$serial" shell settings put global animator_duration_scale 0 &>/dev/null || true
+    # Dismiss keyguard / unlock screen
+    adb -s "$serial" shell input keyevent 82 &>/dev/null || true
+    adb -s "$serial" shell wm dismiss-keyguard &>/dev/null || true
+    # Suppress ANR dialogs (SystemUI ANR steals window focus on slow headless emulators)
+    adb -s "$serial" shell settings put secure anr_show_background 0 &>/dev/null || true
+    adb -s "$serial" shell settings put global hidden_api_blacklist_exemptions "'*'" &>/dev/null || true
+    adb -s "$serial" shell settings put global hide_error_dialogs 1 &>/dev/null || true
+    # Dismiss any existing ANR/crash dialogs
+    adb -s "$serial" shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS &>/dev/null || true
+  done
+
   local booted=$(( ${#serials[@]} - failed ))
   echo ""
   echo "E2E pool: $booted/${#serials[@]} emulator(s) ready"

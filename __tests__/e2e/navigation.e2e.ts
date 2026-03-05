@@ -47,8 +47,7 @@ describe("Tab Navigation", () => {
   });
 
   it("opens Settings from appbar gear icon", async () => {
-    // react-native-paper Appbar.Action uses default testID="icon-button"
-    await element(by.id("icon-button")).tap();
+    await element(by.id("appbar-settings-button")).tap();
     // "Settings" text appears in both RN and native toolbar views
     await expect(element(by.text("Settings")).atIndex(0)).toBeVisible();
     // Go back to main tabs

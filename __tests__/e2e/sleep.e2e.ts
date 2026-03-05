@@ -11,7 +11,12 @@ describe("Sleep Log Screen", () => {
   beforeAll(async () => {
     await launchAppFresh();
     await completeSetup();
+    // Health Connect initialize() hangs on GMS emulators without HC installed,
+    // blocking Detox synchronisation. Disable sync around navigation.
+    await device.disableSynchronization();
     await navigateToTab("Sleep");
+    await waitVisible("sleep-log-screen");
+    await device.enableSynchronization();
   });
 
   describe("Empty State", () => {
@@ -62,11 +67,15 @@ describe("Sleep Log Screen", () => {
       // Dismiss keyboard
       await device.pressBack();
 
+      // Save triggers navigation back; useFocusEffect re-runs sync(),
+      // which hangs on HC. Disable sync around the save + navigation.
+      await device.disableSynchronization();
       await element(by.id("save-button")).tap();
+      await waitVisible("sleep-log-screen");
+      await device.enableSynchronization();
     });
 
     it("returns to sleep log with new entry", async () => {
-      await waitVisible("sleep-log-screen");
       await expect(element(by.text("2026-02-25"))).toBeVisible();
       await expect(element(by.text("8h 0m"))).toBeVisible();
     });
@@ -106,7 +115,9 @@ describe("Sleep Log Screen", () => {
         .not.toBeVisible()
         .withTimeout(5000);
       // Empty state should return
+      await device.disableSynchronization();
       await expect(element(by.text("No sleep data"))).toBeVisible();
+      await device.enableSynchronization();
     });
   });
 });

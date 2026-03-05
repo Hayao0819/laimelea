@@ -86,6 +86,7 @@ export function BottomTabNavigator() {
         <Appbar.Content title={options.title ?? ""} />
         <Appbar.Action
           icon="cog-outline"
+          testID="appbar-settings-button"
           onPress={() => rootNavigation.navigate("Settings")}
         />
       </Appbar.Header>
@@ -99,11 +100,13 @@ export function BottomTabNavigator() {
         <Appbar.Content title={options.title ?? ""} />
         <Appbar.Action
           icon="fullscreen"
+          testID="appbar-desk-clock-button"
           onPress={() => rootNavigation.navigate("DeskClock")}
           accessibilityLabel={t("clock.deskClock")}
         />
         <Appbar.Action
           icon="cog-outline"
+          testID="appbar-settings-button"
           onPress={() => rootNavigation.navigate("Settings")}
         />
       </Appbar.Header>
