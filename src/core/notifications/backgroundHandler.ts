@@ -2,8 +2,14 @@ import notifee, { EventType } from "@notifee/react-native";
 
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
-    if (detail.notification?.id) {
-      await notifee.cancelNotification(detail.notification.id);
+    const notification = detail.notification;
+    if (notification?.id) {
+      // Don't cancel alarm notifications — AlarmFiringScreen handles dismissal
+      const isAlarmNotification =
+        typeof notification.data?.alarmId === "string";
+      if (!isAlarmNotification) {
+        await notifee.cancelNotification(notification.id);
+      }
     }
   }
 

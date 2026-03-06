@@ -1,4 +1,6 @@
+import notifee from "@notifee/react-native";
 import {
+  createNavigationContainerRef,
   DarkTheme as NavDarkTheme,
   DefaultTheme as NavLightTheme,
   NavigationContainer,
@@ -12,6 +14,7 @@ import { alarmsAtom } from "../atoms/alarmAtoms";
 import { platformTypeAtom } from "../atoms/platformAtoms";
 import { settingsAtom } from "../atoms/settingsAtoms";
 import i18n, { resolveLanguage } from "../core/i18n";
+import { setupForegroundHandler } from "../core/notifications/foregroundHandler";
 import {
   createAlarmChannel,
   createTimerChannel,
@@ -19,7 +22,11 @@ import {
 } from "../core/notifications/notifeeSetup";
 import { detectPlatform } from "../core/platform/detection";
 import { rescheduleAllEnabledAlarms } from "../features/alarm/services/alarmRescheduler";
+import type { RootStackParamList } from "../navigation/types";
 import { darkTheme, lightTheme } from "./theme";
+
+export const navigationRef =
+  createNavigationContainerRef<RootStackParamList>();
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -55,6 +62,42 @@ export function Providers({ children }: ProvidersProps) {
   }, []);
 
   useEffect(() => {
+    const unsubscribe = setupForegroundHandler((alarmId) => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate("AlarmFiring", { alarmId });
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    async function checkInitialNotification() {
+      const initial = await notifee.getInitialNotification();
+      if (initial?.notification?.data?.alarmId) {
+        const alarmId = initial.notification.data.alarmId as string;
+        intervalId = setInterval(() => {
+          if (navigationRef.isReady()) {
+            if (intervalId) clearInterval(intervalId);
+            intervalId = null;
+            navigationRef.navigate("AlarmFiring", { alarmId });
+          }
+        }, 100);
+        setTimeout(() => {
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+        }, 5000);
+      }
+    }
+    checkInitialNotification();
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
     const lang = resolveLanguage(settings.language);
     if (i18n.language !== lang) {
       i18n.changeLanguage(lang);
@@ -81,7 +124,7 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <PaperProvider theme={theme}>
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer ref={navigationRef} theme={navigationTheme}>
         {children}
       </NavigationContainer>
     </PaperProvider>

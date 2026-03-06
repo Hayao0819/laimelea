@@ -62,11 +62,6 @@ jest.mock("@react-navigation/native", () => ({
     navigate: mockNavigate,
     goBack: jest.fn(),
   }),
-  useFocusEffect: (cb: () => void) => {
-    const { useEffect } = require("react");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => cb(), []);
-  },
 }));
 
 jest.mock("date-fns", () => ({
@@ -114,7 +109,7 @@ async function renderWithProviders(
       </PaperProvider>
     </JotaiProvider>,
   );
-  // Flush pending effects (useFocusEffect, FAB.Group animations)
+  // Flush pending effects (FAB.Group animations)
   await act(async () => {});
   return { ...utils, store };
 }

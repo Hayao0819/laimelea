@@ -2,7 +2,9 @@ import notifee from "@notifee/react-native";
 
 let registeredHandler: (event: {
   type: number;
-  detail: { notification?: { id?: string } };
+  detail: {
+    notification?: { id?: string; data?: Record<string, string | undefined> };
+  };
 }) => Promise<void>;
 
 jest.mock("@notifee/react-native", () => ({
@@ -29,22 +31,50 @@ describe("backgroundHandler", () => {
     expect(registeredHandler).toBeDefined();
   });
 
-  it("should cancel notification on PRESS event", async () => {
+  it("should cancel non-alarm notification on PRESS event", async () => {
     await registeredHandler({
       type: 1, // PRESS
-      detail: { notification: { id: "notif-1" } },
+      detail: { notification: { id: "timer-notif-1" } },
     });
 
-    expect(notifee.cancelNotification).toHaveBeenCalledWith("notif-1");
+    expect(notifee.cancelNotification).toHaveBeenCalledWith("timer-notif-1");
   });
 
-  it("should cancel notification on ACTION_PRESS event", async () => {
+  it("should cancel non-alarm notification on ACTION_PRESS event", async () => {
     await registeredHandler({
       type: 7, // ACTION_PRESS
-      detail: { notification: { id: "notif-2" } },
+      detail: { notification: { id: "timer-notif-2" } },
     });
 
-    expect(notifee.cancelNotification).toHaveBeenCalledWith("notif-2");
+    expect(notifee.cancelNotification).toHaveBeenCalledWith("timer-notif-2");
+  });
+
+  it("should NOT cancel alarm notification on PRESS event", async () => {
+    await registeredHandler({
+      type: 1, // PRESS
+      detail: {
+        notification: {
+          id: "alarm-uuid-1",
+          data: { alarmId: "alarm-uuid-1" },
+        },
+      },
+    });
+
+    expect(notifee.cancelNotification).not.toHaveBeenCalled();
+  });
+
+  it("should NOT cancel alarm notification on ACTION_PRESS event", async () => {
+    await registeredHandler({
+      type: 7, // ACTION_PRESS
+      detail: {
+        notification: {
+          id: "alarm-uuid-2",
+          data: { alarmId: "alarm-uuid-2" },
+        },
+      },
+    });
+
+    expect(notifee.cancelNotification).not.toHaveBeenCalled();
   });
 
   it("should NOT cancel notification on DISMISSED event", async () => {
@@ -72,5 +102,28 @@ describe("backgroundHandler", () => {
     });
 
     expect(notifee.cancelNotification).not.toHaveBeenCalled();
+  });
+
+  it("should cancel notification with empty data (no alarmId)", async () => {
+    await registeredHandler({
+      type: 1, // PRESS
+      detail: { notification: { id: "notif-4", data: {} } },
+    });
+
+    expect(notifee.cancelNotification).toHaveBeenCalledWith("notif-4");
+  });
+
+  it("should cancel notification when alarmId is not a string", async () => {
+    await registeredHandler({
+      type: 1, // PRESS
+      detail: {
+        notification: {
+          id: "notif-5",
+          data: { alarmId: undefined },
+        },
+      },
+    });
+
+    expect(notifee.cancelNotification).toHaveBeenCalledWith("notif-5");
   });
 });

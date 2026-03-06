@@ -1,4 +1,4 @@
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback } from "react";
@@ -9,7 +9,6 @@ import { FAB, Snackbar, Text, useTheme } from "react-native-paper";
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import { setupForegroundHandler } from "../../../core/notifications/foregroundHandler";
 import type { Alarm } from "../../../models/Alarm";
 import type { RootStackParamList } from "../../../navigation/types";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
@@ -26,15 +25,6 @@ export function AlarmListScreen() {
   const [snackMessage, setSnackMessage] = React.useState("");
   const [fabOpen, setFabOpen] = React.useState(false);
   const theme = useTheme();
-
-  useFocusEffect(
-    useCallback(() => {
-      const unsubscribe = setupForegroundHandler((alarmId) => {
-        navigation.navigate("AlarmFiring", { alarmId });
-      });
-      return unsubscribe;
-    }, [navigation]),
-  );
 
   const handleToggle = useCallback(
     async (alarm: Alarm) => {

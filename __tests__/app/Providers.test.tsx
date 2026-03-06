@@ -50,6 +50,24 @@ jest.mock("../../src/core/i18n", () => ({
   resolveLanguage: (lang: string) => (lang === "auto" ? "en" : lang),
 }));
 
+const mockGetInitialNotification = jest.fn().mockResolvedValue(null);
+jest.mock("@notifee/react-native", () => ({
+  __esModule: true,
+  default: {
+    getInitialNotification: mockGetInitialNotification,
+    onForegroundEvent: jest.fn().mockReturnValue(jest.fn()),
+    onBackgroundEvent: jest.fn(),
+  },
+  EventType: { PRESS: 1, ACTION_PRESS: 7, DISMISSED: 2 },
+}));
+
+const mockForegroundUnsubscribe = jest.fn();
+jest.mock("../../src/core/notifications/foregroundHandler", () => ({
+  setupForegroundHandler: jest
+    .fn()
+    .mockReturnValue(mockForegroundUnsubscribe),
+}));
+
 jest.mock("../../src/core/notifications/notifeeSetup", () => ({
   createAlarmChannel: jest.fn(),
   createTimerChannel: jest.fn(),
@@ -71,11 +89,28 @@ jest.mock("../../src/atoms/platformAtoms", () => {
   return { platformTypeAtom: jotaiAtom("aosp") };
 });
 
+const mockNavigate = jest.fn();
+const mockIsReady = jest.fn().mockReturnValue(true);
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
-  NavigationContainer: ({ children }: { children: React.ReactNode }) =>
+  createNavigationContainerRef: () => ({
+    isReady: mockIsReady,
+    navigate: mockNavigate,
+    current: {},
+  }),
+  NavigationContainer: ({
     children,
+  }: {
+    children: React.ReactNode;
+     
+    [key: string]: any;
+  }) => children,
 }));
+
+// Import after mocks
+const {
+  setupForegroundHandler,
+} = require("../../src/core/notifications/foregroundHandler");
 
 // Import Providers after all mocks are set up
 const { Providers } = require("../../src/app/Providers");
@@ -137,6 +172,12 @@ describe("Providers", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     appStateCallback = null;
+    // Restore mock return values after clearAllMocks
+    mockIsReady.mockReturnValue(true);
+    mockGetInitialNotification.mockResolvedValue(null);
+    (setupForegroundHandler as jest.Mock).mockReturnValue(
+      mockForegroundUnsubscribe,
+    );
     // Restore spy implementation after clearAllMocks
     (AppState.addEventListener as jest.Mock).mockImplementation(
       (_type: string, listener: (state: AppStateStatus) => void) => {
@@ -212,6 +253,86 @@ describe("Providers", () => {
       await waitFor(() => {
         expect(ensureNotificationPermissions).toHaveBeenCalledTimes(1);
       });
+    });
+  });
+
+  describe("foreground notification handler", () => {
+    it("registers setupForegroundHandler on mount", async () => {
+      await renderProviders();
+
+      expect(setupForegroundHandler).toHaveBeenCalledWith(
+        expect.any(Function),
+      );
+    });
+
+    it("unsubscribes foreground handler on unmount", async () => {
+      const { unmount } = await renderProviders();
+
+      expect(mockForegroundUnsubscribe).not.toHaveBeenCalled();
+      unmount();
+      expect(mockForegroundUnsubscribe).toHaveBeenCalled();
+    });
+
+    it("navigates to AlarmFiring when foreground handler fires", async () => {
+      await renderProviders();
+
+      const handler = (setupForegroundHandler as jest.Mock).mock.calls[0][0];
+      handler("alarm-abc");
+
+      expect(mockNavigate).toHaveBeenCalledWith("AlarmFiring", {
+        alarmId: "alarm-abc",
+      });
+    });
+
+    it("does not navigate when navigation is not ready", async () => {
+      mockIsReady.mockReturnValue(false);
+      await renderProviders();
+
+      const handler = (setupForegroundHandler as jest.Mock).mock.calls[0][0];
+      handler("alarm-abc");
+
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("initial notification", () => {
+    it("does nothing when there is no initial notification", async () => {
+      mockGetInitialNotification.mockResolvedValue(null);
+      await renderProviders();
+
+      await act(async () => {});
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("navigates to AlarmFiring when launched from alarm notification", async () => {
+      mockGetInitialNotification.mockResolvedValue({
+        notification: { data: { alarmId: "alarm-from-notification" } },
+      });
+
+      await renderProviders();
+
+      // The checkInitialNotification function resolves the promise and
+      // sets up a 100ms interval that polls navigationRef.isReady().
+      // Wait for the interval to fire and navigate.
+      await waitFor(
+        () => {
+          expect(mockNavigate).toHaveBeenCalledWith("AlarmFiring", {
+            alarmId: "alarm-from-notification",
+          });
+        },
+        { timeout: 3000 },
+      );
+    });
+
+    it("does not navigate when initial notification has no alarmId", async () => {
+      mockGetInitialNotification.mockResolvedValue({
+        notification: { data: {} },
+      });
+
+      await renderProviders();
+
+      await act(async () => {});
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 });
