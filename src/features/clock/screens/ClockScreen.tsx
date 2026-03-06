@@ -30,6 +30,7 @@ export function ClockScreen() {
         onPress={toggleClockMode}
         accessibilityLabel={t("clock.toggleMode")}
         accessibilityRole="button"
+        testID="clock-mode-toggle-area"
       >
         <View style={styles.clockArea}>
           {clockMode === "analog" ? (
