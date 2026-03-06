@@ -107,6 +107,7 @@ export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
       mode="outlined"
       onPress={onPress ? () => onPress(event) : undefined}
       accessibilityLabel={`${event.title}${event.allDay ? `, ${t("calendar.allDay")}` : `, ${formatRealTime(event.startTimestampMs)}`}`}
+      testID={`event-card-${event.id}`}
     >
       <Card.Content style={styles.content}>
         <View style={styles.row}>
