@@ -35,15 +35,19 @@ const syncStopwatchAtom = unwrap(
 );
 
 // Public read/write atoms — sync read, persisted write
+// Write handlers resolve the current value via the sync (unwrapped) atom
+// before calling function updaters, because atomWithStorage's baseAtom
+// may hold a Promise before async storage resolves.
 export const timersAtom = atom(
   (get) => get(syncTimersAtom) ?? [],
   (
-    _get,
+    get,
     set,
     update: TimerState[] | ((prev: TimerState[]) => TimerState[]),
   ) => {
     if (typeof update === "function") {
-      set(timersStorageAtom, update as never);
+      const current = get(syncTimersAtom) ?? [];
+      set(timersStorageAtom, update(current));
     } else {
       set(timersStorageAtom, update);
     }
@@ -53,12 +57,13 @@ export const timersAtom = atom(
 export const stopwatchAtom = atom(
   (get) => get(syncStopwatchAtom) ?? DEFAULT_STOPWATCH,
   (
-    _get,
+    get,
     set,
     update: StopwatchState | ((prev: StopwatchState) => StopwatchState),
   ) => {
     if (typeof update === "function") {
-      set(stopwatchStorageAtom, update as never);
+      const current = get(syncStopwatchAtom) ?? DEFAULT_STOPWATCH;
+      set(stopwatchStorageAtom, update(current));
     } else {
       set(stopwatchStorageAtom, update);
     }
