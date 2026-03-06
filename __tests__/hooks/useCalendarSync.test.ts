@@ -150,10 +150,7 @@ describe("useCalendarSync", () => {
       await result.current.sync(true);
     });
 
-    expect(mockSyncCalendarEvents).toHaveBeenCalledWith(
-      mockServices.calendar,
-      undefined,
-    );
+    expect(mockSyncCalendarEvents).toHaveBeenCalledWith(mockServices.calendar);
     expect(store.get(calendarEventsAtom)).toEqual([sampleEvent]);
     expect(store.get(calendarLastSyncAtom)).toBe(syncTimestamp);
   });
@@ -293,7 +290,7 @@ describe("useCalendarSync", () => {
     expect(store.get(calendarListAtom)).toEqual([]);
   });
 
-  it("should pass visibleCalendarIds to syncCalendarEvents", async () => {
+  it("should not pass visibleCalendarIds to syncCalendarEvents", async () => {
     mockSyncCalendarEvents.mockResolvedValue({
       events: [],
       syncTimestamp: Date.now(),
@@ -314,9 +311,6 @@ describe("useCalendarSync", () => {
       await result.current.sync(true);
     });
 
-    expect(mockSyncCalendarEvents).toHaveBeenCalledWith(mockServices.calendar, [
-      "cal-1",
-      "cal-3",
-    ]);
+    expect(mockSyncCalendarEvents).toHaveBeenCalledWith(mockServices.calendar);
   });
 });

@@ -15,6 +15,7 @@ import {
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
+import { visibleCalendarEventsAtom } from "../../../atoms/calendarAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
@@ -69,7 +70,8 @@ export function CalendarScreen() {
   } = useCalendarView();
   const settings = useAtomValue(resolvedSettingsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
-  const { events, error, sync, isStale } = useCalendarSync();
+  const { error, sync, isStale } = useCalendarSync();
+  const events = useAtomValue(visibleCalendarEventsAtom);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   // Auto-sync when tab is focused and cache is stale

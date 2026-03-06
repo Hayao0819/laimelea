@@ -5,6 +5,7 @@ import { PaperProvider } from "react-native-paper";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import {
+  calendarEventsAtom,
   calendarSelectedDateAtom,
   calendarViewModeAtom,
 } from "../../../src/atoms/calendarAtoms";
@@ -196,6 +197,7 @@ async function renderWithProviders(options?: {
   const store = createStore();
   store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, initialAlarms);
+  store.set(calendarEventsAtom, events);
   store.set(calendarSelectedDateAtom, selectedDate);
   store.set(calendarViewModeAtom, viewMode);
 

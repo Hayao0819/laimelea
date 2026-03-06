@@ -8,6 +8,15 @@ import {
 } from "../../../../src/atoms/calendarAtoms";
 import { useCalendarView } from "../../../../src/features/calendar/hooks/useCalendarView";
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve()),
+    removeItem: jest.fn(() => Promise.resolve()),
+  },
+}));
+
 function startOfDay(ms: number): number {
   const d = new Date(ms);
   d.setHours(0, 0, 0, 0);

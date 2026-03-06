@@ -10,7 +10,6 @@ import {
   calendarSyncErrorAtom,
 } from "../atoms/calendarAtoms";
 import { platformServicesAtom } from "../atoms/platformAtoms";
-import { resolvedSettingsAtom } from "../atoms/settingsAtoms";
 import { syncCalendarEvents } from "../core/calendar/calendarSyncService";
 import type { CalendarEvent } from "../models/CalendarEvent";
 
@@ -30,7 +29,6 @@ export function useCalendarSync(): CalendarSyncResult {
   const setCalendarList = useSetAtom(calendarListAtom);
   const isStale = useAtomValue(calendarCacheStaleAtom);
   const services = useAtomValue(platformServicesAtom);
-  const settings = useAtomValue(resolvedSettingsAtom);
 
   const syncingRef = useRef(false);
 
@@ -50,12 +48,7 @@ export function useCalendarSync(): CalendarSyncResult {
           return;
         }
 
-        const visibleIds =
-          settings.visibleCalendarIds.length > 0
-            ? settings.visibleCalendarIds
-            : undefined;
-
-        const result = await syncCalendarEvents(services.calendar, visibleIds);
+        const result = await syncCalendarEvents(services.calendar);
         setEvents(result.events);
         setLastSync(result.syncTimestamp);
 
@@ -75,7 +68,6 @@ export function useCalendarSync(): CalendarSyncResult {
     [
       isStale,
       services.calendar,
-      settings.visibleCalendarIds,
       setEvents,
       setLastSync,
       setCalendarList,

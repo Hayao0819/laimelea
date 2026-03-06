@@ -79,7 +79,7 @@ describe("syncCalendarEvents", () => {
     expect(typeof result.syncTimestamp).toBe("number");
   });
 
-  it("should return all events when visibleCalendarIds is undefined", async () => {
+  it("should return all events regardless of calendarId", async () => {
     const events = [
       makeEvent({ id: "evt-1", calendarId: "cal-1" }),
       makeEvent({ id: "evt-2", calendarId: "cal-2" }),
@@ -90,31 +90,14 @@ describe("syncCalendarEvents", () => {
     const result = await syncCalendarEvents(service);
 
     expect(result.events).toHaveLength(3);
+    expect(result.events).toEqual(events);
   });
 
-  it("should filter events by visibleCalendarIds when specified", async () => {
-    const events = [
-      makeEvent({ id: "evt-1", calendarId: "cal-1" }),
-      makeEvent({ id: "evt-2", calendarId: "cal-2" }),
-      makeEvent({ id: "evt-3", calendarId: "cal-3" }),
-    ];
-    const service = createMockCalendarService(events);
+  it("should return empty array when no events exist", async () => {
+    const service = createMockCalendarService([]);
 
-    const result = await syncCalendarEvents(service, ["cal-1", "cal-3"]);
+    const result = await syncCalendarEvents(service);
 
-    expect(result.events).toHaveLength(2);
-    expect(result.events.map((e) => e.calendarId)).toEqual(["cal-1", "cal-3"]);
-  });
-
-  it("should return all events when visibleCalendarIds is empty array", async () => {
-    const events = [
-      makeEvent({ id: "evt-1", calendarId: "cal-1" }),
-      makeEvent({ id: "evt-2", calendarId: "cal-2" }),
-    ];
-    const service = createMockCalendarService(events);
-
-    const result = await syncCalendarEvents(service, []);
-
-    expect(result.events).toHaveLength(2);
+    expect(result.events).toEqual([]);
   });
 });
