@@ -67,6 +67,7 @@ function createMockServices(): PlatformServices {
       isAvailable: jest.fn().mockResolvedValue(true),
       fetchEvents: jest.fn().mockResolvedValue([]),
       getCalendarList: jest.fn().mockResolvedValue([]),
+      requestPermissions: jest.fn().mockResolvedValue(true),
     },
     backup: {
       isAvailable: jest.fn().mockResolvedValue(true),

@@ -1,3 +1,5 @@
+import { PermissionsAndroid } from "react-native";
+
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 import { getNativeCalendarModule } from "../native/calendarModule";
 import type { CalendarInfo, PlatformCalendarService } from "../types";
@@ -6,6 +8,18 @@ export function createAospCalendarService(): PlatformCalendarService {
   return {
     async isAvailable() {
       return getNativeCalendarModule() != null;
+    },
+
+    async requestPermissions() {
+      const granted = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.READ_CALENDAR,
+      );
+      if (granted) return true;
+
+      const result = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_CALENDAR,
+      );
+      return result === PermissionsAndroid.RESULTS.GRANTED;
     },
 
     async fetchEvents(startMs: number, endMs: number) {

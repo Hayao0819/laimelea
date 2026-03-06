@@ -26,6 +26,7 @@ export interface CalendarInfo {
 export interface PlatformCalendarService {
   fetchEvents(startMs: number, endMs: number): Promise<CalendarEvent[]>;
   getCalendarList(): Promise<CalendarInfo[]>;
+  requestPermissions(): Promise<boolean>;
   isAvailable(): Promise<boolean>;
 }
 

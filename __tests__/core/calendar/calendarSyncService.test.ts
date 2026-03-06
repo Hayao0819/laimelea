@@ -28,6 +28,7 @@ function createMockCalendarService(
   return {
     fetchEvents: jest.fn().mockResolvedValue(events),
     getCalendarList: jest.fn().mockResolvedValue([]),
+    requestPermissions: jest.fn().mockResolvedValue(true),
     isAvailable: jest.fn().mockResolvedValue(true),
   };
 }

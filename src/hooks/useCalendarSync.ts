@@ -44,6 +44,12 @@ export function useCalendarSync(): CalendarSyncResult {
       setError(null);
 
       try {
+        const permitted = await services.calendar.requestPermissions();
+        if (!permitted) {
+          setError("Calendar permission denied");
+          return;
+        }
+
         const visibleIds =
           settings.visibleCalendarIds.length > 0
             ? settings.visibleCalendarIds
