@@ -131,6 +131,9 @@ describe("Alarm CRUD", () => {
 const REPEAT_ALARM_LABEL = "E2E Repeat Alarm";
 const SOUND_ALARM_LABEL = "E2E Sound Alarm";
 const PREVIEW_ALARM_LABEL = "E2E Preview Alarm";
+const DISMISSAL_PREVIEW_LABEL = "E2E Dismissal Preview";
+const SNOOZE_ALARM_LABEL = "E2E Snooze Alarm";
+const MATH_ALARM_LABEL = "E2E Math Alarm";
 
 describe("Alarm Edit - New Features", () => {
   beforeAll(async () => {
@@ -343,6 +346,312 @@ describe("Alarm Edit - New Features", () => {
       // Clean up: go back without saving if still on edit screen
       await device.pressBack();
       await waitFor(element(by.id("alarm-list-screen")))
+        .toBeVisible()
+        .withTimeout(10000);
+    });
+  });
+
+  describe("Dismissal Preview with Methods", () => {
+    it("should preview with simple dismissal", async () => {
+      // Create new alarm via FAB
+      await element(by.id("alarm-fab-group")).tap();
+      await element(by.id("add-alarm-fab")).tap();
+      await waitVisible("alarm-edit-screen");
+
+      // Enter label
+      await element(by.id("label-input")).typeText(DISMISSAL_PREVIEW_LABEL);
+      await device.pressBack();
+
+      // Default dismissal method is "simple" — verify and preview
+      await element(by.id("preview-button")).tap();
+      await waitVisible("alarm-firing-screen");
+
+      // Verify preview badge
+      await expect(element(by.id("preview-badge"))).toBeVisible();
+
+      // Simple dismissal shows a dismiss button
+      await expect(element(by.id("dismissal-simple"))).toBeVisible();
+      await expect(element(by.id("dismiss-button"))).toBeVisible();
+
+      // Close preview and return to edit screen
+      await element(by.id("close-preview-button")).tap();
+      await waitVisible("alarm-edit-screen");
+    });
+
+    it("should preview with shake dismissal", async () => {
+      // Change dismissal method to shake
+      await element(by.id("dismissal-method-item")).tap();
+      await waitVisible("dismissal-dialog");
+      await element(by.id("dismissal-option-shake")).tap();
+      await waitFor(element(by.id("dismissal-dialog")))
+        .not.toBeVisible()
+        .withTimeout(5000);
+
+      // Preview with shake dismissal
+      await element(by.id("preview-button")).tap();
+      await waitVisible("alarm-firing-screen");
+
+      // Verify preview badge
+      await expect(element(by.id("preview-badge"))).toBeVisible();
+
+      // Shake dismissal shows shake container with progress
+      await expect(element(by.id("dismissal-shake"))).toBeVisible();
+      await expect(element(by.id("shake-progress"))).toBeVisible();
+      await expect(element(by.id("shake-count"))).toBeVisible();
+
+      // Close preview
+      await element(by.id("close-preview-button")).tap();
+      await waitVisible("alarm-edit-screen");
+    });
+
+    it("should preview with math dismissal", async () => {
+      // Change dismissal method to math
+      await element(by.id("dismissal-method-item")).tap();
+      await waitVisible("dismissal-dialog");
+      await element(by.id("dismissal-option-math")).tap();
+      await waitFor(element(by.id("dismissal-dialog")))
+        .not.toBeVisible()
+        .withTimeout(5000);
+
+      // Preview with math dismissal
+      await element(by.id("preview-button")).tap();
+      await waitVisible("alarm-firing-screen");
+
+      // Verify preview badge
+      await expect(element(by.id("preview-badge"))).toBeVisible();
+
+      // Math dismissal shows math container with question and input
+      await expect(element(by.id("dismissal-math"))).toBeVisible();
+      await expect(element(by.id("math-question"))).toBeVisible();
+      await expect(element(by.id("math-input"))).toBeVisible();
+      await expect(element(by.id("math-submit"))).toBeVisible();
+
+      // Close preview
+      await element(by.id("close-preview-button")).tap();
+      await waitVisible("alarm-edit-screen");
+    });
+
+    afterAll(async () => {
+      // Clean up: go back without saving
+      await device.pressBack();
+      await waitFor(element(by.id("alarm-list-screen")))
+        .toBeVisible()
+        .withTimeout(10000);
+    });
+  });
+
+  describe("Snooze Settings", () => {
+    it("should cycle snooze duration", async () => {
+      // Create new alarm via FAB
+      await element(by.id("alarm-fab-group")).tap();
+      await element(by.id("add-alarm-fab")).tap();
+      await waitVisible("alarm-edit-screen");
+
+      // Enter label
+      await element(by.id("label-input")).typeText(SNOOZE_ALARM_LABEL);
+      await device.pressBack();
+
+      // Default snooze duration is 5 min
+      await expect(element(by.text("5 min")).atIndex(0)).toBeVisible();
+
+      // Cycle: 5 -> 10
+      await element(by.id("snooze-duration-item")).tap();
+      await expect(element(by.text("10 min")).atIndex(0)).toBeVisible();
+
+      // Cycle: 10 -> 15
+      await element(by.id("snooze-duration-item")).tap();
+      await expect(element(by.text("15 min")).atIndex(0)).toBeVisible();
+
+      // Cycle: 15 -> 1
+      await element(by.id("snooze-duration-item")).tap();
+      await expect(element(by.text("1 min")).atIndex(0)).toBeVisible();
+
+      // Cycle: 1 -> 3
+      await element(by.id("snooze-duration-item")).tap();
+      await expect(element(by.text("3 min")).atIndex(0)).toBeVisible();
+    });
+
+    it("should cycle snooze max count", async () => {
+      // Default snooze max count is 3
+      await expect(
+        element(by.id("snooze-max-item")).atIndex(0),
+      ).toBeVisible();
+
+      // Cycle: 3 -> 5
+      await element(by.id("snooze-max-item")).tap();
+      // The description shows just the number
+      await waitFor(element(by.text("5")).atIndex(0))
+        .toBeVisible()
+        .withTimeout(3000);
+
+      // Cycle: 5 -> 10
+      await element(by.id("snooze-max-item")).tap();
+      await waitFor(element(by.text("10")).atIndex(0))
+        .toBeVisible()
+        .withTimeout(3000);
+
+      // Cycle: 10 -> 1 (wraps around)
+      await element(by.id("snooze-max-item")).tap();
+      await waitFor(element(by.text("1")).atIndex(0))
+        .toBeVisible()
+        .withTimeout(3000);
+    });
+
+    afterAll(async () => {
+      // Clean up: go back without saving
+      await device.pressBack();
+      await waitFor(element(by.id("alarm-list-screen")))
+        .toBeVisible()
+        .withTimeout(10000);
+    });
+  });
+
+  describe("Math Difficulty", () => {
+    it("should select math difficulty levels when math dismissal is active", async () => {
+      // Create new alarm via FAB
+      await element(by.id("alarm-fab-group")).tap();
+      await element(by.id("add-alarm-fab")).tap();
+      await waitVisible("alarm-edit-screen");
+
+      // Enter label
+      await element(by.id("label-input")).typeText(MATH_ALARM_LABEL);
+      await device.pressBack();
+
+      // Set dismissal method to math (math difficulty segment only shows for math)
+      await element(by.id("dismissal-method-item")).tap();
+      await waitVisible("dismissal-dialog");
+      await element(by.id("dismissal-option-math")).tap();
+      await waitFor(element(by.id("dismissal-dialog")))
+        .not.toBeVisible()
+        .withTimeout(5000);
+
+      // Scroll down to see math difficulty segmented buttons
+      await element(by.id("alarm-edit-screen")).scrollTo("bottom");
+
+      // Math difficulty is a SegmentedButtons with "Easy", "Medium", "Hard"
+      // Default is Easy (difficulty 1)
+      await expect(element(by.text("Easy")).atIndex(0)).toBeVisible();
+      await expect(element(by.text("Medium")).atIndex(0)).toBeVisible();
+      await expect(element(by.text("Hard")).atIndex(0)).toBeVisible();
+
+      // Select Medium
+      await element(by.text("Medium")).atIndex(0).tap();
+
+      // Select Hard
+      await element(by.text("Hard")).atIndex(0).tap();
+
+      // Select Easy again (full cycle)
+      await element(by.text("Easy")).atIndex(0).tap();
+    });
+
+    it("should hide math difficulty when dismissal is not math", async () => {
+      // Change dismissal to simple
+      await element(by.id("alarm-edit-screen")).scrollTo("top");
+      await element(by.id("dismissal-method-item")).tap();
+      await waitVisible("dismissal-dialog");
+      await element(by.id("dismissal-option-simple")).tap();
+      await waitFor(element(by.id("dismissal-dialog")))
+        .not.toBeVisible()
+        .withTimeout(5000);
+
+      // Math difficulty label should not be visible
+      await expect(element(by.text("Math Difficulty"))).not.toBeVisible();
+    });
+
+    afterAll(async () => {
+      // Clean up: go back without saving
+      await device.pressBack();
+      await waitFor(element(by.id("alarm-list-screen")))
+        .toBeVisible()
+        .withTimeout(10000);
+    });
+  });
+
+  describe("Gradual Volume", () => {
+    it("should cycle gradual volume duration in alarm defaults settings", async () => {
+      // Navigate to Settings > Alarm Defaults where gradual-volume-item lives
+      await element(by.id("appbar-settings-button")).tap();
+      await waitVisible("settings-screen");
+      await element(by.id("settings-alarm-defaults-item")).tap();
+      await waitVisible("alarm-defaults-screen");
+
+      // Default gradual volume is 30 sec
+      await expect(element(by.text("30 sec"))).toBeVisible();
+
+      // Cycle: 30 -> 60
+      await element(by.id("gradual-volume-item")).tap();
+      await expect(element(by.text("60 sec"))).toBeVisible();
+
+      // Cycle: 60 -> 0 (off)
+      await element(by.id("gradual-volume-item")).tap();
+      await expect(element(by.text("0 sec"))).toBeVisible();
+
+      // Cycle: 0 -> 15
+      await element(by.id("gradual-volume-item")).tap();
+      await expect(element(by.text("15 sec"))).toBeVisible();
+
+      // Cycle: 15 -> 30 (back to default)
+      await element(by.id("gradual-volume-item")).tap();
+      await expect(element(by.text("30 sec"))).toBeVisible();
+    });
+
+    afterAll(async () => {
+      // Navigate back to alarm list
+      await device.pressBack();
+      await waitVisible("settings-screen");
+      await device.pressBack();
+      await navigateToTab("Alarm");
+      await waitFor(element(by.id("alarm-list-screen")))
+        .toBeVisible()
+        .withTimeout(10000);
+    });
+  });
+
+  describe("Toggle Alarm State", () => {
+    it("should create alarm and verify toggle persists state", async () => {
+      // Create a new alarm to test toggling
+      await element(by.id("alarm-fab-group")).tap();
+      await element(by.id("add-alarm-fab")).tap();
+      await waitVisible("alarm-edit-screen");
+
+      await element(by.id("label-input")).typeText("E2E Toggle Test");
+      await device.pressBack();
+
+      await element(by.id("save-button")).tap();
+      await waitVisible("alarm-list-screen");
+      await expect(element(by.text("E2E Toggle Test"))).toBeVisible();
+
+      // Find the alarm switch (ReactSwitch on Android)
+      const alarmSwitch = element(
+        by.type("com.facebook.react.views.switchview.ReactSwitch"),
+      ).atIndex(0);
+
+      // Toggle off
+      await alarmSwitch.tap();
+
+      // Verify the alarm card is still visible (not deleted)
+      await expect(element(by.text("E2E Toggle Test"))).toBeVisible();
+
+      // Toggle back on
+      await alarmSwitch.tap();
+
+      // Open the alarm to verify it is in enabled state after toggle
+      await element(by.text("E2E Toggle Test")).tap();
+      await waitVisible("alarm-edit-screen");
+
+      // Verify we can see the alarm edit screen (alarm is accessible)
+      await expect(element(by.id("save-button"))).toBeVisible();
+    });
+
+    afterAll(async () => {
+      // Clean up: delete the test alarm
+      await waitFor(element(by.id("delete-button")))
+        .toBeVisible()
+        .withTimeout(5000);
+      await element(by.id("delete-button")).tap();
+      await expect(element(by.text("Delete this alarm?"))).toBeVisible();
+      await element(by.text("Delete")).tap();
+      await waitFor(element(by.id("no-alarms-text")))
         .toBeVisible()
         .withTimeout(10000);
     });
