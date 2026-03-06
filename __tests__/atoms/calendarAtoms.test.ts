@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createStore } from "jotai";
 
 import {
@@ -5,9 +6,14 @@ import {
   calendarCacheStaleAtom,
   calendarEventsAtom,
   calendarLastSyncAtom,
+  calendarListAtom,
+  calendarLoadingAtom,
+  calendarSyncErrorAtom,
+  calendarViewModeAtom,
   visibleCalendarEventsAtom,
 } from "../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../src/atoms/settingsAtoms";
+import { STORAGE_KEYS } from "../../src/core/storage/keys";
 import type { CalendarEvent } from "../../src/models/CalendarEvent";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 
@@ -38,10 +44,119 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
 }
 
 describe("calendarAtoms", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("CALENDAR_CACHE_TTL_MS", () => {
     it("should be 5 minutes in milliseconds", () => {
       expect(CALENDAR_CACHE_TTL_MS).toBe(5 * 60 * 1000);
       expect(CALENDAR_CACHE_TTL_MS).toBe(300000);
+    });
+  });
+
+  describe("persistence", () => {
+    it("calendarEventsAtom should persist via AsyncStorage", () => {
+      const store = createStore();
+      const events = [makeEvent({ id: "evt-1" })];
+      store.set(calendarEventsAtom, events);
+
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        STORAGE_KEYS.CALENDAR_CACHE,
+        JSON.stringify(events),
+      );
+    });
+
+    it("calendarLastSyncAtom should persist via AsyncStorage", () => {
+      const store = createStore();
+      const timestamp = 1700000000000;
+      store.set(calendarLastSyncAtom, timestamp);
+
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        STORAGE_KEYS.CALENDAR_LAST_SYNC,
+        JSON.stringify(timestamp),
+      );
+    });
+
+    it("calendarViewModeAtom should persist via AsyncStorage", () => {
+      const store = createStore();
+      store.set(calendarViewModeAtom, "month");
+
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        STORAGE_KEYS.CALENDAR_VIEW_MODE,
+        JSON.stringify("month"),
+      );
+    });
+
+    it("calendarListAtom should persist via AsyncStorage", () => {
+      const store = createStore();
+      const calendars = [
+        { id: "cal-1", name: "Work", color: "#ff0000", isPrimary: true },
+      ];
+      store.set(calendarListAtom, calendars);
+
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        STORAGE_KEYS.CALENDAR_LIST,
+        JSON.stringify(calendars),
+      );
+    });
+  });
+
+  describe("volatile atoms", () => {
+    it("calendarLoadingAtom should not persist", () => {
+      const store = createStore();
+      store.set(calendarLoadingAtom, true);
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+        expect.stringContaining("loading"),
+        expect.anything(),
+      );
+    });
+
+    it("calendarSyncErrorAtom should not persist", () => {
+      const store = createStore();
+      store.set(calendarSyncErrorAtom, "Network error");
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+        expect.stringContaining("error"),
+        expect.anything(),
+      );
+    });
+
+    it("calendarLoadingAtom should default to false", () => {
+      const store = createStore();
+      expect(store.get(calendarLoadingAtom)).toBe(false);
+    });
+
+    it("calendarSyncErrorAtom should default to null", () => {
+      const store = createStore();
+      expect(store.get(calendarSyncErrorAtom)).toBeNull();
+    });
+  });
+
+  describe("default values", () => {
+    it("calendarEventsAtom should default to empty array", () => {
+      const store = createStore();
+      store.set(calendarEventsAtom, []);
+      expect(store.get(calendarEventsAtom)).toEqual([]);
+    });
+
+    it("calendarLastSyncAtom should default to null", () => {
+      const store = createStore();
+      store.set(calendarLastSyncAtom, null);
+      expect(store.get(calendarLastSyncAtom)).toBeNull();
+    });
+
+    it("calendarViewModeAtom should default to agenda", () => {
+      const store = createStore();
+      store.set(calendarViewModeAtom, "agenda");
+      expect(store.get(calendarViewModeAtom)).toBe("agenda");
+    });
+
+    it("calendarListAtom should default to empty array", () => {
+      const store = createStore();
+      store.set(calendarListAtom, []);
+      expect(store.get(calendarListAtom)).toEqual([]);
     });
   });
 

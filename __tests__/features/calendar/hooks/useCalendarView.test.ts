@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 
+import type { CalendarViewMode } from "../../../../src/atoms/calendarAtoms";
 import {
   calendarSelectedDateAtom,
   calendarViewModeAtom,
@@ -17,6 +18,23 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+// Replace atomWithStorage atoms with plain atoms so tests avoid async storage init.
+// The factory must use jest.requireActual to get the real `atom` constructor.
+jest.mock("../../../../src/atoms/calendarAtoms", () => {
+  const { atom } = jest.requireActual<typeof import("jotai")>("jotai");
+  const actual = jest.requireActual("../../../../src/atoms/calendarAtoms");
+  function getStartOfDay(ms: number): number {
+    const d = new Date(ms);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  return {
+    ...actual,
+    calendarViewModeAtom: atom<CalendarViewMode>("agenda"),
+    calendarSelectedDateAtom: atom<number>(getStartOfDay(Date.now())),
+  };
+});
+
 function startOfDay(ms: number): number {
   const d = new Date(ms);
   d.setHours(0, 0, 0, 0);
@@ -29,7 +47,10 @@ function renderCalendarViewHook(initialDate?: number, initialMode?: string) {
     store.set(calendarSelectedDateAtom, initialDate);
   }
   if (initialMode != null) {
-    store.set(calendarViewModeAtom, initialMode as "month" | "week" | "agenda");
+    store.set(
+      calendarViewModeAtom,
+      initialMode as "month" | "week" | "agenda",
+    );
   }
   function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(JotaiProvider, { store }, children);
@@ -88,7 +109,7 @@ describe("useCalendarView", () => {
   });
 
   describe("computed values", () => {
-    it("selectedDayStart is midnight of selected date", () => {
+    it("selectedDayStart is midnight of selected date", async () => {
       // Set to 2025-03-15 14:30:00 (mid-afternoon)
       const dateWithTime = new Date(2025, 2, 15, 14, 30, 0, 0).getTime();
       const { result } = renderCalendarViewHook(dateWithTime);
@@ -97,7 +118,7 @@ describe("useCalendarView", () => {
       expect(result.current.selectedDayStart).toBe(expected);
     });
 
-    it("selectedDayEnd is midnight of next day", () => {
+    it("selectedDayEnd is midnight of next day", async () => {
       const dateWithTime = new Date(2025, 2, 15, 14, 30, 0, 0).getTime();
       const { result } = renderCalendarViewHook(dateWithTime);
 
@@ -105,7 +126,7 @@ describe("useCalendarView", () => {
       expect(result.current.selectedDayEnd).toBe(expected);
     });
 
-    it("weekStart is Monday of the selected week", () => {
+    it("weekStart is Monday of the selected week", async () => {
       // 2025-03-12 is a Wednesday
       const wednesday = new Date(2025, 2, 12, 0, 0, 0, 0).getTime();
       const { result } = renderCalendarViewHook(wednesday);
@@ -115,7 +136,7 @@ describe("useCalendarView", () => {
       expect(result.current.weekStart).toBe(expectedMonday);
     });
 
-    it("weekStart handles Sunday correctly (maps to previous Monday)", () => {
+    it("weekStart handles Sunday correctly (maps to previous Monday)", async () => {
       // 2025-03-16 is a Sunday
       const sunday = new Date(2025, 2, 16, 0, 0, 0, 0).getTime();
       const { result } = renderCalendarViewHook(sunday);
@@ -125,7 +146,7 @@ describe("useCalendarView", () => {
       expect(result.current.weekStart).toBe(expectedMonday);
     });
 
-    it("monthStart is 1st of the selected month", () => {
+    it("monthStart is 1st of the selected month", async () => {
       const midMonth = new Date(2025, 7, 20, 0, 0, 0, 0).getTime();
       const { result } = renderCalendarViewHook(midMonth);
 

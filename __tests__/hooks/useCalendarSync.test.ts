@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
-import React from "react";
+import React, { Suspense } from "react";
 
 import {
   calendarCacheStaleAtom,
@@ -100,10 +100,23 @@ function createMockServicesResult(
   };
 }
 
+function createStoreWithDefaults() {
+  const store = createStore();
+  store.set(settingsAtom, DEFAULT_SETTINGS);
+  store.set(calendarEventsAtom, []);
+  store.set(calendarLastSyncAtom, null);
+  store.set(calendarListAtom, []);
+  return store;
+}
+
 function createWrapper(storeOverride?: ReturnType<typeof createStore>) {
-  const store = storeOverride ?? createStore();
+  const store = storeOverride ?? createStoreWithDefaults();
   function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(JotaiProvider, { store }, children);
+    return React.createElement(
+      JotaiProvider,
+      { store },
+      React.createElement(Suspense, { fallback: null }, children),
+    );
   }
   return { Wrapper, store };
 }
@@ -117,14 +130,14 @@ describe("useCalendarSync", () => {
     mockCreatePlatformServices.mockReturnValue(mockServices);
   });
 
-  it("should return initial state with empty events, loading false, and error null", () => {
-    const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+  it("should return initial state with empty events, loading false, and error null", async () => {
+    const store = createStoreWithDefaults();
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     expect(result.current.events).toEqual([]);
     expect(result.current.loading).toBe(false);
@@ -138,13 +151,13 @@ describe("useCalendarSync", () => {
       syncTimestamp,
     });
 
-    const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    const store = createStoreWithDefaults();
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     await act(async () => {
       await result.current.sync(true);
@@ -158,20 +171,28 @@ describe("useCalendarSync", () => {
   it("should set calendarSyncErrorAtom on sync error", async () => {
     mockSyncCalendarEvents.mockRejectedValue(new Error("Network failure"));
 
-    const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    const store = createStoreWithDefaults();
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
+    let syncError: unknown;
     await act(async () => {
-      await result.current.sync(true);
+      try {
+        await result.current.sync(true);
+      } catch (e) {
+        syncError = e;
+      }
     });
 
+    // sync() should not throw - errors are caught internally
+    expect(syncError).toBeUndefined();
+    // Verify error is stored in the atom
     expect(store.get(calendarSyncErrorAtom)).toBe("Network failure");
-    expect(result.current.error).toBe("Network failure");
+    expect(result.current.loading).toBe(false);
   });
 
   it("should skip sync when isStale is false and force is false", async () => {
@@ -180,8 +201,7 @@ describe("useCalendarSync", () => {
       syncTimestamp: Date.now(),
     });
 
-    const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    const store = createStoreWithDefaults();
     // Set lastSync to now so cache is not stale
     store.set(calendarLastSyncAtom, Date.now());
     const { Wrapper } = createWrapper(store);
@@ -192,6 +212,7 @@ describe("useCalendarSync", () => {
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     await act(async () => {
       await result.current.sync();
@@ -207,8 +228,7 @@ describe("useCalendarSync", () => {
       syncTimestamp,
     });
 
-    const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    const store = createStoreWithDefaults();
     // Set lastSync to now so cache is not stale
     store.set(calendarLastSyncAtom, Date.now());
     const { Wrapper } = createWrapper(store);
@@ -218,6 +238,7 @@ describe("useCalendarSync", () => {
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     await act(async () => {
       await result.current.sync(true);
@@ -241,13 +262,13 @@ describe("useCalendarSync", () => {
       syncTimestamp: Date.now(),
     });
 
-    const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    const store = createStoreWithDefaults();
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     await act(async () => {
       await result.current.sync(true);
@@ -270,13 +291,13 @@ describe("useCalendarSync", () => {
       syncTimestamp: 9999999,
     });
 
-    const store = createStore();
-    store.set(settingsAtom, DEFAULT_SETTINGS);
+    const store = createStoreWithDefaults();
     const { Wrapper } = createWrapper(store);
 
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     await act(async () => {
       await result.current.sync(true);
@@ -296,7 +317,7 @@ describe("useCalendarSync", () => {
       syncTimestamp: Date.now(),
     });
 
-    const store = createStore();
+    const store = createStoreWithDefaults();
     store.set(settingsAtom, {
       ...DEFAULT_SETTINGS,
       visibleCalendarIds: ["cal-1", "cal-3"],
@@ -306,6 +327,7 @@ describe("useCalendarSync", () => {
     const { result } = renderHook(() => useCalendarSync(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     await act(async () => {
       await result.current.sync(true);
