@@ -1,7 +1,9 @@
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { AppState } from "react-native";
 
+import { stopwatchAtom } from "../../src/atoms/timerAtoms";
 import { useStopwatch } from "../../src/hooks/useStopwatch";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -13,18 +15,32 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-function createWrapper() {
-  const store = createStore();
-  function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(JotaiProvider, { store }, children);
+const DEFAULT_STOPWATCH = {
+  elapsedMs: 0,
+  isRunning: false,
+  startedAt: null,
+  laps: [] as number[],
+};
+
+function createWrapper(store?: ReturnType<typeof createStore>) {
+  const s = store ?? createStore();
+  // Pre-set atom to avoid async storage initialization issues in tests
+  if (!store) {
+    s.set(stopwatchAtom, DEFAULT_STOPWATCH);
   }
-  return { Wrapper, store };
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(JotaiProvider, { store: s }, children);
+  }
+  return { Wrapper, store: s };
 }
 
 describe("useStopwatch", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.spyOn(Date, "now").mockReturnValue(0);
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockReturnValue({ remove: jest.fn() } as never);
   });
 
   afterEach(() => {
@@ -192,5 +208,163 @@ describe("useStopwatch", () => {
     expect(result.current.elapsedMs).toBe(0);
     expect(result.current.isRunning).toBe(false);
     expect(result.current.laps).toEqual([]);
+  });
+
+  it("should register AppState listener", () => {
+    const { Wrapper } = createWrapper();
+    renderHook(() => useStopwatch(), { wrapper: Wrapper });
+
+    expect(AppState.addEventListener).toHaveBeenCalledWith(
+      "change",
+      expect.any(Function),
+    );
+  });
+
+  describe("persistence and restoration", () => {
+    it("should persist startedAt in atom when starting", () => {
+      const store = createStore();
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      (Date.now as jest.Mock).mockReturnValue(5000);
+      act(() => {
+        result.current.start();
+      });
+
+      const atomState = store.get(stopwatchAtom);
+      expect(atomState.startedAt).toBe(5000);
+      expect(atomState.isRunning).toBe(true);
+    });
+
+    it("should set startedAt to null on pause", () => {
+      const store = createStore();
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      act(() => {
+        result.current.start();
+      });
+
+      act(() => {
+        result.current.pause();
+      });
+
+      const atomState = store.get(stopwatchAtom);
+      expect(atomState.startedAt).toBeNull();
+      expect(atomState.isRunning).toBe(false);
+    });
+
+    it("should set startedAt on resume", () => {
+      const store = createStore();
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      act(() => {
+        result.current.start();
+      });
+
+      (Date.now as jest.Mock).mockReturnValue(2000);
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      act(() => {
+        result.current.pause();
+      });
+
+      (Date.now as jest.Mock).mockReturnValue(5000);
+      act(() => {
+        result.current.resume();
+      });
+
+      const atomState = store.get(stopwatchAtom);
+      expect(atomState.startedAt).toBe(5000);
+      expect(atomState.isRunning).toBe(true);
+    });
+
+    it("should restore a running stopwatch and continue ticking", () => {
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 5000,
+        isRunning: true,
+        startedAt: -5000,
+        laps: [2000],
+      });
+
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      expect(result.current.isRunning).toBe(true);
+      expect(result.current.laps).toEqual([2000]);
+
+      // Advance time and verify it keeps ticking
+      // startedAtRef = Date.now(0) - elapsedMs(5000) = -5000
+      // elapsed = 2000 - (-5000) + 0 = 7000
+      (Date.now as jest.Mock).mockReturnValue(2000);
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      expect(result.current.elapsedMs).toBe(7000);
+    });
+
+    it("should restore a paused stopwatch with correct elapsed", () => {
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 3000,
+        isRunning: false,
+        startedAt: null,
+        laps: [1000],
+      });
+
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      expect(result.current.elapsedMs).toBe(3000);
+      expect(result.current.isRunning).toBe(false);
+      expect(result.current.laps).toEqual([1000]);
+
+      // Resuming should continue from 3000
+      (Date.now as jest.Mock).mockReturnValue(1000);
+      act(() => {
+        result.current.resume();
+      });
+
+      (Date.now as jest.Mock).mockReturnValue(3000);
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      // 3000 (previous) + 2000 (new) = 5000
+      expect(result.current.elapsedMs).toBe(5000);
+    });
+
+    it("should reset abnormal state (isRunning true but startedAt null)", () => {
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 1000,
+        isRunning: true,
+        startedAt: null,
+        laps: [],
+      });
+
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      expect(result.current.elapsedMs).toBe(0);
+      expect(result.current.isRunning).toBe(false);
+    });
   });
 });

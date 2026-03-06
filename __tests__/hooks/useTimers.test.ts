@@ -1,7 +1,10 @@
+import notifee from "@notifee/react-native";
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { AppState } from "react-native";
 
+import { timersAtom } from "../../src/atoms/timerAtoms";
 import { useTimers } from "../../src/hooks/useTimers";
 
 jest.mock("@notifee/react-native", () => ({
@@ -9,8 +12,11 @@ jest.mock("@notifee/react-native", () => ({
   default: {
     displayNotification: jest.fn().mockResolvedValue(undefined),
     createChannel: jest.fn().mockResolvedValue("timer"),
+    createTriggerNotification: jest.fn().mockResolvedValue("trigger-id"),
+    cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
   },
   AndroidImportance: { DEFAULT: 3 },
+  TriggerType: { TIMESTAMP: 0 },
 }));
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -24,6 +30,7 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 function createWrapper() {
   const store = createStore();
+  store.set(timersAtom, []);
   function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(JotaiProvider, { store }, children);
   }
@@ -34,6 +41,10 @@ describe("useTimers", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.spyOn(Date, "now").mockReturnValue(0);
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockReturnValue({ remove: jest.fn() } as never);
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -238,5 +249,150 @@ describe("useTimers", () => {
     expect(result.current.timers[0].remainingMs).toBe(10000);
     expect(result.current.timers[0].isRunning).toBe(false);
     expect(result.current.timers[0].pausedElapsedMs).toBe(0);
+  });
+
+  describe("Notifee trigger scheduling", () => {
+    it("should schedule a trigger when adding a timer", () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+
+      (Date.now as jest.Mock).mockReturnValue(1000);
+      act(() => {
+        result.current.addTimer(10000, "Test Timer");
+      });
+
+      expect(notifee.createTriggerNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Test Timer",
+          body: "Timer complete",
+        }),
+        expect.objectContaining({
+          type: 0,
+          timestamp: 11000,
+        }),
+      );
+    });
+
+    it("should cancel trigger when pausing a timer", () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+
+      act(() => {
+        result.current.addTimer(10000);
+      });
+
+      const id = result.current.timers[0].id;
+
+      act(() => {
+        result.current.pauseTimer(id);
+      });
+
+      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        `timer-${id}`,
+      );
+    });
+
+    it("should cancel trigger when deleting a timer", () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+
+      act(() => {
+        result.current.addTimer(10000);
+      });
+
+      const id = result.current.timers[0].id;
+
+      act(() => {
+        result.current.deleteTimer(id);
+      });
+
+      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        `timer-${id}`,
+      );
+    });
+
+    it("should cancel trigger when resetting a timer", () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+
+      act(() => {
+        result.current.addTimer(10000);
+      });
+
+      const id = result.current.timers[0].id;
+
+      act(() => {
+        result.current.resetTimer(id);
+      });
+
+      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        `timer-${id}`,
+      );
+    });
+
+    it("should schedule a trigger when resuming a timer", () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+
+      act(() => {
+        result.current.addTimer(10000);
+      });
+
+      const id = result.current.timers[0].id;
+
+      (Date.now as jest.Mock).mockReturnValue(3000);
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      act(() => {
+        result.current.pauseTimer(id);
+      });
+
+      jest.clearAllMocks();
+
+      (Date.now as jest.Mock).mockReturnValue(5000);
+      act(() => {
+        result.current.resumeTimer(id);
+      });
+
+      expect(notifee.createTriggerNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: "Timer complete",
+        }),
+        expect.objectContaining({
+          type: 0,
+          // completionTime = startedAt(5000) + durationMs(10000) - pausedElapsedMs(3000) = 12000
+          timestamp: 12000,
+        }),
+      );
+    });
+
+    it("should cancel trigger on foreground completion to prevent duplicates", () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+
+      act(() => {
+        result.current.addTimer(5000, "Short Timer");
+      });
+
+      const id = result.current.timers[0].id;
+      jest.clearAllMocks();
+
+      (Date.now as jest.Mock).mockReturnValue(6000);
+      act(() => {
+        jest.advanceTimersByTime(6000);
+      });
+
+      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        `timer-${id}`,
+      );
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Short Timer",
+          body: "Timer complete",
+        }),
+      );
+    });
   });
 });

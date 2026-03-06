@@ -12,4 +12,5 @@ export const STORAGE_KEYS = {
   AOSP_AUTH_STATE: "@laimelea/aosp_auth_state",
   HMS_AUTH_STATE: "@laimelea/hms_auth_state",
   GAME_2048: "@laimelea/game_2048",
+  STOPWATCH_STATE: "@laimelea/stopwatch_state",
 } as const;

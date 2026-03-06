@@ -1,8 +1,13 @@
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 
 import { timersAtom } from "../atoms/timerAtoms";
-import { showTimerCompleteNotification } from "../features/timer/services/timerNotification";
+import {
+  cancelTimerTrigger,
+  scheduleTimerTrigger,
+  showTimerCompleteNotification,
+} from "../features/timer/services/timerNotification";
 import type { TimerState } from "../models/Timer";
 
 const TICK_INTERVAL = 100;
@@ -43,6 +48,7 @@ export function useTimers(): UseTimersReturn {
         const remaining = Math.max(0, t.durationMs - elapsed);
         changed = true;
         if (remaining <= 0) {
+          cancelTimerTrigger(t.id);
           showTimerCompleteNotification(t.label);
           return { ...t, remainingMs: 0, isRunning: false };
         }
@@ -70,19 +76,38 @@ export function useTimers(): UseTimersReturn {
     return clearTick;
   }, [clearTick]);
 
+  // Sync display on AppState active resume
+  useEffect(() => {
+    const handleAppState = (state: AppStateStatus) => {
+      if (state === "active") {
+        tick();
+      }
+    };
+    const subscription = AppState.addEventListener("change", handleAppState);
+    return () => subscription.remove();
+  }, [tick]);
+
   const addTimer = useCallback(
     (durationMs: number, label?: string) => {
       const num = nextTimerNumber++;
+      const now = Date.now();
       const timer: TimerState = {
         id: generateId(),
         label: label ?? `Timer ${num}`,
         durationMs,
         remainingMs: durationMs,
         isRunning: true,
-        startedAt: Date.now(),
+        startedAt: now,
         pausedElapsedMs: 0,
       };
       setTimers((prev) => [...prev, timer]);
+      scheduleTimerTrigger({
+        id: timer.id,
+        label: timer.label,
+        durationMs: timer.durationMs,
+        startedAt: now,
+        pausedElapsedMs: 0,
+      });
     },
     [setTimers],
   );
@@ -90,6 +115,7 @@ export function useTimers(): UseTimersReturn {
   const deleteTimer = useCallback(
     (id: string) => {
       setTimers((prev) => prev.filter((t) => t.id !== id));
+      cancelTimerTrigger(id);
     },
     [setTimers],
   );
@@ -107,22 +133,32 @@ export function useTimers(): UseTimersReturn {
           };
         }),
       );
+      cancelTimerTrigger(id);
     },
     [setTimers],
   );
 
   const resumeTimer = useCallback(
     (id: string) => {
+      const now = Date.now();
+      let resumed: TimerState | null = null;
       setTimers((prev) =>
         prev.map((t) => {
           if (t.id !== id || t.isRunning || t.remainingMs <= 0) return t;
-          return {
-            ...t,
-            isRunning: true,
-            startedAt: Date.now(),
-          };
+          resumed = { ...t, isRunning: true, startedAt: now };
+          return resumed;
         }),
       );
+      if (resumed) {
+        const r = resumed as TimerState;
+        scheduleTimerTrigger({
+          id: r.id,
+          label: r.label,
+          durationMs: r.durationMs,
+          startedAt: now,
+          pausedElapsedMs: r.pausedElapsedMs,
+        });
+      }
     },
     [setTimers],
   );
@@ -141,6 +177,7 @@ export function useTimers(): UseTimersReturn {
           };
         }),
       );
+      cancelTimerTrigger(id);
     },
     [setTimers],
   );
