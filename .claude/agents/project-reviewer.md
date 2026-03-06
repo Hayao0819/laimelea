@@ -198,6 +198,15 @@ Explicit user requests:
 - When the user asks to forget or stop remembering something, find and remove the relevant entries from your memory files
 - Since this memory is project-scope and shared with your team via version control, tailor your memories to this project
 
+## Optional Deep Code Review
+
+CI チェック（上記 Validation Pipeline）が全て通過した後、より深いコード品質分析が必要な場合は呼び出し元に以下を提案できる:
+
+- **pr-review-toolkit** / **code-review** プラグインによるヒューリスティック分析（パターン準拠、セキュリティ、パフォーマンス、可読性）
+- これは CI ゲートとは別のオプション分析であり、Validation Pipeline の合否には影響しない
+
+提案するタイミング: 大規模な変更（10+ ファイル）、新規機能追加、セキュリティに関わるコード変更。
+
 ## MEMORY.md
 
 Your MEMORY.md is currently empty. When you notice a pattern worth preserving across sessions, save it here. Anything in MEMORY.md will be included in your system prompt next time.

@@ -113,6 +113,33 @@ Markdownファイルを生成・編集する際は、以下のルールに従う
 Task tool → subagent_type: "emulator-operator"
 ```
 
+## Official Plugins
+
+公式マーケットプレイス（`claude-plugins-official`）が `.claude/settings.json` の `extraKnownMarketplaces` で有効化済み。`/plugin install <name>@claude-plugins-official` で各自インストール。
+
+| プラグイン          | 用途                                                                 | 備考                                                 |
+| ------------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| `typescript-lsp`    | TS編集時の自動型診断・go-to-definition・find-references              | `typescript-language-server` は `nix develop` で提供 |
+| `feature-dev`       | 探索・設計フェーズ（code-explorer / code-architect / code-reviewer） | `/implement` の Step 1 で活用                        |
+| `pr-review-toolkit` | 包括的コードレビュー（6種の専門エージェント）                        | CI チェック後のオプション分析                        |
+| `security-guidance` | Edit/Write 時のセキュリティパターン検出（eval, XSS 等9種）           | PreToolUse フック                                    |
+| `commit-commands`   | `/commit`, `/commit-push-pr`, `/clean_gone`                          | Co-Authored-By 禁止ルールは CLAUDE.md で上書き       |
+
+`/plugin` コマンドで利用可能なプラグインを確認・有効化できる。
+
+## Worktree 規約
+
+worktree は常に `.worktree/` ディレクトリに作成する。ビルトインの `EnterWorktree` は使わず、`git worktree add` で直接作成すること:
+
+```bash
+git worktree add ".worktree/<name>" -b "claude/<prefix>/<name>"
+```
+
+- **ディレクトリ**: `.worktree/<name>`（`.claude/worktrees/` は使わない）
+- **ブランチ**: 必ず `claude/` プレフィックス + conventional prefix
+- **例**: `claude/feat/calendar-sync`, `claude/fix/alarm-bug`, `claude/test/alarm-atoms`
+- **作業完了後**: マージ確認後に worktree とブランチを削除する。rebase 後は `git branch -D`（強制削除）を使う
+
 ## 自動並列実装
 
 `/implement` スキルで実装計画を並列ワーカーに自動ディスパッチできる。詳細は [Auto-Implement Guide](docs/llm/auto-implement.md) を参照。
@@ -120,6 +147,7 @@ Task tool → subagent_type: "emulator-operator"
 - **スキル**: `.claude/skills/implement/SKILL.md` — オーケストレーター
 - **エージェント**: `.claude/agents/worker.md` — 実装ワーカー（Opus, worktree分離）
 - ワーカーはサブエージェントを呼べない（ネスト不可）ため、メインLLMがオーケストレーター役
+- **feature-dev 連携**: テキスト記述の新規機能は `code-explorer` + `code-architect` で詳細な探索・設計が可能
 
 ## テスト自動追加
 

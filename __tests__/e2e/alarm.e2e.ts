@@ -473,9 +473,7 @@ describe("Alarm Edit - New Features", () => {
 
     it("should cycle snooze max count", async () => {
       // Default snooze max count is 3
-      await expect(
-        element(by.id("snooze-max-item")).atIndex(0),
-      ).toBeVisible();
+      await expect(element(by.id("snooze-max-item")).atIndex(0)).toBeVisible();
 
       // Cycle: 3 -> 5
       await element(by.id("snooze-max-item")).tap();

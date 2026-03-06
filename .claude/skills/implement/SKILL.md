@@ -11,16 +11,17 @@ allowed-tools: Read, Glob, Grep, Task, Bash(git *), Bash(ls *), Bash(treefmt*), 
 
 ## 実行フロー
 
-### Step 1: 実装計画の読み取り（Exploreサブエージェントに委譲）
+### Step 1: 実装計画の読み取り（サブエージェントに委譲）
 
-**コンテキスト節約のため、architecture.md等の大きなドキュメントはオーケストレーターが直接Readしない。** Explore サブエージェントに必要な情報だけを抽出させる。
+**コンテキスト節約のため、architecture.md等の大きなドキュメントはオーケストレーターが直接Readしない。** サブエージェントに必要な情報だけを抽出させる。
 
-`$ARGUMENTS` の解釈:
+`$ARGUMENTS` の解釈と使い分け:
 
-- 数字（例: `11`）→ Phase番号
-- ファイルパス → そのファイルを実装計画として使用
-- テキスト → タスク説明としてそのまま使用
-- 空 → ユーザーに何を実装するか質問する
+- **Phase番号 / ファイルパス**（既知の計画あり）→ 従来の Explore サブエージェント（高速）
+- **テキスト記述 / 新規機能**（探索・設計が必要）→ feature-dev プラグインの `code-explorer` + `code-architect` を並列起動（詳細な探索・設計）
+- **空** → ユーザーに何を実装するか質問する
+
+#### パターン A: Explore（Phase番号・ファイルパス指定時）
 
 ```yaml
 Task tool:
@@ -30,7 +31,7 @@ Task tool:
     以下の情報を抽出し、簡潔にまとめて返してください。
 
     ## 対象
-    <$ARGUMENTSに応じて: Phase番号、ファイルパス、タスク説明>
+    <$ARGUMENTSに応じて: Phase番号、ファイルパス>
 
     ## 読むべきソース
     1. `docs/architecture.md` — 該当フェーズのセクションのみ抽出
@@ -42,6 +43,34 @@ Task tool:
     - 参照すべき既存ファイル一覧（パス + 参考にすべき点を1行で）
     - 主要な型定義・インターフェース（コードブロック）
     - テスト要件（箇条書き）
+```
+
+#### パターン B: feature-dev（テキスト記述・新規機能時）
+
+`code-explorer` と `code-architect` を **並列起動** し、探索と設計を同時に行う:
+
+```yaml
+# 1つ目: コードベース探索
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Explore codebase for feature"
+  prompt: |
+    feature-dev プラグインの code-explorer として動作してください。
+    タスク: <$ARGUMENTSのテキスト記述>
+    - 関連する既存コード、型、パターンを網羅的に探索
+    - 影響範囲の分析（依存関係、副作用）
+    - 出力: ファイル一覧 + 参照すべきパターン + 型定義
+
+# 2つ目（並列）: アーキテクチャ設計
+Task tool:
+  subagent_type: "Plan"
+  description: "Design feature architecture"
+  prompt: |
+    feature-dev プラグインの code-architect として動作してください。
+    タスク: <$ARGUMENTSのテキスト記述>
+    - 既存アーキテクチャとの整合性を考慮した設計案
+    - ファイル構成、データフロー、エッジケース
+    - 出力: 設計概要 + タスク分解案
 ```
 
 **MEMORY.md** はコンテキストに自動ロード済みなので直接参照する。
@@ -200,6 +229,10 @@ Task tool:
 - **FAIL あり** → オーケストレーターが問題を修正し、再度 reviewer で確認
 
 **重要**: `project-reviewer` はファイルを一切変更しない読み取り専用エージェント。
+
+#### 7c. オプション: 深いコード品質分析
+
+project-reviewer 通過後、大規模な変更や新規機能の場合は `code-reviewer`（feature-dev プラグイン）による深いコード品質分析をユーザーに提案する。パターン準拠、セキュリティ、パフォーマンス等のヒューリスティック分析が可能。
 
 全ゲート通過後、最終結果をユーザーに報告:
 

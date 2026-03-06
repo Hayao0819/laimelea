@@ -87,6 +87,7 @@
             treefmtEval.${system}.config.build.wrapper
             terraform
             google-cloud-sdk
+            nodePackages.typescript-language-server
           ];
 
           hasAndroidSdk = builtins.hasAttr system android-nixpkgs.sdk;

@@ -46,6 +46,8 @@ The task description is provided as the prompt when you are spawned. Read it car
 
 All five gates must pass before committing. If a gate fails, fix the issue and re-run from that gate.
 
+**Note**: typescript-lsp プラグインが有効な場合、リアルタイムの型診断が自動で提供される。ただし明示的な `pnpm tsc --noEmit` は引き続き必須（LSP は増分チェックのため全ファイルの整合性は保証しない）。
+
 ### Coding Standards
 
 - Implement thoroughly within scope — cover edge cases, error handling, and type safety. Do not cut corners, but do not add features beyond the task
