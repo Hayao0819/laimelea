@@ -309,7 +309,7 @@ describe("Providers", () => {
         notification: { data: { alarmId: "alarm-from-notification" } },
       });
 
-      await renderProviders();
+      const { unmount } = await renderProviders();
 
       // The checkInitialNotification function resolves the promise and
       // sets up a 100ms interval that polls navigationRef.isReady().
@@ -322,6 +322,8 @@ describe("Providers", () => {
         },
         { timeout: 3000 },
       );
+
+      unmount();
     });
 
     it("does not navigate when initial notification has no alarmId", async () => {

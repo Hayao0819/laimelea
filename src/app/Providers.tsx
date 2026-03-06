@@ -72,6 +72,7 @@ export function Providers({ children }: ProvidersProps) {
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     async function checkInitialNotification() {
       const initial = await notifee.getInitialNotification();
       if (initial?.notification?.data?.alarmId) {
@@ -80,20 +81,24 @@ export function Providers({ children }: ProvidersProps) {
           if (navigationRef.isReady()) {
             if (intervalId) clearInterval(intervalId);
             intervalId = null;
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = null;
             navigationRef.navigate("AlarmFiring", { alarmId });
           }
         }, 100);
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           if (intervalId) {
             clearInterval(intervalId);
             intervalId = null;
           }
+          timeoutId = null;
         }, 5000);
       }
     }
     checkInitialNotification();
     return () => {
       if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
 
