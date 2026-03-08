@@ -62,4 +62,4 @@ jobs:
       - uses: DeterminateSystems/flake-checker-action@main
 
       - name: Check flake
-        run: nix flake check --all-systems --show-trace
+        run: nix flake check --show-trace

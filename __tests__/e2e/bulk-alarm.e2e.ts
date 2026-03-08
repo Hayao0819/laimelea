@@ -64,9 +64,7 @@ describe("Bulk Alarm", () => {
   describe("Preview", () => {
     it("shows preview section with alarm count", async () => {
       // Default from=7:00, to=9:00 with interval=60 produces 3 alarms (7:00, 8:00, 9:00)
-      await expect(
-        element(by.text("3 alarms will be created")),
-      ).toBeVisible();
+      await expect(element(by.text("3 alarms will be created"))).toBeVisible();
     });
   });
 

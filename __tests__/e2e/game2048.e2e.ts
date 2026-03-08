@@ -1,10 +1,6 @@
 import { by, device, element, expect, waitFor } from "detox";
 
-import {
-  completeSetup,
-  launchAppFresh,
-  waitVisible,
-} from "./utils/helpers";
+import { completeSetup, launchAppFresh, waitVisible } from "./utils/helpers";
 
 describe("Game 2048", () => {
   beforeAll(async () => {
