@@ -20,6 +20,16 @@ buildscript {
 
 allprojects {
     repositories {
+        // @notifee/react-native: resolve app.notifee:core exclusively from bundled local repo
+        // to avoid JitPack timeouts on dynamic version "+"
+        exclusiveContent {
+            forRepository {
+                maven { url = "$rootDir/../node_modules/@notifee/react-native/android/libs" }
+            }
+            filter {
+                includeGroup "app.notifee"
+            }
+        }
         // @react-native-async-storage/async-storage v3: shared_storage bundled artifact
         maven { url = "$rootDir/../node_modules/@react-native-async-storage/async-storage/android/local_repo" }
         // Detox E2E testing framework
