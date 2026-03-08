@@ -6,6 +6,7 @@
 [![React Native](https://img.shields.io/badge/React_Native-0.84-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Material 3](https://img.shields.io/badge/Material_3-Paper_v5-6750A4?style=flat-square&logo=materialdesign&logoColor=white)](https://callstack.github.io/react-native-paper/)
+[![Coverage](https://codecov.io/gh/Hayao0819/laimelea/graph/badge.svg)](https://codecov.io/gh/Hayao0819/laimelea)
 [![License](https://img.shields.io/github/license/Hayao0819/laimelea?style=flat-square)](LICENSE)
 
 ---
