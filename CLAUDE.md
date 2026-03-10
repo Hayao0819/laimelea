@@ -16,7 +16,7 @@ AI assistant guidance for Laimelea project.
 
 ## Essential Rules
 
-1. **Development environment**: Always use `nix develop` (or direnv) for a reproducible environment with Node.js, pnpm, JDK 17, and Android SDK
+1. **Development environment**: **すべてのコマンドは必ず `nix develop` シェル内で実行すること**（direnv が有効なら自動適用）。`nix develop` 外ではツールバージョンが異なり、CI と結果が一致しない。`nix develop` に入っていない場合は `nix develop --command <cmd>` でラップすること
 2. **Lint** with ESLint. Fix any errors before proceeding:
 
    ```bash

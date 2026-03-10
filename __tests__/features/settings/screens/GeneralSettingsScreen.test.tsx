@@ -1,9 +1,4 @@
-import {
-  act,
-  fireEvent,
-  render,
-  waitFor,
-} from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -49,12 +44,15 @@ jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
 const mockRequestExclusion = jest.fn();
 let mockIgnored: boolean | null = false;
 
-jest.mock("../../../../src/features/settings/hooks/useBatteryOptimization", () => ({
-  useBatteryOptimization: () => ({
-    ignored: mockIgnored,
-    requestExclusion: mockRequestExclusion,
+jest.mock(
+  "../../../../src/features/settings/hooks/useBatteryOptimization",
+  () => ({
+    useBatteryOptimization: () => ({
+      ignored: mockIgnored,
+      requestExclusion: mockRequestExclusion,
+    }),
   }),
-}));
+);
 
 async function renderScreen(overrides: Partial<AppSettings> = {}) {
   const store = createStore();

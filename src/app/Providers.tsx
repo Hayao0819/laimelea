@@ -25,8 +25,7 @@ import { rescheduleAllEnabledAlarms } from "../features/alarm/services/alarmResc
 import type { RootStackParamList } from "../navigation/types";
 import { darkTheme, lightTheme } from "./theme";
 
-export const navigationRef =
-  createNavigationContainerRef<RootStackParamList>();
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 interface ProvidersProps {
   children: React.ReactNode;

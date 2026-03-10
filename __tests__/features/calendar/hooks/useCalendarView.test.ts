@@ -47,10 +47,7 @@ function renderCalendarViewHook(initialDate?: number, initialMode?: string) {
     store.set(calendarSelectedDateAtom, initialDate);
   }
   if (initialMode != null) {
-    store.set(
-      calendarViewModeAtom,
-      initialMode as "month" | "week" | "agenda",
-    );
+    store.set(calendarViewModeAtom, initialMode as "month" | "week" | "agenda");
   }
   function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(JotaiProvider, { store }, children);

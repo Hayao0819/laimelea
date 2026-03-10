@@ -214,4 +214,3 @@ describe("cancelTimerTrigger", () => {
     warnSpy.mockRestore();
   });
 });
-

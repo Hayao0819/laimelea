@@ -63,9 +63,7 @@ jest.mock("@notifee/react-native", () => ({
 
 const mockForegroundUnsubscribe = jest.fn();
 jest.mock("../../src/core/notifications/foregroundHandler", () => ({
-  setupForegroundHandler: jest
-    .fn()
-    .mockReturnValue(mockForegroundUnsubscribe),
+  setupForegroundHandler: jest.fn().mockReturnValue(mockForegroundUnsubscribe),
 }));
 
 jest.mock("../../src/core/notifications/notifeeSetup", () => ({
@@ -102,7 +100,7 @@ jest.mock("@react-navigation/native", () => ({
     children,
   }: {
     children: React.ReactNode;
-     
+
     [key: string]: any;
   }) => children,
 }));
@@ -260,9 +258,7 @@ describe("Providers", () => {
     it("registers setupForegroundHandler on mount", async () => {
       await renderProviders();
 
-      expect(setupForegroundHandler).toHaveBeenCalledWith(
-        expect.any(Function),
-      );
+      expect(setupForegroundHandler).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it("unsubscribes foreground handler on unmount", async () => {

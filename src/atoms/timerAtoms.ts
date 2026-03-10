@@ -40,11 +40,7 @@ const syncStopwatchAtom = unwrap(
 // may hold a Promise before async storage resolves.
 export const timersAtom = atom(
   (get) => get(syncTimersAtom) ?? [],
-  (
-    get,
-    set,
-    update: TimerState[] | ((prev: TimerState[]) => TimerState[]),
-  ) => {
+  (get, set, update: TimerState[] | ((prev: TimerState[]) => TimerState[])) => {
     if (typeof update === "function") {
       const current = get(syncTimersAtom) ?? [];
       set(timersStorageAtom, update(current));

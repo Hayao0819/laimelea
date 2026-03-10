@@ -26,12 +26,9 @@ jest.mock("@notifee/react-native", () => ({
   AndroidCategory: { ALARM: "alarm" },
 }));
 
-jest.mock(
-  "../../../../src/features/alarm/services/alarmRescheduler",
-  () => ({
-    rescheduleAllEnabledAlarms: jest.fn(),
-  }),
-);
+jest.mock("../../../../src/features/alarm/services/alarmRescheduler", () => ({
+  rescheduleAllEnabledAlarms: jest.fn(),
+}));
 
 function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   return {
@@ -93,9 +90,7 @@ describe("bootRescheduleTask", () => {
   });
 
   it("silently handles JSON parse errors", async () => {
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
-      "invalid json {{{",
-    );
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("invalid json {{{");
 
     await expect(bootRescheduleTask()).resolves.toBeUndefined();
     expect(rescheduleAllEnabledAlarms).not.toHaveBeenCalled();

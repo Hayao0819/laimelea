@@ -65,4 +65,3 @@ export async function cancelTimerTrigger(timerId: string): Promise<void> {
     console.warn("Failed to cancel timer trigger:", error);
   }
 }
-

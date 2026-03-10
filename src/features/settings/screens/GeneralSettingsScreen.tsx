@@ -111,9 +111,7 @@ export function GeneralSettingsScreen() {
         </View>
       </List.Section>
       <List.Section>
-        <List.Subheader>
-          {t("settings.batteryOptimization")}
-        </List.Subheader>
+        <List.Subheader>{t("settings.batteryOptimization")}</List.Subheader>
         <List.Item
           title={t("settings.batteryOptimizationTitle")}
           description={
