@@ -1,15 +1,18 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { List, SegmentedButtons, Text } from "react-native-paper";
+import { Button, List, SegmentedButtons, Text } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
 import { resolveLanguage } from "../../../core/i18n";
+import { useBatteryOptimization } from "../hooks/useBatteryOptimization";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
 export function GeneralSettingsScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
+  const { ignored: batteryOptIgnored, requestExclusion } =
+    useBatteryOptimization();
 
   return (
     <ScrollView
@@ -75,6 +78,47 @@ export function GeneralSettingsScreen() {
             ]}
           />
         </View>
+      </List.Section>
+      <List.Section>
+        <List.Subheader>
+          {t("settings.batteryOptimization")}
+        </List.Subheader>
+        <List.Item
+          title={t("settings.batteryOptimizationTitle")}
+          description={
+            batteryOptIgnored === null
+              ? t("settings.batteryOptimizationChecking")
+              : batteryOptIgnored
+                ? t("settings.batteryOptimizationDisabled")
+                : t("settings.batteryOptimizationEnabled")
+          }
+          left={(props) => (
+            <List.Icon
+              {...props}
+              icon={
+                batteryOptIgnored === null
+                  ? "battery-unknown"
+                  : batteryOptIgnored
+                    ? "battery-check"
+                    : "battery-alert"
+              }
+            />
+          )}
+          right={() =>
+            batteryOptIgnored === true ? (
+              <List.Icon icon="check" />
+            ) : batteryOptIgnored === false ? (
+              <Button
+                mode="outlined"
+                onPress={requestExclusion}
+                testID="battery-optimization-request-button"
+              >
+                {t("settings.batteryOptimizationRequest")}
+              </Button>
+            ) : null
+          }
+          testID="battery-optimization-item"
+        />
       </List.Section>
     </ScrollView>
   );

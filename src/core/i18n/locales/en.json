@@ -300,7 +300,13 @@
     "mathDifficulty": "Math Difficulty",
     "mathDifficultyEasy": "Easy",
     "mathDifficultyMedium": "Medium",
-    "mathDifficultyHard": "Hard"
+    "mathDifficultyHard": "Hard",
+    "batteryOptimization": "Battery",
+    "batteryOptimizationTitle": "Battery optimization",
+    "batteryOptimizationChecking": "Checking...",
+    "batteryOptimizationDisabled": "Excluded from optimization",
+    "batteryOptimizationEnabled": "Not excluded — alarms may not fire reliably",
+    "batteryOptimizationRequest": "Exclude"
   },
   "game2048": {
     "title": "2048",

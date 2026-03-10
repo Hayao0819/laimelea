@@ -300,7 +300,13 @@
     "mathDifficulty": "計算難易度",
     "mathDifficultyEasy": "かんたん",
     "mathDifficultyMedium": "ふつう",
-    "mathDifficultyHard": "むずかしい"
+    "mathDifficultyHard": "むずかしい",
+    "batteryOptimization": "バッテリー",
+    "batteryOptimizationTitle": "バッテリー最適化",
+    "batteryOptimizationChecking": "確認中...",
+    "batteryOptimizationDisabled": "最適化から除外済み",
+    "batteryOptimizationEnabled": "除外されていません — アラームが正確に動作しない可能性があります",
+    "batteryOptimizationRequest": "除外する"
   },
   "game2048": {
     "title": "2048",

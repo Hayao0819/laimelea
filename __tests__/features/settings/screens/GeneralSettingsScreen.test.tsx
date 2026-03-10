@@ -1,4 +1,9 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+} from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -41,18 +46,36 @@ jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
   requestClockWidgetUpdate: jest.fn(),
 }));
 
-function renderScreen(overrides: Partial<AppSettings> = {}) {
+const mockRequestExclusion = jest.fn();
+let mockIgnored: boolean | null = false;
+
+jest.mock("../../../../src/features/settings/hooks/useBatteryOptimization", () => ({
+  useBatteryOptimization: () => ({
+    ignored: mockIgnored,
+    requestExclusion: mockRequestExclusion,
+  }),
+}));
+
+async function renderScreen(overrides: Partial<AppSettings> = {}) {
   const store = createStore();
   store.set(settingsAtom, { ...DEFAULT_SETTINGS, ...overrides });
-  const result = render(
+
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <GeneralSettingsScreen />
       </PaperProvider>
     </JotaiProvider>,
   );
-  return { ...result, store };
+
+  return { ...utils, store };
 }
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockIgnored = false;
+  mockRequestExclusion.mockResolvedValue(undefined);
+});
 
 describe("GeneralSettingsScreen", () => {
   it("renders all setting sections", async () => {
@@ -65,7 +88,6 @@ describe("GeneralSettingsScreen", () => {
 
   it("shows current primaryTimeDisplay value", async () => {
     const { getByTestId } = await renderScreen();
-    // Default is "custom"; verify the segment container renders
     expect(getByTestId("primary-display-segment")).toBeTruthy();
   });
 
@@ -82,7 +104,6 @@ describe("GeneralSettingsScreen", () => {
 
   it("shows current theme value", async () => {
     const { getByTestId } = await renderScreen();
-    // Default is "system"; verify the segment container renders
     expect(getByTestId("theme-segment")).toBeTruthy();
   });
 
@@ -99,7 +120,6 @@ describe("GeneralSettingsScreen", () => {
 
   it("shows current language value", async () => {
     const { getByTestId } = await renderScreen();
-    // Default language is "auto" which resolveLanguage maps to "en"
     expect(getByTestId("language-segment")).toBeTruthy();
   });
 
@@ -117,12 +137,54 @@ describe("GeneralSettingsScreen", () => {
   it("updates timeFormat on segment press", async () => {
     const { getByText, store } = await renderScreen();
 
-    // Default is "24h", press "12h"
     await fireEvent.press(getByText("12h"));
 
     await waitFor(() => {
       const updated = store.get(settingsAtom) as AppSettings;
       expect(updated.timeFormat).toBe("12h");
     });
+  });
+});
+
+describe("GeneralSettingsScreen - battery optimization", () => {
+  it("renders the battery optimization item", async () => {
+    const { getByTestId } = await renderScreen();
+    expect(getByTestId("battery-optimization-item")).toBeTruthy();
+  });
+
+  it("shows checking description when status is null", async () => {
+    mockIgnored = null;
+    const { getByText } = await renderScreen();
+    expect(getByText("settings.batteryOptimizationChecking")).toBeTruthy();
+  });
+
+  it("shows excluded description when battery optimization is ignored", async () => {
+    mockIgnored = true;
+    const { getByText, queryByTestId } = await renderScreen();
+
+    expect(getByText("settings.batteryOptimizationDisabled")).toBeTruthy();
+    expect(queryByTestId("battery-optimization-request-button")).toBeNull();
+  });
+
+  it("shows request button when not excluded", async () => {
+    mockIgnored = false;
+    const { getByText, getByTestId } = await renderScreen();
+
+    expect(getByText("settings.batteryOptimizationEnabled")).toBeTruthy();
+    expect(getByTestId("battery-optimization-request-button")).toBeTruthy();
+  });
+
+  it("calls requestExclusion on button press", async () => {
+    mockIgnored = false;
+
+    const { getByTestId } = await renderScreen();
+
+    const button = getByTestId("battery-optimization-request-button");
+
+    await act(async () => {
+      fireEvent.press(button);
+    });
+
+    expect(mockRequestExclusion).toHaveBeenCalledTimes(1);
   });
 });
