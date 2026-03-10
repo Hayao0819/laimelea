@@ -49,6 +49,7 @@ AI assistant guidance for Laimelea project.
 
 7. **Package manager**: pnpm (with `node-linker=hoisted` in `.npmrc` for Metro compatibility). Always use `pnpm` instead of `npm` or `npx`.
 8. **Test execution**: Use `pnpm jest <path>` directly, not `pnpm test -- --testPathPattern`
+9. **想定外の変更を安易に破棄しない**: ワーキングツリーに自分が行っていない変更（未知のファイル変更・新規ファイル）を発見した場合、**絶対に `git checkout --` や `git restore` で即座に元に戻さないこと**。バックグラウンドで動作中のワーカーサブエージェント（`/implement` 等）が並列に書き込んでいる可能性がある。まずユーザーに確認し、変更の出所を特定してから対処すること
 
 ## Project Overview
 
