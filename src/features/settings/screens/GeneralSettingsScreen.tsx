@@ -1,18 +1,49 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, List, SegmentedButtons, Text } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
 import { resolveLanguage } from "../../../core/i18n";
+import type { BatteryOptimizationStatus } from "../hooks/useBatteryOptimization";
 import { useBatteryOptimization } from "../hooks/useBatteryOptimization";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
+
+function batteryIcon(status: BatteryOptimizationStatus): string {
+  if (status === null) return "battery-unknown";
+  return status ? "battery-check" : "battery-alert";
+}
 
 export function GeneralSettingsScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
   const { ignored: batteryOptIgnored, requestExclusion } =
     useBatteryOptimization();
+
+  const renderBatteryIcon = useCallback(
+    (props: { color: string }) => (
+      <List.Icon color={props.color} icon={batteryIcon(batteryOptIgnored)} />
+    ),
+    [batteryOptIgnored],
+  );
+
+  const renderBatteryRight = useCallback(() => {
+    if (batteryOptIgnored === true) {
+      return <List.Icon icon="check" />;
+    }
+    if (batteryOptIgnored === false) {
+      return (
+        <Button
+          mode="outlined"
+          onPress={requestExclusion}
+          testID="battery-optimization-request-button"
+        >
+          {t("settings.batteryOptimizationRequest")}
+        </Button>
+      );
+    }
+    return null;
+  }, [batteryOptIgnored, requestExclusion, t]);
 
   return (
     <ScrollView
@@ -92,31 +123,8 @@ export function GeneralSettingsScreen() {
                 ? t("settings.batteryOptimizationDisabled")
                 : t("settings.batteryOptimizationEnabled")
           }
-          left={(props) => (
-            <List.Icon
-              {...props}
-              icon={
-                batteryOptIgnored === null
-                  ? "battery-unknown"
-                  : batteryOptIgnored
-                    ? "battery-check"
-                    : "battery-alert"
-              }
-            />
-          )}
-          right={() =>
-            batteryOptIgnored === true ? (
-              <List.Icon icon="check" />
-            ) : batteryOptIgnored === false ? (
-              <Button
-                mode="outlined"
-                onPress={requestExclusion}
-                testID="battery-optimization-request-button"
-              >
-                {t("settings.batteryOptimizationRequest")}
-              </Button>
-            ) : null
-          }
+          left={renderBatteryIcon}
+          right={renderBatteryRight}
           testID="battery-optimization-item"
         />
       </List.Section>
