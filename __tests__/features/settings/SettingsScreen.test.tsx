@@ -1,4 +1,8 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  renderAsync,
+} from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -43,18 +47,16 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-function renderWithProviders(store = createStore()) {
+async function renderWithProviders(store = createStore()) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
-  return {
-    store,
-    ...render(
-      <JotaiProvider store={store}>
-        <PaperProvider>
-          <SettingsScreen />
-        </PaperProvider>
-      </JotaiProvider>,
-    ),
-  };
+  const utils = await renderAsync(
+    <JotaiProvider store={store}>
+      <PaperProvider>
+        <SettingsScreen />
+      </PaperProvider>
+    </JotaiProvider>,
+  );
+  return { ...utils, store };
 }
 
 beforeEach(() => {
@@ -95,7 +97,7 @@ describe("SettingsScreen (hub)", () => {
         cycleLengthMinutes: 26 * 60,
       },
     });
-    const { getByText } = await render(
+    const { getByText } = await renderAsync(
       <JotaiProvider store={store}>
         <PaperProvider>
           <SettingsScreen />
@@ -111,7 +113,7 @@ describe("SettingsScreen (hub)", () => {
       ...DEFAULT_SETTINGS,
       timezone: "America/New_York",
     });
-    const { getByText } = await render(
+    const { getByText } = await renderAsync(
       <JotaiProvider store={store}>
         <PaperProvider>
           <SettingsScreen />
@@ -127,7 +129,7 @@ describe("SettingsScreen (hub)", () => {
       ...DEFAULT_SETTINGS,
       timezone: "auto",
     });
-    const { queryByText } = await render(
+    const { queryByText } = await renderAsync(
       <JotaiProvider store={store}>
         <PaperProvider>
           <SettingsScreen />

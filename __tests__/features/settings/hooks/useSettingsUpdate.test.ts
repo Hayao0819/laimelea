@@ -38,16 +38,17 @@ describe("useSettingsUpdate", () => {
     jest.clearAllMocks();
   });
 
-  it("should return settings merged with defaults", () => {
+  it("should return settings merged with defaults", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     expect(result.current.settings).toEqual(DEFAULT_SETTINGS);
   });
 
-  it("should return settings merged with defaults when rawSettings is partial", () => {
+  it("should return settings merged with defaults when rawSettings is partial", async () => {
     const store = createStore();
     const partial = { setupComplete: true } as AppSettings;
     store.set(settingsAtom, partial);
@@ -59,6 +60,7 @@ describe("useSettingsUpdate", () => {
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
     // The hook merges DEFAULT_SETTINGS with rawSettings, so missing fields come from defaults
     expect(result.current.settings.setupComplete).toBe(true);
@@ -70,13 +72,14 @@ describe("useSettingsUpdate", () => {
     );
   });
 
-  it("should update partial settings via update()", () => {
+  it("should update partial settings via update()", async () => {
     const { Wrapper, store } = createWrapper();
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
-    act(() => {
+    await act(async () => {
       result.current.update({ setupComplete: true, theme: "dark" });
     });
 
@@ -87,13 +90,14 @@ describe("useSettingsUpdate", () => {
     expect(stored.primaryTimeDisplay).toBe(DEFAULT_SETTINGS.primaryTimeDisplay);
   });
 
-  it("should update alarm defaults via updateAlarmDefaults()", () => {
+  it("should update alarm defaults via updateAlarmDefaults()", async () => {
     const { Wrapper, store } = createWrapper();
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
-    act(() => {
+    await act(async () => {
       result.current.updateAlarmDefaults({
         snoozeDurationMin: 10,
         vibrationEnabled: false,
@@ -112,13 +116,14 @@ describe("useSettingsUpdate", () => {
     );
   });
 
-  it("should update widget settings via updateWidgetSettings()", () => {
+  it("should update widget settings via updateWidgetSettings()", async () => {
     const { Wrapper, store } = createWrapper();
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
-    act(() => {
+    await act(async () => {
       result.current.updateWidgetSettings({
         opacity: 80,
         showRealTime: false,
@@ -134,33 +139,35 @@ describe("useSettingsUpdate", () => {
     );
   });
 
-  it("should call requestClockWidgetUpdate when updating widget settings", () => {
+  it("should call requestClockWidgetUpdate when updating widget settings", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
-    act(() => {
+    await act(async () => {
       result.current.updateWidgetSettings({ opacity: 50 });
     });
 
     expect(requestClockWidgetUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("should not call requestClockWidgetUpdate when using update()", () => {
+  it("should not call requestClockWidgetUpdate when using update()", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
-    act(() => {
+    await act(async () => {
       result.current.update({ theme: "dark" });
     });
 
     expect(requestClockWidgetUpdate).not.toHaveBeenCalled();
   });
 
-  it("should merge with DEFAULT_WIDGET_SETTINGS when widgetSettings is undefined", () => {
+  it("should merge with DEFAULT_WIDGET_SETTINGS when widgetSettings is undefined", async () => {
     const store = createStore();
     // Create settings without widgetSettings to simulate legacy stored data
     const settingsWithoutWidget = {
@@ -176,8 +183,9 @@ describe("useSettingsUpdate", () => {
     const { result } = renderHook(() => useSettingsUpdate(), {
       wrapper: Wrapper,
     });
+    await act(async () => {});
 
-    act(() => {
+    await act(async () => {
       result.current.updateWidgetSettings({ opacity: 75 });
     });
 

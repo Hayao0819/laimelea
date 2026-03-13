@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -42,7 +42,7 @@ const mockWidgetUpdate = requestClockWidgetUpdate as jest.MockedFunction<
   typeof requestClockWidgetUpdate
 >;
 
-function renderScreen(settingsOverride?: Partial<AppSettings>) {
+async function renderScreen(settingsOverride?: Partial<AppSettings>) {
   const store = createStore();
   const settings = { ...DEFAULT_SETTINGS, ...settingsOverride };
   store.set(settingsAtom, settings);
@@ -53,6 +53,7 @@ function renderScreen(settingsOverride?: Partial<AppSettings>) {
       </PaperProvider>
     </JotaiProvider>,
   );
+  await act(async () => {});
   return { ...utils, store };
 }
 

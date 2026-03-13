@@ -58,13 +58,14 @@ async function renderScreen(overrides: Partial<AppSettings> = {}) {
   const store = createStore();
   store.set(settingsAtom, { ...DEFAULT_SETTINGS, ...overrides });
 
-  const utils = await render(
+  const utils = render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <GeneralSettingsScreen />
       </PaperProvider>
     </JotaiProvider>,
   );
+  await act(async () => {});
 
   return { ...utils, store };
 }

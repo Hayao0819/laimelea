@@ -106,7 +106,7 @@ function createMockServices(): PlatformServices {
 
 let mockServices: PlatformServices;
 
-function renderWithProviders() {
+async function renderWithProviders() {
   mockServices = createMockServices();
   mockCreatePlatformServices.mockReturnValue(mockServices);
 
@@ -116,16 +116,15 @@ function renderWithProviders() {
   store.set(sleepSessionsAtom, []);
   store.set(game2048StoreAtom, createDefaultStore());
 
-  return {
-    store,
-    ...render(
-      <JotaiProvider store={store}>
-        <PaperProvider>
-          <BackupScreen />
-        </PaperProvider>
-      </JotaiProvider>,
-    ),
-  };
+  const utils = render(
+    <JotaiProvider store={store}>
+      <PaperProvider>
+        <BackupScreen />
+      </PaperProvider>
+    </JotaiProvider>,
+  );
+  await act(async () => {});
+  return { ...utils, store };
 }
 
 beforeEach(() => {
