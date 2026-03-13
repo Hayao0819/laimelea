@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -77,17 +77,16 @@ function createGameOverStore() {
   });
 }
 
-function renderWithProviders(store = createInitializedStore()) {
-  return {
-    store,
-    ...render(
-      <JotaiProvider store={store}>
-        <PaperProvider>
-          <Game2048Screen />
-        </PaperProvider>
-      </JotaiProvider>,
-    ),
-  };
+async function renderWithProviders(store = createInitializedStore()) {
+  const utils = render(
+    <JotaiProvider store={store}>
+      <PaperProvider>
+        <Game2048Screen />
+      </PaperProvider>
+    </JotaiProvider>,
+  );
+  await act(async () => {});
+  return { store, ...utils };
 }
 
 beforeEach(() => {
@@ -133,13 +132,15 @@ describe("Game2048Screen", () => {
 
       // Transition to game over by directly updating the store
       const currentStore = store.get(resolvedStoreAtom);
-      store.set(game2048StoreAtom, {
-        ...currentStore,
-        currentGame: {
-          ...currentStore.currentGame,
-          isGameOver: true,
-          score: 500,
-        },
+      await act(async () => {
+        store.set(game2048StoreAtom, {
+          ...currentStore,
+          currentGame: {
+            ...currentStore.currentGame,
+            isGameOver: true,
+            score: 500,
+          },
+        });
       });
 
       // Wait for the useEffect to fire
@@ -160,13 +161,15 @@ describe("Game2048Screen", () => {
 
       // Transition to game over
       const currentStore = store.get(resolvedStoreAtom);
-      store.set(game2048StoreAtom, {
-        ...currentStore,
-        currentGame: {
-          ...currentStore.currentGame,
-          isGameOver: true,
-          score: 100,
-        },
+      await act(async () => {
+        store.set(game2048StoreAtom, {
+          ...currentStore,
+          currentGame: {
+            ...currentStore.currentGame,
+            isGameOver: true,
+            score: 100,
+          },
+        });
       });
 
       // Wait for auto-save
@@ -176,13 +179,15 @@ describe("Game2048Screen", () => {
 
       // Trigger another re-render by updating an unrelated field
       const updatedStore = store.get(resolvedStoreAtom);
-      store.set(game2048StoreAtom, {
-        ...updatedStore,
-        currentGame: {
-          ...updatedStore.currentGame,
-          isGameOver: true,
-          score: 101,
-        },
+      await act(async () => {
+        store.set(game2048StoreAtom, {
+          ...updatedStore,
+          currentGame: {
+            ...updatedStore.currentGame,
+            isGameOver: true,
+            score: 101,
+          },
+        });
       });
 
       // Give time for any potential additional save
@@ -302,7 +307,9 @@ describe("Game2048Screen", () => {
         wonAcknowledged: false,
         moveCount: 11,
       };
-      store.set(milestoneAutoSaveAtom, newState);
+      await act(async () => {
+        store.set(milestoneAutoSaveAtom, newState);
+      });
 
       const resolved = store.get(resolvedStoreAtom);
       const milestoneSnapshots = resolved.snapshots.filter(

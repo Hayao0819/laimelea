@@ -109,7 +109,8 @@ async function renderWithProviders(
       </PaperProvider>
     </JotaiProvider>,
   );
-  // Flush pending effects (FAB.Group animations)
+  // Flush pending async atom resolutions and FAB.Group animations
+  await act(async () => {});
   await act(async () => {});
   return { ...utils, store };
 }

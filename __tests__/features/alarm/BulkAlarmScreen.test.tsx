@@ -84,7 +84,7 @@ jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
   scheduleAlarm: jest.fn().mockResolvedValue("trigger-id"),
 }));
 
-function renderWithProviders(
+async function renderWithProviders(
   store = createStore(),
   initialAlarms: Alarm[] = [],
 ) {
@@ -97,6 +97,7 @@ function renderWithProviders(
       </PaperProvider>
     </JotaiProvider>,
   );
+  await act(async () => {});
   return { ...utils, store };
 }
 
@@ -161,6 +162,7 @@ describe("BulkAlarmScreen", () => {
         </PaperProvider>
       </JotaiProvider>,
     );
+    await act(async () => {});
 
     // Change interval to 0 to produce no preview alarms
     await act(async () => {
@@ -183,7 +185,7 @@ describe("BulkAlarmScreen", () => {
 
   it("should save alarms and navigate back on save button press", async () => {
     const store = createStore();
-    renderWithProviders(store, []);
+    await renderWithProviders(store, []);
 
     // Default state: from=07:00, to=09:00, interval=30
     // This generates 5 alarms (07:00, 07:30, 08:00, 08:30, 09:00)

@@ -128,7 +128,7 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   };
 }
 
-function renderWithProviders(
+async function renderWithProviders(
   store = createStore(),
   initialAlarms: Alarm[] = [],
 ) {
@@ -141,6 +141,8 @@ function renderWithProviders(
       </PaperProvider>
     </JotaiProvider>,
   );
+  // Flush pending async atom resolutions
+  await act(async () => {});
   return { ...utils, store };
 }
 
@@ -259,8 +261,8 @@ describe("AlarmFiringScreen", () => {
       fireEvent.press(getByTestId("snooze-button"));
     });
 
-    await waitFor(async () => {
-      const updatedAlarms = await store.get(alarmsAtom);
+    await waitFor(() => {
+      const updatedAlarms = store.get(alarmsAtom);
       expect(updatedAlarms[0].snoozeCount).toBe(2);
     });
   });

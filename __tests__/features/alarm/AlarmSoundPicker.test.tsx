@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 
@@ -25,8 +25,10 @@ jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
 
 const mockGetAlarmRingtones = RingtoneService.getAlarmRingtones as jest.Mock;
 
-function renderWithPaper(ui: React.ReactElement) {
-  return render(<PaperProvider>{ui}</PaperProvider>);
+async function renderWithPaper(ui: React.ReactElement) {
+  const utils = render(<PaperProvider>{ui}</PaperProvider>);
+  await act(async () => {});
+  return utils;
 }
 
 describe("AlarmSoundPicker", () => {

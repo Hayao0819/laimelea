@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -84,17 +84,16 @@ function createInitializedStore(
   return store;
 }
 
-function renderWithProviders(store = createInitializedStore()) {
-  return {
-    store,
-    ...render(
-      <JotaiProvider store={store}>
-        <PaperProvider>
-          <Game2048TreeScreen />
-        </PaperProvider>
-      </JotaiProvider>,
-    ),
-  };
+async function renderWithProviders(store = createInitializedStore()) {
+  const utils = render(
+    <JotaiProvider store={store}>
+      <PaperProvider>
+        <Game2048TreeScreen />
+      </PaperProvider>
+    </JotaiProvider>,
+  );
+  await act(async () => {});
+  return { store, ...utils };
 }
 
 beforeEach(() => {
