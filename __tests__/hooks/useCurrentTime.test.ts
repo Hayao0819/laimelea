@@ -1,40 +1,38 @@
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
-import React, { Suspense } from "react";
+import React from "react";
 
 import { currentTimeMsAtom } from "../../src/atoms/clockAtoms";
-import { settingsAtom } from "../../src/atoms/settingsAtoms";
 import { useCurrentTime } from "../../src/hooks/useCurrentTime";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 
-jest.mock("@react-native-async-storage/async-storage", () => {
-  const store: Record<string, string> = {};
+// Replace settingsAtom (atomWithStorage) with a plain atom to avoid async
+// storage init that causes act() warnings during renderHook.
+jest.mock("../../src/atoms/settingsAtoms", () => {
+  const { atom } = jest.requireActual<typeof import("jotai")>("jotai");
+  const { DEFAULT_SETTINGS: defaults } = jest.requireActual<
+    typeof import("../../src/models/Settings")
+  >("../../src/models/Settings");
   return {
     __esModule: true,
-    default: {
-      getItem: jest.fn((key: string) => Promise.resolve(store[key] ?? null)),
-      setItem: jest.fn((key: string, value: string) => {
-        store[key] = value;
-        return Promise.resolve();
-      }),
-      removeItem: jest.fn((key: string) => {
-        delete store[key];
-        return Promise.resolve();
-      }),
-    },
+    settingsAtom: atom(defaults),
   };
 });
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve()),
+    removeItem: jest.fn(() => Promise.resolve()),
+  },
+}));
+
 function createWrapper() {
   const store = createStore();
-  store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(currentTimeMsAtom, 1000000);
   function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(
-      JotaiProvider,
-      { store },
-      React.createElement(Suspense, { fallback: null }, children),
-    );
+    return React.createElement(JotaiProvider, { store }, children);
   }
   return { Wrapper, store };
 }

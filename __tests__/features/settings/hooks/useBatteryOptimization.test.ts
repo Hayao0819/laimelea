@@ -39,6 +39,9 @@ describe("useBatteryOptimization", () => {
     // Initially null
     expect(result.current.ignored).toBeNull();
 
+    // Flush async state update from useEffect
+    await act(async () => {});
+
     await waitFor(() => {
       expect(result.current.ignored).toBe(true);
     });

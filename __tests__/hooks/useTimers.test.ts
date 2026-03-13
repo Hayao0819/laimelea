@@ -52,9 +52,10 @@ describe("useTimers", () => {
     jest.restoreAllMocks();
   });
 
-  it("should start with empty timers array", () => {
+  it("should start with empty timers array", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+    await act(async () => {});
 
     expect(result.current.timers).toEqual([]);
   });

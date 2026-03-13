@@ -48,18 +48,20 @@ describe("useStopwatch", () => {
     jest.restoreAllMocks();
   });
 
-  it("should start with initial state", () => {
+  it("should start with initial state", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     expect(result.current.elapsedMs).toBe(0);
     expect(result.current.isRunning).toBe(false);
     expect(result.current.laps).toEqual([]);
   });
 
-  it("should start and increase elapsedMs", () => {
+  it("should start and increase elapsedMs", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     act(() => {
       result.current.start();
@@ -75,9 +77,10 @@ describe("useStopwatch", () => {
     expect(result.current.elapsedMs).toBe(3000);
   });
 
-  it("should pause and elapsedMs should not change", () => {
+  it("should pause and elapsedMs should not change", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     act(() => {
       result.current.start();
@@ -103,9 +106,10 @@ describe("useStopwatch", () => {
     expect(result.current.isRunning).toBe(false);
   });
 
-  it("should resume with correct offset", () => {
+  it("should resume with correct offset", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     act(() => {
       result.current.start();
@@ -142,9 +146,10 @@ describe("useStopwatch", () => {
     expect(result.current.elapsedMs).toBe(5000);
   });
 
-  it("should record laps", () => {
+  it("should record laps", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     act(() => {
       result.current.start();
@@ -173,9 +178,10 @@ describe("useStopwatch", () => {
     expect(result.current.laps[1]).toBe(3000);
   });
 
-  it("should not record lap when not running", () => {
+  it("should not record lap when not running", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     act(() => {
       result.current.lap();
@@ -184,9 +190,10 @@ describe("useStopwatch", () => {
     expect(result.current.laps).toEqual([]);
   });
 
-  it("should reset to initial state", () => {
+  it("should reset to initial state", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     act(() => {
       result.current.start();
@@ -210,9 +217,10 @@ describe("useStopwatch", () => {
     expect(result.current.laps).toEqual([]);
   });
 
-  it("should register AppState listener", () => {
+  it("should register AppState listener", async () => {
     const { Wrapper } = createWrapper();
     renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
 
     expect(AppState.addEventListener).toHaveBeenCalledWith(
       "change",
@@ -221,12 +229,13 @@ describe("useStopwatch", () => {
   });
 
   describe("persistence and restoration", () => {
-    it("should persist startedAt in atom when starting", () => {
+    it("should persist startedAt in atom when starting", async () => {
       const store = createStore();
       const { Wrapper } = createWrapper(store);
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
+      await act(async () => {});
 
       (Date.now as jest.Mock).mockReturnValue(5000);
       act(() => {
@@ -238,12 +247,13 @@ describe("useStopwatch", () => {
       expect(atomState.isRunning).toBe(true);
     });
 
-    it("should set startedAt to null on pause", () => {
+    it("should set startedAt to null on pause", async () => {
       const store = createStore();
       const { Wrapper } = createWrapper(store);
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
+      await act(async () => {});
 
       act(() => {
         result.current.start();
@@ -258,12 +268,13 @@ describe("useStopwatch", () => {
       expect(atomState.isRunning).toBe(false);
     });
 
-    it("should set startedAt on resume", () => {
+    it("should set startedAt on resume", async () => {
       const store = createStore();
       const { Wrapper } = createWrapper(store);
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
+      await act(async () => {});
 
       act(() => {
         result.current.start();
@@ -288,7 +299,7 @@ describe("useStopwatch", () => {
       expect(atomState.isRunning).toBe(true);
     });
 
-    it("should restore a running stopwatch and continue ticking", () => {
+    it("should restore a running stopwatch and continue ticking", async () => {
       const store = createStore();
       store.set(stopwatchAtom, {
         elapsedMs: 5000,
@@ -301,6 +312,7 @@ describe("useStopwatch", () => {
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
+      await act(async () => {});
 
       expect(result.current.isRunning).toBe(true);
       expect(result.current.laps).toEqual([2000]);
@@ -316,7 +328,7 @@ describe("useStopwatch", () => {
       expect(result.current.elapsedMs).toBe(7000);
     });
 
-    it("should restore a paused stopwatch with correct elapsed", () => {
+    it("should restore a paused stopwatch with correct elapsed", async () => {
       const store = createStore();
       store.set(stopwatchAtom, {
         elapsedMs: 3000,
@@ -329,6 +341,7 @@ describe("useStopwatch", () => {
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
+      await act(async () => {});
 
       expect(result.current.elapsedMs).toBe(3000);
       expect(result.current.isRunning).toBe(false);
@@ -349,7 +362,7 @@ describe("useStopwatch", () => {
       expect(result.current.elapsedMs).toBe(5000);
     });
 
-    it("should reset abnormal state (isRunning true but startedAt null)", () => {
+    it("should reset abnormal state (isRunning true but startedAt null)", async () => {
       const store = createStore();
       store.set(stopwatchAtom, {
         elapsedMs: 1000,
@@ -362,6 +375,7 @@ describe("useStopwatch", () => {
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
+      await act(async () => {});
 
       expect(result.current.elapsedMs).toBe(0);
       expect(result.current.isRunning).toBe(false);

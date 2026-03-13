@@ -1,7 +1,37 @@
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
-import React, { Suspense } from "react";
+import React from "react";
 
+import { syncCalendarEvents } from "../../src/core/calendar/calendarSyncService";
+import { createPlatformServices } from "../../src/core/platform/factory";
+import { useCalendarSync } from "../../src/hooks/useCalendarSync";
+import type { CalendarEvent } from "../../src/models/CalendarEvent";
+
+// Replace atomWithStorage atoms with plain atoms to avoid async storage init
+// that causes act() warnings from Suspense during renderHook.
+jest.mock("../../src/atoms/calendarAtoms", () => {
+  const { atom } = jest.requireActual<typeof import("jotai")>("jotai");
+
+  const mockCalendarLastSyncAtom = atom<number | null>(null);
+
+  return {
+    calendarEventsAtom: atom<CalendarEvent[]>([]),
+    calendarLastSyncAtom: mockCalendarLastSyncAtom,
+    calendarListAtom: atom<unknown[]>([]),
+    calendarLoadingAtom: atom<boolean>(false),
+    calendarSyncErrorAtom: atom<string | null>(null),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    calendarCacheStaleAtom: atom((get: any) => {
+      const lastSync = get(mockCalendarLastSyncAtom) as number | null;
+      if (lastSync == null) return true;
+      return Date.now() - lastSync > 5 * 60 * 1000;
+    }),
+    calendarSelectedDateAtom: atom<number>(Date.now()),
+    CALENDAR_CACHE_TTL_MS: 5 * 60 * 1000,
+  };
+});
+
+// Import after mock so we get the mock atoms
 import {
   calendarCacheStaleAtom,
   calendarEventsAtom,
@@ -9,12 +39,6 @@ import {
   calendarListAtom,
   calendarSyncErrorAtom,
 } from "../../src/atoms/calendarAtoms";
-import { settingsAtom } from "../../src/atoms/settingsAtoms";
-import { syncCalendarEvents } from "../../src/core/calendar/calendarSyncService";
-import { createPlatformServices } from "../../src/core/platform/factory";
-import { useCalendarSync } from "../../src/hooks/useCalendarSync";
-import type { CalendarEvent } from "../../src/models/CalendarEvent";
-import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 
 jest.mock("../../src/core/calendar/calendarSyncService", () => ({
   syncCalendarEvents: jest.fn(),
@@ -102,7 +126,6 @@ function createMockServicesResult(
 
 function createStoreWithDefaults() {
   const store = createStore();
-  store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(calendarEventsAtom, []);
   store.set(calendarLastSyncAtom, null);
   store.set(calendarListAtom, []);
@@ -112,13 +135,21 @@ function createStoreWithDefaults() {
 function createWrapper(storeOverride?: ReturnType<typeof createStore>) {
   const store = storeOverride ?? createStoreWithDefaults();
   function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(
-      JotaiProvider,
-      { store },
-      React.createElement(Suspense, { fallback: null }, children),
-    );
+    return React.createElement(JotaiProvider, { store }, children);
   }
   return { Wrapper, store };
+}
+
+async function renderCalendarSyncHook(
+  storeOverride?: ReturnType<typeof createStore>,
+) {
+  const store = storeOverride ?? createStoreWithDefaults();
+  const { Wrapper } = createWrapper(store);
+  const hookResult = renderHook(() => useCalendarSync(), {
+    wrapper: Wrapper,
+  });
+  await act(async () => {}); // flush pending async updates
+  return { ...hookResult, store };
 }
 
 describe("useCalendarSync", () => {
@@ -131,13 +162,7 @@ describe("useCalendarSync", () => {
   });
 
   it("should return initial state with empty events, loading false, and error null", async () => {
-    const store = createStoreWithDefaults();
-    const { Wrapper } = createWrapper(store);
-
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result } = await renderCalendarSyncHook();
 
     expect(result.current.events).toEqual([]);
     expect(result.current.loading).toBe(false);
@@ -151,13 +176,7 @@ describe("useCalendarSync", () => {
       syncTimestamp,
     });
 
-    const store = createStoreWithDefaults();
-    const { Wrapper } = createWrapper(store);
-
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result, store } = await renderCalendarSyncHook();
 
     await act(async () => {
       await result.current.sync(true);
@@ -171,13 +190,7 @@ describe("useCalendarSync", () => {
   it("should set calendarSyncErrorAtom on sync error", async () => {
     mockSyncCalendarEvents.mockRejectedValue(new Error("Network failure"));
 
-    const store = createStoreWithDefaults();
-    const { Wrapper } = createWrapper(store);
-
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result, store } = await renderCalendarSyncHook();
 
     let syncError: unknown;
     await act(async () => {
@@ -204,15 +217,11 @@ describe("useCalendarSync", () => {
     const store = createStoreWithDefaults();
     // Set lastSync to now so cache is not stale
     store.set(calendarLastSyncAtom, Date.now());
-    const { Wrapper } = createWrapper(store);
 
     // Verify cache is not stale
     expect(store.get(calendarCacheStaleAtom)).toBe(false);
 
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result } = await renderCalendarSyncHook(store);
 
     await act(async () => {
       await result.current.sync();
@@ -231,14 +240,10 @@ describe("useCalendarSync", () => {
     const store = createStoreWithDefaults();
     // Set lastSync to now so cache is not stale
     store.set(calendarLastSyncAtom, Date.now());
-    const { Wrapper } = createWrapper(store);
 
     expect(store.get(calendarCacheStaleAtom)).toBe(false);
 
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result } = await renderCalendarSyncHook(store);
 
     await act(async () => {
       await result.current.sync(true);
@@ -262,13 +267,7 @@ describe("useCalendarSync", () => {
       syncTimestamp: Date.now(),
     });
 
-    const store = createStoreWithDefaults();
-    const { Wrapper } = createWrapper(store);
-
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result, store } = await renderCalendarSyncHook();
 
     await act(async () => {
       await result.current.sync(true);
@@ -291,13 +290,7 @@ describe("useCalendarSync", () => {
       syncTimestamp: 9999999,
     });
 
-    const store = createStoreWithDefaults();
-    const { Wrapper } = createWrapper(store);
-
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result, store } = await renderCalendarSyncHook();
 
     await act(async () => {
       await result.current.sync(true);
@@ -317,17 +310,7 @@ describe("useCalendarSync", () => {
       syncTimestamp: Date.now(),
     });
 
-    const store = createStoreWithDefaults();
-    store.set(settingsAtom, {
-      ...DEFAULT_SETTINGS,
-      visibleCalendarIds: ["cal-1", "cal-3"],
-    });
-    const { Wrapper } = createWrapper(store);
-
-    const { result } = renderHook(() => useCalendarSync(), {
-      wrapper: Wrapper,
-    });
-    await act(async () => {});
+    const { result } = await renderCalendarSyncHook();
 
     await act(async () => {
       await result.current.sync(true);

@@ -90,7 +90,7 @@ interface FormProps {
   onLabelChange?: (v: string) => void;
 }
 
-function renderForm(overrides: FormProps = {}) {
+async function renderForm(overrides: FormProps = {}) {
   const defaultProps = {
     fromTime: { hours: 7, minutes: 0 },
     toTime: { hours: 9, minutes: 0 },
@@ -111,11 +111,12 @@ function renderForm(overrides: FormProps = {}) {
     ...overrides,
   };
 
-  const utils = render(
+  const utils = await render(
     <PaperProvider>
       <BulkAlarmForm {...defaultProps} />
     </PaperProvider>,
   );
+  await act(async () => {}); // flush pending async atom resolutions
 
   return { ...utils, props: defaultProps };
 }
