@@ -109,6 +109,21 @@ async function renderWithProviders(options?: {
   return { ...utils, store };
 }
 
+const originalConsoleError = console.error;
+
+beforeEach(() => {
+  console.error = (...args: unknown[]) => {
+    const msg = typeof args[0] === "string" ? args[0] : "";
+    if (msg.includes("suspended inside an `act` scope")) return;
+    if (msg.includes("suspended resource finished loading")) return;
+    originalConsoleError(...args);
+  };
+});
+
+afterEach(() => {
+  console.error = originalConsoleError;
+});
+
 describe("EventDetailScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();

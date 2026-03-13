@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -74,20 +74,36 @@ jest.mock("../../../src/features/clock/components/CustomDayIndicator", () => ({
   },
 }));
 
-function renderWithProviders(
+async function renderWithProviders(
   overrides?: Partial<AppSettings>,
   store = createStore(),
 ) {
   store.set(settingsAtom, { ...DEFAULT_SETTINGS, ...overrides });
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <ClockScreen />
       </PaperProvider>
     </JotaiProvider>,
   );
+  await act(async () => {});
   return { ...utils, store };
 }
+
+const originalConsoleError = console.error;
+
+beforeEach(() => {
+  console.error = (...args: unknown[]) => {
+    const msg = typeof args[0] === "string" ? args[0] : "";
+    if (msg.includes("suspended inside an `act` scope")) return;
+    if (msg.includes("suspended resource finished loading")) return;
+    originalConsoleError(...args);
+  };
+});
+
+afterEach(() => {
+  console.error = originalConsoleError;
+});
 
 describe("ClockScreen", () => {
   beforeEach(() => {

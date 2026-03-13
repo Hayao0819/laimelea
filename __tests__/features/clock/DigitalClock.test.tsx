@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -44,20 +44,36 @@ const sampleCustomTime: CustomTimeValue = {
 // 2026-01-15T10:30:45Z
 const sampleRealTimeMs = new Date("2026-01-15T10:30:45Z").getTime();
 
-function renderWithProviders(
+async function renderWithProviders(
   ui: React.ReactElement,
   settingsOverride?: Partial<AppSettings>,
 ) {
   const store = createStore();
   const settings = { ...DEFAULT_SETTINGS, ...settingsOverride };
   store.set(settingsAtom, settings);
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>{ui}</PaperProvider>
     </JotaiProvider>,
   );
+  await act(async () => {});
   return { ...utils, store };
 }
+
+const originalConsoleError = console.error;
+
+beforeEach(() => {
+  console.error = (...args: unknown[]) => {
+    const msg = typeof args[0] === "string" ? args[0] : "";
+    if (msg.includes("suspended inside an `act` scope")) return;
+    if (msg.includes("suspended resource finished loading")) return;
+    originalConsoleError(...args);
+  };
+});
+
+afterEach(() => {
+  console.error = originalConsoleError;
+});
 
 describe("DigitalClock", () => {
   it('should display formatted custom time as primary when primaryTimeDisplay is "custom"', async () => {
@@ -153,16 +169,19 @@ describe("DigitalClock", () => {
         </PaperProvider>
       </JotaiProvider>,
     );
+    await act(async () => {});
 
     expect(getByText("03:15:00")).toBeTruthy();
     expect(getByText("08:00:00")).toBeTruthy();
     expect(getByTestId("digital-clock").children.length).toBe(2);
 
     // Switch to "24h" primary via atom update
-    store.set(settingsAtom, {
-      ...DEFAULT_SETTINGS,
-      primaryTimeDisplay: "24h",
-      timeFormat: "24h",
+    await act(async () => {
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        primaryTimeDisplay: "24h",
+        timeFormat: "24h",
+      });
     });
 
     await rerender(

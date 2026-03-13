@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -69,15 +69,34 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-function renderWithProviders(ui: React.ReactElement, store = createStore()) {
+async function renderWithProviders(
+  ui: React.ReactElement,
+  store = createStore(),
+) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>{ui}</PaperProvider>
     </JotaiProvider>,
   );
+  await act(async () => {});
   return { ...utils, store };
 }
+
+const originalConsoleError = console.error;
+
+beforeEach(() => {
+  console.error = (...args: unknown[]) => {
+    const msg = typeof args[0] === "string" ? args[0] : "";
+    if (msg.includes("suspended inside an `act` scope")) return;
+    if (msg.includes("suspended resource finished loading")) return;
+    originalConsoleError(...args);
+  };
+});
+
+afterEach(() => {
+  console.error = originalConsoleError;
+});
 
 describe("MonthView", () => {
   beforeEach(() => {
