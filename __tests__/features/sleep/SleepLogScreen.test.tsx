@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 
@@ -105,12 +105,14 @@ function makeSession(overrides: Partial<SleepSession> = {}): SleepSession {
   };
 }
 
-function renderScreen() {
-  return render(
+async function renderScreen() {
+  const utils = await render(
     <PaperProvider>
       <SleepLogScreen />
     </PaperProvider>,
   );
+  await act(async () => {});
+  return utils;
 }
 
 describe("SleepLogScreen", () => {

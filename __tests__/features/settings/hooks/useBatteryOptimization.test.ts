@@ -82,7 +82,12 @@ describe("useBatteryOptimization", () => {
   });
 
   it("registers an AppState listener on mount", async () => {
-    renderHook(() => useBatteryOptimization());
+    const { result } = renderHook(() => useBatteryOptimization());
+
+    // Flush the async useEffect that checks battery status
+    await waitFor(() => {
+      expect(result.current.ignored).not.toBeNull();
+    });
 
     const addListenerMock = AppState.addEventListener as jest.Mock;
     const call = addListenerMock.mock.calls.find(

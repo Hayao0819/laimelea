@@ -20,6 +20,22 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+jest.mock("../../../../src/core/storage/asyncStorageAdapter", () => ({
+  createAsyncStorage: () => {
+    const store = new Map<string, unknown>();
+    return {
+      getItem: (key: string, initialValue: unknown) =>
+        store.has(key) ? store.get(key) : initialValue,
+      setItem: (key: string, value: unknown) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    };
+  },
+}));
+
 jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
   requestClockWidgetUpdate: jest.fn(),
 }));

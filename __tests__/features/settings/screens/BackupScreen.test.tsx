@@ -20,23 +20,30 @@ jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
 }));
 
-jest.mock("@react-native-async-storage/async-storage", () => {
-  const store: Record<string, string> = {};
-  return {
-    __esModule: true,
-    default: {
-      getItem: jest.fn((key: string) => Promise.resolve(store[key] ?? null)),
-      setItem: jest.fn((key: string, value: string) => {
-        store[key] = value;
-        return Promise.resolve();
-      }),
-      removeItem: jest.fn((key: string) => {
-        delete store[key];
-        return Promise.resolve();
-      }),
-    },
-  };
-});
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve()),
+    removeItem: jest.fn(() => Promise.resolve()),
+  },
+}));
+
+jest.mock("../../../../src/core/storage/asyncStorageAdapter", () => ({
+  createAsyncStorage: () => {
+    const store = new Map<string, unknown>();
+    return {
+      getItem: (key: string, initialValue: unknown) =>
+        store.has(key) ? store.get(key) : initialValue,
+      setItem: (key: string, value: unknown) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    };
+  },
+}));
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({

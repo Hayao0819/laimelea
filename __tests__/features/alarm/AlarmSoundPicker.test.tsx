@@ -12,12 +12,14 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
+const defaultRingtones = [
+  { uri: "content://alarm1", title: "Alarm Tone 1" },
+  { uri: "content://alarm2", title: "Alarm Tone 2" },
+];
+
 jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
   RingtoneService: {
-    getAlarmRingtones: jest.fn().mockResolvedValue([
-      { uri: "content://alarm1", title: "Alarm Tone 1" },
-      { uri: "content://alarm2", title: "Alarm Tone 2" },
-    ]),
+    getAlarmRingtones: jest.fn(),
     playPreview: jest.fn().mockResolvedValue(undefined),
     stopPreview: jest.fn().mockResolvedValue(undefined),
   },
@@ -25,19 +27,36 @@ jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
 
 const mockGetAlarmRingtones = RingtoneService.getAlarmRingtones as jest.Mock;
 
+// Deferred promise so ringtone resolution happens inside act()
+let deferredResolve: ((v: unknown) => void) | null = null;
+let deferredReject: ((e: unknown) => void) | null = null;
+
+function setupDeferredRingtones() {
+  mockGetAlarmRingtones.mockImplementation(
+    () =>
+      new Promise((resolve, reject) => {
+        deferredResolve = resolve;
+        deferredReject = reject;
+      }),
+  );
+}
+
 async function renderWithPaper(ui: React.ReactElement) {
+  setupDeferredRingtones();
   const utils = await render(<PaperProvider>{ui}</PaperProvider>);
-  await act(async () => {});
+  // Resolve ringtone loading inside act to prevent act() warnings
+  await act(async () => {
+    deferredResolve?.(defaultRingtones);
+    deferredResolve = null;
+  });
   return utils;
 }
 
 describe("AlarmSoundPicker", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetAlarmRingtones.mockResolvedValue([
-      { uri: "content://alarm1", title: "Alarm Tone 1" },
-      { uri: "content://alarm2", title: "Alarm Tone 2" },
-    ]);
+    deferredResolve = null;
+    deferredReject = null;
   });
 
   it("should render dialog when visible", async () => {
@@ -142,22 +161,24 @@ describe("AlarmSoundPicker", () => {
   });
 
   it("should show only default and silent when ringtone loading fails", async () => {
-    mockGetAlarmRingtones.mockRejectedValue(new Error("Module not found"));
-
+    setupDeferredRingtones();
     const onSoundChange = jest.fn();
     const onDismiss = jest.fn();
-    const { getByTestId, queryByText } = await renderWithPaper(
-      <AlarmSoundPicker
-        soundUri={null}
-        onSoundChange={onSoundChange}
-        visible={true}
-        onDismiss={onDismiss}
-      />,
+    const { getByTestId, queryByText } = await render(
+      <PaperProvider>
+        <AlarmSoundPicker
+          soundUri={null}
+          onSoundChange={onSoundChange}
+          visible={true}
+          onDismiss={onDismiss}
+        />
+      </PaperProvider>,
     );
 
-    // Wait for async load to settle
-    await waitFor(() => {
-      expect(getByTestId("sound-option-default")).toBeTruthy();
+    // Reject ringtone loading inside act
+    await act(async () => {
+      deferredReject?.(new Error("Module not found"));
+      deferredReject = null;
     });
 
     expect(getByTestId("sound-option-default")).toBeTruthy();

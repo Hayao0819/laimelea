@@ -123,7 +123,12 @@ async function renderForm(overrides: FormProps = {}) {
 
 describe("BulkAlarmForm", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("should render with interval input", async () => {
@@ -158,6 +163,7 @@ describe("BulkAlarmForm", () => {
 
     await act(async () => {
       fireEvent.press(getByTestId("bulk-dismissal-item"));
+      jest.runAllTimers();
     });
 
     expect(getByTestId("bulk-dismissal-dialog")).toBeTruthy();
@@ -168,6 +174,7 @@ describe("BulkAlarmForm", () => {
 
     await act(async () => {
       fireEvent.press(getByTestId("bulk-dismissal-item"));
+      jest.runAllTimers();
     });
 
     expect(getByTestId("bulk-dismissal-option-simple")).toBeTruthy();
@@ -176,7 +183,6 @@ describe("BulkAlarmForm", () => {
   });
 
   it("should call onDismissalMethodChange when radio button selected and close dialog", async () => {
-    jest.useFakeTimers();
     const onDismissalMethodChange = jest.fn();
     const { getByTestId, queryByTestId } = await renderForm({
       onDismissalMethodChange,
@@ -184,6 +190,7 @@ describe("BulkAlarmForm", () => {
 
     await act(async () => {
       fireEvent.press(getByTestId("bulk-dismissal-item"));
+      jest.runAllTimers();
     });
 
     expect(getByTestId("bulk-dismissal-dialog")).toBeTruthy();
@@ -201,7 +208,6 @@ describe("BulkAlarmForm", () => {
 
     // After animation completes, Dialog should be removed from tree
     expect(queryByTestId("bulk-dismissal-dialog")).toBeNull();
-    jest.useRealTimers();
   });
 
   it("should show preview with alarm count when previewAlarms has items", async () => {
