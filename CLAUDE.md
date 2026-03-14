@@ -12,6 +12,7 @@ AI assistant guidance for Laimelea project.
 ### Guides
 
 - [Nix Language](docs/llm/nix-language.md) - Language quick reference
+- [Unit Testing](docs/llm/testing.md) - React 19 + RNTL v13 act() patterns, Jotai atomWithStorage mocking
 - [Parallel E2E Testing](docs/llm/parallel-e2e.md) - Parallel emulator pool for Detox
 
 ## Essential Rules
