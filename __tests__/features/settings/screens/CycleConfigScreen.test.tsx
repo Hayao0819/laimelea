@@ -46,7 +46,7 @@ async function renderScreen(settingsOverride?: Partial<AppSettings>) {
   const store = createStore();
   const settings = { ...DEFAULT_SETTINGS, ...settingsOverride };
   store.set(settingsAtom, settings);
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <CycleConfigScreen />

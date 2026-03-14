@@ -26,7 +26,7 @@ jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
 const mockGetAlarmRingtones = RingtoneService.getAlarmRingtones as jest.Mock;
 
 async function renderWithPaper(ui: React.ReactElement) {
-  const utils = render(<PaperProvider>{ui}</PaperProvider>);
+  const utils = await render(<PaperProvider>{ui}</PaperProvider>);
   await act(async () => {});
   return utils;
 }

@@ -116,7 +116,7 @@ async function renderWithProviders() {
   store.set(sleepSessionsAtom, []);
   store.set(game2048StoreAtom, createDefaultStore());
 
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <BackupScreen />

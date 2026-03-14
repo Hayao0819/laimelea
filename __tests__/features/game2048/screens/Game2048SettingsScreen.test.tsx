@@ -50,7 +50,7 @@ function createTestStore(overrides: Partial<Game2048Store> = {}) {
 }
 
 async function renderWithProviders(jotaiStore = createTestStore()) {
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={jotaiStore}>
       <PaperProvider>
         <Game2048SettingsScreen />

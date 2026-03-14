@@ -78,7 +78,7 @@ function createGameOverStore() {
 }
 
 async function renderWithProviders(store = createInitializedStore()) {
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <Game2048Screen />

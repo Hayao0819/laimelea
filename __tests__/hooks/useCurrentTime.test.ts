@@ -4,8 +4,6 @@ import React from "react";
 
 import { currentTimeMsAtom } from "../../src/atoms/clockAtoms";
 import { useCurrentTime } from "../../src/hooks/useCurrentTime";
-import { DEFAULT_SETTINGS } from "../../src/models/Settings";
-
 // Replace settingsAtom (atomWithStorage) with a plain atom to avoid async
 // storage init that causes act() warnings during renderHook.
 jest.mock("../../src/atoms/settingsAtoms", () => {

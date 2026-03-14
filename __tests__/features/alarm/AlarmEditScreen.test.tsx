@@ -136,13 +136,13 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   };
 }
 
-function renderWithProviders(
+async function renderWithProviders(
   store = createStore(),
   initialAlarms: Alarm[] = [],
 ) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, initialAlarms);
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <AlarmEditScreen />
@@ -151,6 +151,25 @@ function renderWithProviders(
   );
   return { ...utils, store };
 }
+
+// Suppress React 19 strict-act warnings caused by atomWithStorage async
+// resolution conflicting with react-native-paper Portal. Using act() flush
+// after render breaks Portal-based Dialog tests, so we suppress the warnings.
+const originalConsoleError = console.error;
+
+beforeAll(() => {
+  console.error = (...args: unknown[]) => {
+    const msg = typeof args[0] === "string" ? args[0] : "";
+    if (msg.includes("not wrapped in act(")) return;
+    if (msg.includes("suspended inside an `act` scope")) return;
+    if (msg.includes("suspended resource finished loading")) return;
+    originalConsoleError.call(console, ...args);
+  };
+});
+
+afterAll(() => {
+  console.error = originalConsoleError;
+});
 
 describe("AlarmEditScreen", () => {
   beforeEach(() => {

@@ -134,7 +134,7 @@ async function renderWithProviders(
 ) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, initialAlarms);
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <AlarmFiringScreen />
@@ -261,10 +261,8 @@ describe("AlarmFiringScreen", () => {
       fireEvent.press(getByTestId("snooze-button"));
     });
 
-    await waitFor(() => {
-      const updatedAlarms = store.get(alarmsAtom);
-      expect(updatedAlarms[0].snoozeCount).toBe(2);
-    });
+    const updatedAlarms = await store.get(alarmsAtom);
+    expect(updatedAlarms[0].snoozeCount).toBe(2);
   });
 
   it("should pass canSnooze=false to DismissalContainer when snoozeCount >= snoozeMaxCount", async () => {

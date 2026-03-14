@@ -90,7 +90,7 @@ async function renderWithProviders(
 ) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, initialAlarms);
-  const utils = render(
+  const utils = await render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <BulkAlarmScreen />

@@ -312,7 +312,6 @@ describe("useStopwatch", () => {
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
-      await act(async () => {});
 
       expect(result.current.isRunning).toBe(true);
       expect(result.current.laps).toEqual([2000]);
@@ -341,7 +340,6 @@ describe("useStopwatch", () => {
       const { result } = renderHook(() => useStopwatch(), {
         wrapper: Wrapper,
       });
-      await act(async () => {});
 
       expect(result.current.elapsedMs).toBe(3000);
       expect(result.current.isRunning).toBe(false);

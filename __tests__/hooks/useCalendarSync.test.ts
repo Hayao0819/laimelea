@@ -20,7 +20,7 @@ jest.mock("../../src/atoms/calendarAtoms", () => {
     calendarListAtom: atom<unknown[]>([]),
     calendarLoadingAtom: atom<boolean>(false),
     calendarSyncErrorAtom: atom<string | null>(null),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     calendarCacheStaleAtom: atom((get: any) => {
       const lastSync = get(mockCalendarLastSyncAtom) as number | null;
       if (lastSync == null) return true;
