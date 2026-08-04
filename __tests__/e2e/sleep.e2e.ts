@@ -55,17 +55,10 @@ describe("Sleep Log Screen", () => {
     });
 
     it("enters sleep data and saves", async () => {
-      await element(by.id("start-date-input")).clearText();
-      await element(by.id("start-date-input")).typeText("2026-02-25");
-      await element(by.id("start-time-input")).clearText();
-      await element(by.id("start-time-input")).typeText("23:00");
-      await element(by.id("end-date-input")).clearText();
-      await element(by.id("end-date-input")).typeText("2026-02-26");
-      await element(by.id("end-time-input")).clearText();
-      await element(by.id("end-time-input")).typeText("07:00");
-
-      // Dismiss keyboard
-      await device.pressBack();
+      await element(by.id("start-date-input")).replaceText("2026-02-25");
+      await element(by.id("start-time-input")).replaceText("23:00");
+      await element(by.id("end-date-input")).replaceText("2026-02-26");
+      await element(by.id("end-time-input")).replaceText("07:00");
 
       // Save triggers navigation back; useFocusEffect re-runs sync(),
       // which hangs on HC. Disable sync around the save + navigation.

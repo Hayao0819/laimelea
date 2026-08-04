@@ -28,8 +28,7 @@ describe("Timezone Picker", () => {
     });
 
     it("searches for a timezone", async () => {
-      await element(by.id("timezone-searchbar")).typeText("Tokyo");
-      await device.pressBack();
+      await element(by.id("timezone-searchbar")).replaceText("Tokyo");
       await waitVisible("tz-item-Asia/Tokyo");
     });
 
@@ -56,8 +55,7 @@ describe("Timezone Picker", () => {
     });
 
     it("searches and selects secondary timezone", async () => {
-      await element(by.id("timezone-searchbar")).typeText("London");
-      await device.pressBack();
+      await element(by.id("timezone-searchbar")).replaceText("London");
       await waitVisible("tz-item-Europe/London");
       await element(by.id("tz-item-Europe/London")).tap();
       await waitFor(element(by.id("timezone-picker-modal")))
@@ -88,8 +86,7 @@ describe("Timezone Picker", () => {
       // Open picker, search, then close without selecting
       await element(by.id("timezone-item")).tap();
       await waitVisible("timezone-picker-modal");
-      await element(by.id("timezone-searchbar")).typeText("xyz");
-      await device.pressBack();
+      await element(by.id("timezone-searchbar")).replaceText("xyz");
       await device.pressBack();
       await waitFor(element(by.id("timezone-picker-modal")))
         .not.toBeVisible()

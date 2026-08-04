@@ -81,6 +81,7 @@
           ]);
 
           commonPackages = with pkgs; [
+            curl
             nodejs_22
             pnpm
             watchman
@@ -111,27 +112,8 @@
 
               androidHome = "${androidSdk}/share/android-sdk";
 
-              # Emulator wrapper: bridges host GPU drivers through Nix isolation.
-              # Named "emulator" so it transparently replaces the SDK binary.
-              # The real binary is called by absolute path to avoid recursion.
-              # The emulator's qemu uses DT_RUNPATH (searched AFTER LD_LIBRARY_PATH),
-              # so we prepend emulator's own lib paths for Nix-patched deps, then
-              # append /usr/lib as fallback for GL/Vulkan libs Nix doesn't provide.
               realEmulator = "${androidHome}/emulator/emulator";
               emulatorWrapper = pkgs.writeShellScriptBin "emulator" ''
-                emu_lib="${androidHome}/emulator/lib64"
-
-                # Auto-detect host Vulkan ICDs
-                vk_icds=""
-                for f in /usr/share/vulkan/icd.d/*.json; do
-                  [ -f "$f" ] && vk_icds="''${vk_icds:+''${vk_icds}:}$f"
-                done
-                export VK_ICD_FILENAMES="''${vk_icds}"
-                export VK_DRIVER_FILES="''${vk_icds}"
-
-                export LD_LIBRARY_PATH="''${emu_lib}:''${emu_lib}/qt/lib:''${LD_LIBRARY_PATH:+''${LD_LIBRARY_PATH}:}/usr/lib"
-                export LIBGL_DRIVERS_PATH="/usr/lib/dri"
-
                 exec "${realEmulator}" "$@"
               '';
             in

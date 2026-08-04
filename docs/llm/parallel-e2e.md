@@ -29,6 +29,7 @@ LLM 向け並列 E2E テスト実行ガイド。
 | Emulator manager    | `scripts/e2e-emulators.sh`          | start/stop/status for E2E pool                                       |
 | Detox device config | `.detoxrc.js` (`e2e-pool`)          | `android.attached` + regex `emulator-558[0-9]`                       |
 | Detox configuration | `.detoxrc.js` (`android.e2e.debug`) | Binds `e2e-pool` device to `android.debug` app                       |
+| Test runner         | `scripts/e2e-test.sh`               | Starts Metro when needed, then runs Detox                            |
 | npm scripts         | `package.json`                      | `e2e:pool:start`, `e2e:pool:stop`, `e2e:pool:status`, `e2e:parallel` |
 
 ## Port Design
@@ -46,15 +47,15 @@ LLM 向け並列 E2E テスト実行ガイド。
 ./scripts/e2e-emulators.sh start 3
 ```
 
-Launches 3 headless emulators on ports 5580, 5582, 5584. Waits for `sys.boot_completed == 1` on each (timeout: 120s).
+Launches 3 headless emulators on ports 5580, 5582, 5584. Waits for `sys.boot_completed == 1` on each (timeout: 120s), then disables animations and the first-run immersive-mode prompt.
 
 ### Step 2 - Run tests in parallel
 
 ```bash
-pnpm detox test --configuration android.e2e.debug --maxWorkers=3
+pnpm e2e:parallel
 ```
 
-Detox distributes test files across Jest workers. Each worker gets one emulator from the pool.
+The runner reuses Metro on port 8081 or starts it for the test run. Detox distributes test files across Jest workers, with one emulator per worker.
 
 ### Step 3 - Stop emulator pool
 
@@ -117,6 +118,14 @@ adb kill-server && adb start-server
 - Verify emulators are booted: `./scripts/e2e-emulators.sh status`
 - Verify configuration: `pnpm detox test --configuration android.e2e.debug --list-devices`
 - Ensure APK is built: `pnpm e2e:build`
+
+### App waits for Metro
+
+Use `pnpm e2e:test` or `pnpm e2e:parallel`. Both commands start Metro when port 8081 has no running packager and stop only the Metro process they started.
+
+### Detox exits while React Native starts
+
+The shared launch helper limits Android instrumentation to `DetoxTest`, starts with synchronization disabled, waits for the first React Native screen, and then enables synchronization. Bypassing the helper can run native module tests in the same instrumentation session or trigger a Fabric UI manager initialization race.
 
 ### Port conflict
 

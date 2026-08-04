@@ -1,17 +1,24 @@
 import { by, device, element, waitFor } from "detox";
 
-/**
- * Launch app with a fresh state (clear AsyncStorage).
- */
 export async function launchAppFresh() {
-  await device.launchApp({ newInstance: true, delete: true });
+  await launchWhenReady(true, "cycle-hours");
 }
 
-/**
- * Launch app preserving existing state.
- */
 export async function launchApp() {
-  await device.launchApp({ newInstance: true });
+  await launchWhenReady(false, "clock-screen");
+}
+
+async function launchWhenReady(deleteAppData: boolean, readyTestId: string) {
+  await device.launchApp({
+    newInstance: true,
+    ...(deleteAppData ? { delete: true } : {}),
+    launchArgs: {
+      class: "com.hayao0819.laimelea.DetoxTest",
+      detoxEnableSynchronization: 0,
+    },
+  });
+  await waitVisible(readyTestId, 30000);
+  await device.enableSynchronization();
 }
 
 /**
@@ -20,14 +27,8 @@ export async function launchApp() {
 export async function completeSetup(hours = "26", minutes = "0") {
   await waitVisible("cycle-hours");
 
-  await element(by.id("cycle-hours")).clearText();
-  await element(by.id("cycle-hours")).typeText(hours);
-
-  await element(by.id("cycle-minutes")).clearText();
-  await element(by.id("cycle-minutes")).typeText(minutes);
-
-  // Dismiss keyboard
-  await device.pressBack();
+  await element(by.id("cycle-hours")).replaceText(hours);
+  await element(by.id("cycle-minutes")).replaceText(minutes);
 
   // Tap "Use Current Time" button
   await element(by.text("Use Current Time")).tap();

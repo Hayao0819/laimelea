@@ -1,4 +1,4 @@
-import { by, device, element, expect } from "detox";
+import { by, element, expect } from "detox";
 
 import { launchApp, launchAppFresh, waitVisible } from "./utils/helpers";
 
@@ -15,11 +15,8 @@ describe("Setup Flow", () => {
   });
 
   it("allows editing cycle time", async () => {
-    await element(by.id("cycle-hours")).clearText();
-    await element(by.id("cycle-hours")).typeText("25");
-    await element(by.id("cycle-minutes")).clearText();
-    await element(by.id("cycle-minutes")).typeText("30");
-    await device.pressBack();
+    await element(by.id("cycle-hours")).replaceText("25");
+    await element(by.id("cycle-minutes")).replaceText("30");
 
     await expect(element(by.id("cycle-hours"))).toHaveText("25");
     await expect(element(by.id("cycle-minutes"))).toHaveText("30");

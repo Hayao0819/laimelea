@@ -3,7 +3,7 @@ const simpleImportSort = require("eslint-plugin-simple-import-sort");
 
 module.exports = [
   {
-    ignores: [".worktree/**"],
+    ignores: [".worktree/**", "**/build/**"],
   },
   ...reactNativeConfig,
   {

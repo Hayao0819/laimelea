@@ -26,17 +26,10 @@ describe("Sleep Extras", () => {
       await waitVisible("manual-sleep-entry-screen");
       await device.enableSynchronization();
 
-      await element(by.id("start-date-input")).clearText();
-      await element(by.id("start-date-input")).typeText("2026-03-01");
-      await element(by.id("start-time-input")).clearText();
-      await element(by.id("start-time-input")).typeText("23:00");
-      await element(by.id("end-date-input")).clearText();
-      await element(by.id("end-date-input")).typeText("2026-03-02");
-      await element(by.id("end-time-input")).clearText();
-      await element(by.id("end-time-input")).typeText("07:00");
-
-      // Dismiss keyboard
-      await device.pressBack();
+      await element(by.id("start-date-input")).replaceText("2026-03-01");
+      await element(by.id("start-time-input")).replaceText("23:00");
+      await element(by.id("end-date-input")).replaceText("2026-03-02");
+      await element(by.id("end-time-input")).replaceText("07:00");
 
       // Save triggers navigation back; useFocusEffect re-runs sync(),
       // which hangs on HC. Disable sync around the save + navigation.
@@ -56,20 +49,19 @@ describe("Sleep Extras", () => {
       await device.enableSynchronization();
 
       // Change start time from 23:00 to 22:30
-      await element(by.id("start-time-input")).clearText();
-      await element(by.id("start-time-input")).typeText("22:30");
-
-      // Dismiss keyboard
-      await device.pressBack();
+      await element(by.id("start-time-input")).replaceText("22:30");
+      await expect(element(by.id("start-time-input"))).toHaveText("22:30");
 
       // Save and return to sleep log
       await device.disableSynchronization();
       await element(by.id("save-button")).tap();
       await waitVisible("sleep-log-screen");
-      await device.enableSynchronization();
 
       // Verify the edited time is displayed
-      await expect(element(by.text("22:30"))).toBeVisible();
+      await waitFor(element(by.text("22:30")))
+        .toBeVisible()
+        .withTimeout(5000);
+      await device.enableSynchronization();
     });
   });
 
@@ -80,16 +72,10 @@ describe("Sleep Extras", () => {
       await waitVisible("manual-sleep-entry-screen");
       await device.enableSynchronization();
 
-      await element(by.id("start-date-input")).clearText();
-      await element(by.id("start-date-input")).typeText("2026-03-03");
-      await element(by.id("start-time-input")).clearText();
-      await element(by.id("start-time-input")).typeText("22:45");
-      await element(by.id("end-date-input")).clearText();
-      await element(by.id("end-date-input")).typeText("2026-03-04");
-      await element(by.id("end-time-input")).clearText();
-      await element(by.id("end-time-input")).typeText("06:45");
-
-      await device.pressBack();
+      await element(by.id("start-date-input")).replaceText("2026-03-03");
+      await element(by.id("start-time-input")).replaceText("22:45");
+      await element(by.id("end-date-input")).replaceText("2026-03-04");
+      await element(by.id("end-time-input")).replaceText("06:45");
 
       await device.disableSynchronization();
       await element(by.id("save-button")).tap();
@@ -105,16 +91,10 @@ describe("Sleep Extras", () => {
       await waitVisible("manual-sleep-entry-screen");
       await device.enableSynchronization();
 
-      await element(by.id("start-date-input")).clearText();
-      await element(by.id("start-date-input")).typeText("2026-03-05");
-      await element(by.id("start-time-input")).clearText();
-      await element(by.id("start-time-input")).typeText("23:15");
-      await element(by.id("end-date-input")).clearText();
-      await element(by.id("end-date-input")).typeText("2026-03-06");
-      await element(by.id("end-time-input")).clearText();
-      await element(by.id("end-time-input")).typeText("07:15");
-
-      await device.pressBack();
+      await element(by.id("start-date-input")).replaceText("2026-03-05");
+      await element(by.id("start-time-input")).replaceText("23:15");
+      await element(by.id("end-date-input")).replaceText("2026-03-06");
+      await element(by.id("end-time-input")).replaceText("07:15");
 
       await device.disableSynchronization();
       await element(by.id("save-button")).tap();

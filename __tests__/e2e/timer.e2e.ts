@@ -7,6 +7,23 @@ import {
   waitVisible,
 } from "./utils/helpers";
 
+type TimerAction = "delete" | "pause" | "reset" | "resume";
+
+function timerAction(action: TimerAction) {
+  return element(by.label(`${action} timer`));
+}
+
+async function revealTimerAction(action: TimerAction) {
+  await element(by.id("timer-list")).scrollTo("bottom");
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await waitFor(timerAction(action)).toBeVisible().withTimeout(5000);
+}
+
+async function tapTimerAction(action: TimerAction) {
+  await revealTimerAction(action);
+  await timerAction(action).tap();
+}
+
 describe("Timer", () => {
   beforeAll(async () => {
     await launchAppFresh();
@@ -30,7 +47,6 @@ describe("Timer", () => {
       await element(by.id("numpad-3")).tap();
       await element(by.id("numpad-0")).tap();
 
-      // Disable sync before starting timer (100ms setInterval blocks Espresso idle)
       await device.disableSynchronization();
       await element(by.id("numpad-start")).tap();
 
@@ -44,43 +60,28 @@ describe("Timer", () => {
     });
 
     it("pauses running timer", async () => {
-      await element(by.label("pause timer")).tap();
+      await tapTimerAction("pause");
+      await revealTimerAction("resume");
       await device.enableSynchronization();
-
-      // Resume button should appear
-      await waitFor(element(by.label("resume timer")))
-        .toBeVisible()
-        .withTimeout(3000);
     });
 
     it("resumes paused timer", async () => {
       await device.disableSynchronization();
-      await element(by.label("resume timer")).tap();
-
-      // Pause button should appear again
-      await waitFor(element(by.label("pause timer")))
-        .toBeVisible()
-        .withTimeout(3000);
+      await tapTimerAction("resume");
+      await revealTimerAction("pause");
     });
 
     it("resets timer", async () => {
-      // Pause first
-      await element(by.label("pause timer")).tap();
+      await tapTimerAction("pause");
+      await revealTimerAction("resume");
       await device.enableSynchronization();
-      await waitFor(element(by.label("resume timer")))
-        .toBeVisible()
-        .withTimeout(3000);
 
-      await element(by.label("reset timer")).tap();
-
-      // Timer should still exist with resume button
-      await waitFor(element(by.label("resume timer")))
-        .toBeVisible()
-        .withTimeout(3000);
+      await tapTimerAction("reset");
+      await revealTimerAction("resume");
     });
 
     it("deletes timer", async () => {
-      await element(by.label("delete timer")).tap();
+      await tapTimerAction("delete");
 
       // Empty state should return
       await waitFor(element(by.id("no-timers-text")))
@@ -99,14 +100,10 @@ describe("Timer", () => {
     });
 
     it("uses numpad backspace", async () => {
-      // Delete the preset timer first
-      // Pause it first
-      await element(by.label("pause timer")).tap();
+      await tapTimerAction("pause");
+      await revealTimerAction("delete");
       await device.enableSynchronization();
-      await waitFor(element(by.label("delete timer")))
-        .toBeVisible()
-        .withTimeout(3000);
-      await element(by.label("delete timer")).tap();
+      await tapTimerAction("delete");
       await waitFor(element(by.id("no-timers-text")))
         .toBeVisible()
         .withTimeout(5000);
@@ -126,12 +123,10 @@ describe("Timer", () => {
         .withTimeout(5000);
 
       // Cleanup
-      await element(by.label("pause timer")).tap();
+      await tapTimerAction("pause");
+      await revealTimerAction("delete");
       await device.enableSynchronization();
-      await waitFor(element(by.label("delete timer")))
-        .toBeVisible()
-        .withTimeout(3000);
-      await element(by.label("delete timer")).tap();
+      await tapTimerAction("delete");
       await waitFor(element(by.id("no-timers-text")))
         .toBeVisible()
         .withTimeout(5000);

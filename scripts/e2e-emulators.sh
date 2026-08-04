@@ -83,8 +83,8 @@ cmd_start() {
   check_prerequisites
 
   echo "Starting $count E2E emulator(s)..."
-  local pids=()
   local serials=()
+  local started_serials=()
   local port=$PORT_BASE
 
   for (( i = 0; i < count; i++ )); do
@@ -94,17 +94,26 @@ cmd_start() {
     fi
     local serial="emulator-${port}"
 
-    # Check if port is already in use
-    if adb devices 2>/dev/null | grep -q "^${serial}"; then
+    local device_state
+    device_state=$(adb devices 2>/dev/null | awk -v serial="$serial" '$1 == serial { print $2; exit }')
+    if [[ "$device_state" == "device" ]]; then
       echo "  $serial already running, skipping"
       serials+=("$serial")
       port=$((port + 2))
       continue
     fi
+    if [[ -n "$device_state" ]]; then
+      echo "  Restarting unhealthy $serial ($device_state)..."
+      adb -s "$serial" emu kill &>/dev/null || true
+      for _ in $(seq 1 20); do
+        adb devices 2>/dev/null | grep -q "^${serial}" || break
+        sleep 0.5
+      done
+    fi
 
     echo "  Launching $serial (port $port)..."
-    emulator -avd "$AVD_NAME" -port "$port" "${EMU_FLAGS[@]}" &>/dev/null &
-    pids+=($!)
+    setsid emulator -avd "$AVD_NAME" -port "$port" "${EMU_FLAGS[@]}" </dev/null &>/dev/null &
+    started_serials+=("$serial")
     serials+=("$serial")
     port=$((port + 2))
   done
@@ -128,6 +137,7 @@ cmd_start() {
     adb -s "$serial" shell settings put global window_animation_scale 0 &>/dev/null || true
     adb -s "$serial" shell settings put global transition_animation_scale 0 &>/dev/null || true
     adb -s "$serial" shell settings put global animator_duration_scale 0 &>/dev/null || true
+    adb -s "$serial" shell settings put secure immersive_mode_confirmations confirmed &>/dev/null || true
     # Dismiss keyguard / unlock screen
     adb -s "$serial" shell input keyevent 82 &>/dev/null || true
     adb -s "$serial" shell wm dismiss-keyguard &>/dev/null || true
@@ -143,6 +153,9 @@ cmd_start() {
   echo ""
   echo "E2E pool: $booted/${#serials[@]} emulator(s) ready"
   if (( failed > 0 )); then
+    for serial in "${started_serials[@]}"; do
+      adb -s "$serial" emu kill &>/dev/null || true
+    done
     exit 1
   fi
 }

@@ -41,16 +41,12 @@ describe("Alarm CRUD", () => {
       await expect(element(by.id("hours-input"))).toBeVisible();
       await expect(element(by.id("minutes-input"))).toBeVisible();
 
-      await element(by.id("hours-input")).clearText();
-      await element(by.id("hours-input")).typeText("8");
-      await element(by.id("minutes-input")).clearText();
-      await element(by.id("minutes-input")).typeText("30");
-      await device.pressBack();
+      await element(by.id("hours-input")).replaceText("8");
+      await element(by.id("minutes-input")).replaceText("30");
     });
 
     it("enters alarm label", async () => {
-      await element(by.id("label-input")).typeText(TEST_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(TEST_LABEL);
     });
 
     it("changes dismissal method", async () => {
@@ -87,9 +83,7 @@ describe("Alarm CRUD", () => {
     });
 
     it("changes label and saves", async () => {
-      await element(by.id("label-input")).clearText();
-      await element(by.id("label-input")).typeText(EDITED_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(EDITED_LABEL);
       await element(by.id("save-button")).tap();
       await waitVisible("alarm-list-screen");
       await expect(element(by.text(EDITED_LABEL))).toBeVisible();
@@ -112,6 +106,7 @@ describe("Alarm CRUD", () => {
     it("deletes alarm via edit screen", async () => {
       await element(by.text(EDITED_LABEL)).tap();
       await waitVisible("alarm-edit-screen");
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await waitFor(element(by.id("delete-button")))
         .toBeVisible()
         .withTimeout(5000);
@@ -151,8 +146,7 @@ describe("Alarm Edit - New Features", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText(REPEAT_ALARM_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(REPEAT_ALARM_LABEL);
 
       // Tap repeat picker to expand
       await element(by.id("repeat-picker-item")).tap();
@@ -194,9 +188,7 @@ describe("Alarm Edit - New Features", () => {
 
       // Enter interval hours
       await waitVisible("interval-input");
-      await element(by.id("interval-input")).clearText();
-      await element(by.id("interval-input")).typeText("12");
-      await device.pressBack();
+      await element(by.id("interval-input")).replaceText("12");
 
       // Save alarm
       await element(by.id("save-button")).tap();
@@ -230,6 +222,7 @@ describe("Alarm Edit - New Features", () => {
       // Clean up: delete the test alarm
       await element(by.text(REPEAT_ALARM_LABEL)).tap();
       await waitVisible("alarm-edit-screen");
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await waitFor(element(by.id("delete-button")))
         .toBeVisible()
         .withTimeout(5000);
@@ -250,8 +243,7 @@ describe("Alarm Edit - New Features", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText(SOUND_ALARM_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(SOUND_ALARM_LABEL);
 
       // Tap sound selection item
       await element(by.id("sound-picker-item")).tap();
@@ -303,6 +295,7 @@ describe("Alarm Edit - New Features", () => {
       // Clean up: delete the test alarm
       await element(by.text(SOUND_ALARM_LABEL)).tap();
       await waitVisible("alarm-edit-screen");
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await waitFor(element(by.id("delete-button")))
         .toBeVisible()
         .withTimeout(5000);
@@ -323,8 +316,7 @@ describe("Alarm Edit - New Features", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText(PREVIEW_ALARM_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(PREVIEW_ALARM_LABEL);
 
       // Tap "Show Preview" button
       await element(by.id("preview-button")).tap();
@@ -359,8 +351,7 @@ describe("Alarm Edit - New Features", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText(DISMISSAL_PREVIEW_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(DISMISSAL_PREVIEW_LABEL);
 
       // Default dismissal method is "simple" — verify and preview
       await element(by.id("preview-button")).tap();
@@ -414,6 +405,7 @@ describe("Alarm Edit - New Features", () => {
         .withTimeout(5000);
 
       // Preview with math dismissal
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await element(by.id("preview-button")).tap();
       await waitVisible("alarm-firing-screen");
 
@@ -448,8 +440,7 @@ describe("Alarm Edit - New Features", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText(SNOOZE_ALARM_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(SNOOZE_ALARM_LABEL);
 
       // Default snooze duration is 5 min
       await expect(element(by.text("5 min")).atIndex(0)).toBeVisible();
@@ -512,8 +503,7 @@ describe("Alarm Edit - New Features", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText(MATH_ALARM_LABEL);
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText(MATH_ALARM_LABEL);
 
       // Set dismissal method to math (math difficulty segment only shows for math)
       await element(by.id("dismissal-method-item")).tap();
@@ -524,27 +514,27 @@ describe("Alarm Edit - New Features", () => {
         .withTimeout(5000);
 
       // Scroll down to see math difficulty segmented buttons
-      await element(by.id("alarm-edit-screen")).scrollTo("bottom");
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
 
       // Math difficulty is a SegmentedButtons with "Easy", "Medium", "Hard"
       // Default is Easy (difficulty 1)
-      await expect(element(by.text("Easy")).atIndex(0)).toBeVisible();
-      await expect(element(by.text("Medium")).atIndex(0)).toBeVisible();
-      await expect(element(by.text("Hard")).atIndex(0)).toBeVisible();
+      await expect(element(by.id("math-difficulty-easy"))).toBeVisible();
+      await expect(element(by.id("math-difficulty-medium"))).toBeVisible();
+      await expect(element(by.id("math-difficulty-hard"))).toBeVisible();
 
       // Select Medium
-      await element(by.text("Medium")).atIndex(0).tap();
+      await element(by.id("math-difficulty-medium")).tap();
 
       // Select Hard
-      await element(by.text("Hard")).atIndex(0).tap();
+      await element(by.id("math-difficulty-hard")).tap();
 
       // Select Easy again (full cycle)
-      await element(by.text("Easy")).atIndex(0).tap();
+      await element(by.id("math-difficulty-easy")).tap();
     });
 
     it("should hide math difficulty when dismissal is not math", async () => {
       // Change dismissal to simple
-      await element(by.id("alarm-edit-screen")).scrollTo("top");
+      await element(by.id("alarm-edit-scroll")).scrollTo("top");
       await element(by.id("dismissal-method-item")).tap();
       await waitVisible("dismissal-dialog");
       await element(by.id("dismissal-option-simple")).tap();
@@ -612,8 +602,7 @@ describe("Alarm Edit - New Features", () => {
       await element(by.id("add-alarm-fab")).tap();
       await waitVisible("alarm-edit-screen");
 
-      await element(by.id("label-input")).typeText("E2E Toggle Test");
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText("E2E Toggle Test");
 
       await element(by.id("save-button")).tap();
       await waitVisible("alarm-list-screen");
@@ -643,6 +632,7 @@ describe("Alarm Edit - New Features", () => {
 
     afterAll(async () => {
       // Clean up: delete the test alarm
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await waitFor(element(by.id("delete-button")))
         .toBeVisible()
         .withTimeout(5000);

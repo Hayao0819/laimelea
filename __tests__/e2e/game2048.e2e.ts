@@ -13,7 +13,7 @@ describe("Game 2048", () => {
       await element(by.id("appbar-settings-button")).tap();
       await waitVisible("settings-screen");
 
-      await element(by.id("settings-screen")).scrollTo("bottom");
+      await element(by.id("settings-scroll")).scrollTo("bottom");
       await element(by.id("settings-about-item")).tap();
       await waitVisible("about-screen");
     });

@@ -26,31 +26,23 @@ describe("Calendar Extras", () => {
 
     it("taps event card if available (conditional)", async () => {
       try {
-        // Look for any event card with a short timeout
         await waitFor(element(by.id(/^event-card-/)))
           .toBeVisible()
           .withTimeout(3000);
-
-        // Tap the first visible event card
-        await element(by.id(/^event-card-/))
-          .atIndex(0)
-          .tap();
-
-        // Verify event detail screen appears
-        await waitVisible("event-detail-screen");
-
-        // Verify create-alarm button is present
-        await expect(element(by.id("create-alarm-button"))).toBeVisible();
-
-        // Go back to calendar screen
-        await device.pressBack();
-        await waitVisible("calendar-screen");
       } catch {
-        // No calendar events available - skip gracefully
         console.log(
           "No calendar events available - skipping event detail test",
         );
+        return;
       }
+
+      await element(by.id(/^event-card-/))
+        .atIndex(0)
+        .tap();
+      await waitVisible("event-detail-screen");
+      await expect(element(by.id("create-alarm-button"))).toBeVisible();
+      await device.pressBack();
+      await waitVisible("calendar-screen");
     });
   });
 
@@ -79,24 +71,20 @@ describe("Calendar Extras", () => {
 
     it("toggles calendar checkbox if available (conditional)", async () => {
       try {
-        // Look for any calendar checkbox with a short timeout
         await waitFor(element(by.id(/^calendar-checkbox-/)))
           .toBeVisible()
           .withTimeout(3000);
-
-        // Tap to toggle OFF
-        await element(by.id(/^calendar-checkbox-/))
-          .atIndex(0)
-          .tap();
-
-        // Tap again to toggle ON
-        await element(by.id(/^calendar-checkbox-/))
-          .atIndex(0)
-          .tap();
       } catch {
-        // No calendar checkboxes available - skip gracefully
         console.log("No calendar checkboxes available - skipping toggle test");
+        return;
       }
+
+      await element(by.id(/^calendar-checkbox-/))
+        .atIndex(0)
+        .tap();
+      await element(by.id(/^calendar-checkbox-/))
+        .atIndex(0)
+        .tap();
     });
   });
 });

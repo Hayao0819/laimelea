@@ -1,4 +1,4 @@
-import { by, device, element, expect, waitFor } from "detox";
+import { by, element, expect, waitFor } from "detox";
 
 import {
   completeSetup,
@@ -23,8 +23,7 @@ describe("Alarm Extras", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText("E2E LongPress Test");
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText("E2E LongPress Test");
 
       // Save alarm and return to list
       await element(by.id("save-button")).tap();
@@ -51,25 +50,31 @@ describe("Alarm Extras", () => {
       await waitVisible("alarm-edit-screen");
 
       // Enter label
-      await element(by.id("label-input")).typeText("E2E Test Alarm");
-      await device.pressBack();
+      await element(by.id("label-input")).replaceText("E2E Test Alarm");
     });
 
-    it("taps test alarm button and shows snackbar", async () => {
+    it("delivers, dismisses, and clears the test alarm", async () => {
       // Scroll down to ensure test alarm button is visible
-      await element(by.id("alarm-edit-screen")).scrollTo("bottom");
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
 
       // Tap the test alarm button
       await element(by.id("test-alarm-button")).tap();
 
       // Wait for the snackbar confirming the test alarm was scheduled
       await waitVisible("test-alarm-snackbar");
+
+      await waitFor(element(by.id("alarm-firing-screen")))
+        .toBeVisible()
+        .withTimeout(20000);
+      await element(by.id("dismiss-button")).tap();
+      await waitVisible("alarm-edit-screen");
     });
 
     it("saves alarm and cleans up", async () => {
       // Save the alarm and return to list
       await element(by.id("save-button")).tap();
       await waitVisible("alarm-list-screen");
+      await expect(element(by.text("Test Alarm"))).not.toBeVisible();
 
       // Delete alarm via long press
       await element(by.text("E2E Test Alarm")).longPress();

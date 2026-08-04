@@ -26,13 +26,14 @@ describe("Tab Navigation", () => {
 
   it("navigates to Calendar tab", async () => {
     await navigateToTab("Calendar");
-    // Calendar is a stub screen, just verify navigation works
-    await expect(element(by.text("Calendar")).atIndex(0)).toBeVisible();
+    await waitVisible("calendar-screen");
+    await expect(element(by.id("calendar-screen"))).toBeVisible();
   });
 
   it("navigates to Sleep tab", async () => {
     await navigateToTab("Sleep");
-    await expect(element(by.text("Sleep")).atIndex(0)).toBeVisible();
+    await waitVisible("sleep-log-screen");
+    await expect(element(by.id("sleep-log-screen"))).toBeVisible();
   });
 
   it("navigates to Timer tab", async () => {

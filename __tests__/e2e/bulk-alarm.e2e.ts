@@ -1,4 +1,4 @@
-import { by, device, element, expect, waitFor } from "detox";
+import { by, element, expect, waitFor } from "detox";
 
 import {
   completeSetup,
@@ -37,14 +37,11 @@ describe("Bulk Alarm", () => {
     });
 
     it("enters label", async () => {
-      await element(by.id("bulk-label-input")).typeText(BULK_LABEL);
-      await device.pressBack();
+      await element(by.id("bulk-label-input")).replaceText(BULK_LABEL);
     });
 
     it("changes interval", async () => {
-      await element(by.id("interval-input")).clearText();
-      await element(by.id("interval-input")).typeText("60");
-      await device.pressBack();
+      await element(by.id("interval-input")).replaceText("60");
     });
 
     it("shows dismissal method item", async () => {

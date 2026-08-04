@@ -18,9 +18,9 @@ describe("Settings Screen", () => {
     });
 
     it("displays more hub items on scroll", async () => {
-      await element(by.id("settings-screen")).scrollTo("bottom");
+      await element(by.id("settings-scroll")).scrollTo("bottom");
       await waitVisible("settings-backup-item");
-      await element(by.id("settings-screen")).scrollTo("top");
+      await element(by.id("settings-scroll")).scrollTo("top");
     });
   });
 
@@ -41,9 +41,7 @@ describe("Settings Screen", () => {
     });
 
     it("changes cycle hours", async () => {
-      await element(by.id("cycle-hours-input")).clearText();
-      await element(by.id("cycle-hours-input")).typeText("25");
-      await device.pressBack();
+      await element(by.id("cycle-hours-input")).replaceText("25");
     });
 
     it("shows cycle change warning", async () => {
@@ -183,7 +181,7 @@ describe("Settings Screen", () => {
 
   describe("Backup Section", () => {
     beforeAll(async () => {
-      await element(by.id("settings-screen")).scrollTo("bottom");
+      await element(by.id("settings-scroll")).scrollTo("bottom");
       await element(by.id("settings-backup-item")).tap();
       await waitVisible("backup-screen");
     });
@@ -212,7 +210,7 @@ describe("Settings Screen", () => {
 
   describe("Widget Settings", () => {
     beforeAll(async () => {
-      await element(by.id("settings-screen")).scrollTo("bottom");
+      await element(by.id("settings-scroll")).scrollTo("bottom");
       await element(by.id("settings-widget-item")).tap();
       await waitVisible("widget-settings-screen");
     });
@@ -264,7 +262,7 @@ describe("Settings Screen", () => {
 
   describe("About Screen", () => {
     beforeAll(async () => {
-      await element(by.id("settings-screen")).scrollTo("bottom");
+      await element(by.id("settings-scroll")).scrollTo("bottom");
       await element(by.id("settings-about-item")).tap();
       await waitVisible("about-screen");
     });
@@ -290,7 +288,7 @@ describe("Settings Screen", () => {
 
   describe("Legal Screen", () => {
     beforeAll(async () => {
-      await element(by.id("settings-screen")).scrollTo("bottom");
+      await element(by.id("settings-scroll")).scrollTo("bottom");
       await element(by.id("settings-legal-item")).tap();
       await waitVisible("legal-screen");
     });
