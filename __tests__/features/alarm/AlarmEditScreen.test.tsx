@@ -10,7 +10,10 @@ import { PaperProvider } from "react-native-paper";
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { AlarmEditScreen } from "../../../src/features/alarm/screens/AlarmEditScreen";
-import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
+import {
+  recoverAlarmSchedule,
+  scheduleAlarm,
+} from "../../../src/features/alarm/services/alarmScheduler";
 import type { Alarm } from "../../../src/models/Alarm";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
@@ -76,6 +79,7 @@ jest.mock("@notifee/react-native", () => ({
 jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
   scheduleAlarm: jest.fn().mockResolvedValue("test-trigger-id"),
   cancelAlarm: jest.fn().mockResolvedValue(undefined),
+  recoverAlarmSchedule: jest.fn(),
   rescheduleAllAlarms: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -90,6 +94,9 @@ jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
 
 const mockScheduleAlarm = scheduleAlarm as jest.MockedFunction<
   typeof scheduleAlarm
+>;
+const mockRecoverAlarmSchedule = recoverAlarmSchedule as jest.MockedFunction<
+  typeof recoverAlarmSchedule
 >;
 
 const mockGoBack = jest.fn();
@@ -175,6 +182,10 @@ describe("AlarmEditScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRouteParams.alarmId = undefined;
+    mockRecoverAlarmSchedule.mockImplementation(async (alarm) => ({
+      ...alarm,
+      notifeeTriggerId: "recovered-trigger-id",
+    }));
   });
 
   it("should render in new alarm mode", async () => {
@@ -238,6 +249,49 @@ describe("AlarmEditScreen", () => {
     await waitFor(() => {
       expect(mockSetOptions).toHaveBeenCalled();
     });
+  });
+
+  it("does not save an enabled alarm when scheduling fails", async () => {
+    const store = createStore();
+    mockScheduleAlarm.mockRejectedValueOnce(new Error("schedule failed"));
+    const alertSpy = jest.spyOn(Alert, "alert");
+    await renderWithProviders(store);
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    const saveButton = options.headerRight();
+    await saveButton.props.onPress();
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        "alarm.saveAlarm",
+        "alarm.scheduleFailed",
+      );
+    });
+    expect(mockGoBack).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it("stores the recovered schedule when editing fails", async () => {
+    mockRouteParams.alarmId = "existing-alarm";
+    const existingAlarm = makeAlarm({ notifeeTriggerId: "old-trigger-id" });
+    const store = createStore();
+    mockScheduleAlarm.mockRejectedValueOnce(new Error("schedule failed"));
+    await renderWithProviders(store, [existingAlarm]);
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    await options.headerRight().props.onPress();
+
+    await waitFor(async () => {
+      const storedAlarms = await store.get(alarmsAtom);
+      expect(storedAlarms[0].notifeeTriggerId).toBe("recovered-trigger-id");
+    });
+    expect(mockRecoverAlarmSchedule).toHaveBeenCalledWith(
+      existingAlarm,
+      expect.any(Number),
+    );
+    expect(mockGoBack).not.toHaveBeenCalled();
   });
 
   it("should populate label from existing alarm in edit mode", async () => {

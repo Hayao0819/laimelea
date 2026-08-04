@@ -2,7 +2,9 @@ import notifee from "@notifee/react-native";
 
 import {
   calculateNextAlarmTime,
+  getAlarmToSchedule,
   rescheduleAllEnabledAlarms,
+  scheduleNextAlarmOccurrence,
 } from "../../../src/features/alarm/services/alarmRescheduler";
 import type { Alarm } from "../../../src/models/Alarm";
 
@@ -10,17 +12,28 @@ jest.mock("@notifee/react-native", () => ({
   __esModule: true,
   default: {
     createChannel: jest.fn().mockResolvedValue("alarm"),
+    createChannelGroup: jest.fn().mockResolvedValue(undefined),
     createTriggerNotification: jest.fn().mockResolvedValue("trigger-id"),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
     cancelNotification: jest.fn().mockResolvedValue(undefined),
     requestPermission: jest.fn().mockResolvedValue({ authorizationStatus: 1 }),
+    getNotificationSettings: jest.fn().mockResolvedValue({
+      authorizationStatus: 1,
+      android: { alarm: 1 },
+    }),
     onForegroundEvent: jest.fn().mockReturnValue(() => {}),
     onBackgroundEvent: jest.fn(),
   },
   TriggerType: { TIMESTAMP: 0 },
   AndroidImportance: { HIGH: 4, MAX: 5 },
   AndroidCategory: { ALARM: "alarm" },
+  AndroidNotificationSetting: { DISABLED: 0 },
   AuthorizationStatus: { AUTHORIZED: 1 },
+}));
+
+jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
+  cancelAlarmAudio: jest.fn().mockResolvedValue(undefined),
+  scheduleAlarmAudio: jest.fn().mockResolvedValue(undefined),
 }));
 
 function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
@@ -201,6 +214,79 @@ describe("alarmRescheduler", () => {
         });
         expect(calculateNextAlarmTime(alarm)).toBeNull();
       });
+
+      it("uses the configured custom cycle length", () => {
+        const now = Date.now();
+        const cycleLengthMinutes = 26 * 60;
+        const pastTime = now - 3 * 26 * 60 * 60 * 1000;
+        const alarm = makeAlarm({
+          targetTimestampMs: pastTime,
+          repeat: {
+            type: "customCycleInterval",
+            customCycleIntervalDays: 2,
+          },
+        });
+
+        const result = calculateNextAlarmTime(
+          alarm,
+          { baseTimeMs: 0, cycleLengthMinutes },
+          now,
+        );
+
+        expect(result).toBe(pastTime + 4 * 26 * 60 * 60 * 1000);
+      });
+    });
+
+    it("consumes skipNextOccurrence and schedules the following repeat", () => {
+      const now = Date.now();
+      const intervalMs = 60 * 60 * 1000;
+      const alarm = makeAlarm({
+        targetTimestampMs: now - intervalMs,
+        repeat: { type: "interval", intervalMs },
+        skipNextOccurrence: true,
+      });
+
+      const result = getAlarmToSchedule(alarm, undefined, now);
+
+      expect(result?.targetTimestampMs).toBe(now + 2 * intervalMs);
+      expect(result?.skipNextOccurrence).toBe(false);
+    });
+
+    it("skips the next selected weekday occurrence", () => {
+      const now = Date.now();
+      const currentDay = new Date(now).getDay();
+      const tomorrow = (currentDay + 1) % 7;
+      const target = new Date(now);
+      target.setDate(target.getDate() + 1);
+      target.setHours(8, 0, 0, 0);
+      const alarm = makeAlarm({
+        targetTimestampMs: target.getTime(),
+        repeat: { type: "weekdays", weekdays: [tomorrow] },
+        skipNextOccurrence: true,
+      });
+
+      const result = getAlarmToSchedule(alarm, undefined, now);
+
+      expect(result?.targetTimestampMs).toBeGreaterThan(
+        target.getTime() + 6 * 24 * 60 * 60 * 1000,
+      );
+      expect(new Date(result!.targetTimestampMs).getDay()).toBe(tomorrow);
+      expect(result?.skipNextOccurrence).toBe(false);
+    });
+
+    it("keeps a future snooze instead of replacing it with the recurrence", () => {
+      const now = Date.now();
+      const recurrenceAnchorTimestampMs = now - 10 * 60 * 1000;
+      const targetTimestampMs = now + 5 * 60 * 1000;
+      const alarm = makeAlarm({
+        targetTimestampMs,
+        recurrenceAnchorTimestampMs,
+        repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+      });
+
+      expect(calculateNextAlarmTime(alarm, undefined, now)).toBe(
+        targetTimestampMs,
+      );
     });
   });
 
@@ -301,6 +387,83 @@ describe("alarmRescheduler", () => {
       await rescheduleAllEnabledAlarms(alarms);
 
       expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(2);
+    });
+
+    it("uses the same next occurrence when rescheduled repeatedly", async () => {
+      const now = Date.now();
+      const alarm = makeAlarm({
+        targetTimestampMs: now - 10 * 60 * 1000,
+        repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+      });
+
+      await rescheduleAllEnabledAlarms([alarm]);
+      await rescheduleAllEnabledAlarms([alarm]);
+
+      const calls = (notifee.createTriggerNotification as jest.Mock).mock.calls;
+      expect(calls).toHaveLength(2);
+      expect(calls[0][0].id).toBe(calls[1][0].id);
+      expect(calls[0][1].timestamp).toBe(calls[1][1].timestamp);
+    });
+  });
+
+  describe("scheduleNextAlarmOccurrence", () => {
+    it("schedules the next repeat after an alarm fires", async () => {
+      const now = Date.now();
+      const intervalMs = 60 * 60 * 1000;
+      const alarm = makeAlarm({
+        targetTimestampMs: now - 10 * 60 * 1000,
+        repeat: { type: "interval", intervalMs },
+      });
+
+      const result = await scheduleNextAlarmOccurrence(alarm, undefined, now);
+
+      expect(result.targetTimestampMs).toBe(now + 50 * 60 * 1000);
+      expect(result.notifeeTriggerId).toBe("trigger-id");
+      expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns to the original recurrence after a snooze fires", async () => {
+      const now = Date.now();
+      const recurrenceAnchorTimestampMs = now - 70 * 60 * 1000;
+      const alarm = makeAlarm({
+        targetTimestampMs: now - 10 * 60 * 1000,
+        recurrenceAnchorTimestampMs,
+        repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+      });
+
+      const result = await scheduleNextAlarmOccurrence(alarm, undefined, now);
+
+      expect(result.targetTimestampMs).toBe(now + 50 * 60 * 1000);
+      expect(result.recurrenceAnchorTimestampMs).toBeNull();
+    });
+
+    it("disables a one-shot alarm after it fires", async () => {
+      const now = Date.now();
+      const alarm = makeAlarm({
+        targetTimestampMs: now - 10 * 60 * 1000,
+        repeat: null,
+      });
+
+      const result = await scheduleNextAlarmOccurrence(alarm, undefined, now);
+
+      expect(result.enabled).toBe(false);
+      expect(result.notifeeTriggerId).toBeNull();
+      expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+    });
+
+    it("does not return an unscheduled update when the next schedule fails", async () => {
+      const now = Date.now();
+      const alarm = makeAlarm({
+        targetTimestampMs: now - 10 * 60 * 1000,
+        repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+      });
+      (notifee.createTriggerNotification as jest.Mock).mockRejectedValueOnce(
+        new Error("schedule failed"),
+      );
+
+      await expect(
+        scheduleNextAlarmOccurrence(alarm, undefined, now),
+      ).rejects.toThrow("schedule failed");
     });
   });
 });

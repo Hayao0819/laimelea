@@ -3,7 +3,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { format } from "date-fns";
 import { useAtomValue } from "jotai";
 import { useSetAtom } from "jotai";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
@@ -11,6 +11,7 @@ import {
   Card,
   Chip,
   Divider,
+  Snackbar,
   Text,
   useTheme,
 } from "react-native-paper";
@@ -24,7 +25,10 @@ import { formatCustomTimeShort } from "../../../core/time/formatting";
 import type { Alarm } from "../../../models/Alarm";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 import type { RootStackParamList } from "../../../navigation/types";
-import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
+import {
+  LinkedAlarmTransactionError,
+  scheduleNewLinkedAlarm,
+} from "../services/linkedAlarmTransaction";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
@@ -44,6 +48,7 @@ export function EventDetailScreen() {
   const events = useAtomValue(calendarEventsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
+  const [snackbar, setSnackbar] = useState<string | null>(null);
 
   const { eventId } = route.params;
 
@@ -59,7 +64,7 @@ export function EventDetailScreen() {
       const { alarmDefaults } = settings;
 
       const alarm: Alarm = {
-        id: `alarm-${now}`,
+        id: `alarm-${now}-${Math.random().toString(36).slice(2, 8)}`,
         label: ev.title,
         enabled: true,
         targetTimestampMs: ev.startTimestampMs + offsetMs,
@@ -83,11 +88,24 @@ export function EventDetailScreen() {
         updatedAt: now,
       };
 
-      setAlarms((prev) => (Array.isArray(prev) ? [...prev, alarm] : [alarm]));
-      await scheduleAlarm(alarm);
-      navigation.goBack();
+      try {
+        const scheduledAlarm = await scheduleNewLinkedAlarm(alarm);
+        setAlarms((prev) =>
+          Array.isArray(prev) ? [...prev, scheduledAlarm] : [scheduledAlarm],
+        );
+        navigation.goBack();
+      } catch (error) {
+        setSnackbar(
+          t(
+            error instanceof LinkedAlarmTransactionError &&
+              error.reason === "past"
+              ? "calendar.alarmTimePassed"
+              : "calendar.alarmScheduleFailed",
+          ),
+        );
+      }
     },
-    [settings, setAlarms, navigation],
+    [settings, setAlarms, navigation, t],
   );
 
   if (!event) {
@@ -254,6 +272,13 @@ export function EventDetailScreen() {
           </Button>
         )}
       </ScrollView>
+      <Snackbar
+        visible={snackbar != null}
+        onDismiss={() => setSnackbar(null)}
+        duration={3000}
+      >
+        {snackbar ?? ""}
+      </Snackbar>
     </View>
   );
 }

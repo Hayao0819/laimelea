@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
+import { Alert, DeviceEventEmitter, StyleSheet, View } from "react-native";
 import { Button, Chip, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
@@ -20,8 +20,9 @@ import type {
   RootStackParamList,
 } from "../../../navigation/types";
 import { DismissalContainer } from "../components/dismissal/DismissalContainer";
-import { scheduleAlarm } from "../services/alarmScheduler";
-import { GradualVolumeManager } from "../services/gradualVolumeManager";
+import { scheduleNextAlarmOccurrence } from "../services/alarmRescheduler";
+import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
+import { RingtoneService } from "../services/ringtoneService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmFiring">;
 
@@ -38,6 +39,7 @@ export function AlarmFiringScreen() {
   const theme = useTheme();
   const [alarms, setAlarms] = useAtom(alarmsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
+  const actionInProgress = useRef(false);
 
   const isPreview = isPreviewParams(route.params);
 
@@ -50,31 +52,22 @@ export function AlarmFiringScreen() {
     );
   }, [isPreview, route.params, alarms]);
 
-  const volumeManagerRef = useRef<GradualVolumeManager | null>(null);
-
-  // Volume button behavior
-  // TODO: Capturing hardware volume button events requires a native module
-  // (Android KeyEvent interception). The setting is available via
-  // settings.alarmDefaults.volumeButtonBehavior ("snooze" | "dismiss" | "volume")
-  // but actual interception needs NativeEventEmitter + a custom Java/Kotlin module
-  // that overrides dispatchKeyEvent in the Activity.
+  const activeAlarmId = isPreview ? null : alarm?.id;
 
   useEffect(() => {
-    if (!alarm || isPreview) return;
-    const manager = new GradualVolumeManager(alarm.gradualVolumeDurationSec);
-    volumeManagerRef.current = manager;
-    manager.start((_volume) => {
-      // Volume control callback - native AudioManager integration point
-    });
+    if (!activeAlarmId) return;
     return () => {
-      manager.stop();
+      RingtoneService.stopAlarmSound(activeAlarmId).catch(() => {});
     };
-  }, [alarm, isPreview]);
+  }, [activeAlarmId]);
 
   const timeDisplay = useMemo(() => {
     if (!alarm) return "";
     return formatCustomTimeShort(
-      realToCustom(alarm.targetTimestampMs, settings.cycleConfig),
+      realToCustom(
+        alarm.activeOccurrenceTimestampMs ?? alarm.targetTimestampMs,
+        settings.cycleConfig,
+      ),
     );
   }, [alarm, settings.cycleConfig]);
 
@@ -84,16 +77,68 @@ export function AlarmFiringScreen() {
       navigation.goBack();
       return;
     }
-    volumeManagerRef.current?.stop();
-    await notifee.cancelNotification(alarm.id);
+    if (actionInProgress.current) return;
+    actionInProgress.current = true;
     const now = Date.now();
-    setAlarms(
-      alarms.map((a) =>
-        a.id === alarm.id ? { ...a, lastFiredAt: now, updatedAt: now } : a,
-      ),
-    );
+    let updatedAlarm: Alarm;
+    const deliveredOccurrenceWasAdvanced =
+      alarm.activeOccurrenceTimestampMs != null &&
+      alarm.lastDeliveredOccurrenceTimestampMs ===
+        alarm.activeOccurrenceTimestampMs;
+    if (deliveredOccurrenceWasAdvanced) {
+      try {
+        await Promise.all([
+          RingtoneService.stopAlarmSound(alarm.id),
+          notifee.cancelDisplayedNotification(alarm.id),
+        ]);
+      } catch {
+        actionInProgress.current = false;
+        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+        return;
+      }
+      updatedAlarm = {
+        ...alarm,
+        activeOccurrenceTimestampMs: null,
+        snoozeCount: 0,
+        updatedAt: now,
+      };
+    } else {
+      try {
+        await cancelAlarm(alarm);
+      } catch {
+        actionInProgress.current = false;
+        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+        return;
+      }
+      try {
+        updatedAlarm = await scheduleNextAlarmOccurrence(
+          alarm,
+          settings.cycleConfig,
+          now,
+        );
+      } catch {
+        updatedAlarm = {
+          ...alarm,
+          enabled: false,
+          notifeeTriggerId: null,
+          updatedAt: now,
+        };
+        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+      }
+      updatedAlarm.snoozeCount = 0;
+    }
+    updatedAlarm.lastFiredAt = now;
+    setAlarms(alarms.map((a) => (a.id === alarm.id ? updatedAlarm : a)));
     navigation.goBack();
-  }, [alarm, isPreview, alarms, setAlarms, navigation]);
+  }, [
+    alarm,
+    isPreview,
+    alarms,
+    setAlarms,
+    navigation,
+    settings.cycleConfig,
+    t,
+  ]);
 
   const handleSnooze = useCallback(async () => {
     if (!alarm) return;
@@ -101,32 +146,98 @@ export function AlarmFiringScreen() {
       navigation.goBack();
       return;
     }
-    volumeManagerRef.current?.stop();
-    await notifee.cancelNotification(alarm.id);
+    if (actionInProgress.current) return;
+    actionInProgress.current = true;
+    try {
+      await cancelAlarm(alarm);
+    } catch {
+      actionInProgress.current = false;
+      Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+      return;
+    }
 
+    const now = Date.now();
     const snoozeMs = alarm.snoozeDurationMin * 60 * 1000;
     const snoozedAlarm: Alarm = {
       ...alarm,
-      targetTimestampMs: Date.now() + snoozeMs,
+      enabled: true,
+      targetTimestampMs: now + snoozeMs,
+      recurrenceAnchorTimestampMs: alarm.repeat
+        ? (alarm.activeOccurrenceTimestampMs ??
+          alarm.recurrenceAnchorTimestampMs ??
+          alarm.targetTimestampMs)
+        : null,
+      activeOccurrenceTimestampMs: null,
       snoozeCount: alarm.snoozeCount + 1,
-      updatedAt: Date.now(),
+      updatedAt: now,
     };
 
-    const triggerId = await scheduleAlarm(snoozedAlarm);
-    snoozedAlarm.notifeeTriggerId = triggerId;
+    try {
+      const triggerId = await scheduleAlarm(snoozedAlarm);
+      snoozedAlarm.notifeeTriggerId = triggerId;
+    } catch {
+      const disabledAlarm = {
+        ...alarm,
+        enabled: false,
+        notifeeTriggerId: null,
+        activeOccurrenceTimestampMs: null,
+        updatedAt: now,
+      };
+      setAlarms(alarms.map((a) => (a.id === alarm.id ? disabledAlarm : a)));
+      Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+      navigation.goBack();
+      return;
+    }
 
     setAlarms(alarms.map((a) => (a.id === alarm.id ? snoozedAlarm : a)));
     navigation.goBack();
-  }, [alarm, isPreview, alarms, setAlarms, navigation]);
+  }, [alarm, isPreview, alarms, setAlarms, navigation, t]);
 
-  // Auto-silence timeout
+  const canSnooze = alarm ? alarm.snoozeCount < alarm.snoozeMaxCount : false;
+
+  useEffect(() => {
+    if (!alarm || isPreview) return;
+    const configuredBehavior = settings.alarmDefaults.volumeButtonBehavior;
+    const behavior =
+      configuredBehavior === "snooze" && !canSnooze
+        ? "dismiss"
+        : configuredBehavior;
+    if (behavior === "volume") {
+      RingtoneService.setAlarmVolumeButtonBehavior(null).catch(() => {});
+      return;
+    }
+
+    RingtoneService.setAlarmVolumeButtonBehavior(behavior).catch(() => {});
+    const subscription = DeviceEventEmitter.addListener(
+      "AlarmVolumeButtonPressed",
+      async (action: "snooze" | "dismiss") => {
+        if (action === "snooze") {
+          await handleSnooze();
+        } else {
+          await handleDismiss();
+        }
+      },
+    );
+    return () => {
+      subscription.remove();
+      RingtoneService.setAlarmVolumeButtonBehavior(null).catch(() => {});
+    };
+  }, [
+    alarm,
+    canSnooze,
+    handleDismiss,
+    handleSnooze,
+    isPreview,
+    settings.alarmDefaults.volumeButtonBehavior,
+  ]);
+
   useEffect(() => {
     if (!alarm || isPreview) return;
     if (alarm.autoSilenceMin <= 0) return;
 
     const timeoutMs = alarm.autoSilenceMin * 60 * 1000;
-    const timer = setTimeout(() => {
-      handleDismiss();
+    const timer = setTimeout(async () => {
+      await handleDismiss();
     }, timeoutMs);
 
     return () => {
@@ -141,8 +252,6 @@ export function AlarmFiringScreen() {
       </View>
     );
   }
-
-  const canSnooze = alarm.snoozeCount < alarm.snoozeMaxCount;
 
   return (
     <View

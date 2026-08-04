@@ -1,9 +1,16 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, SegmentedButtons, Switch, Text } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
+import {
+  type AlarmDeliveryStatus,
+  ensureNotificationPermissions,
+  getAlarmDeliveryStatus,
+  openExactAlarmPermissionSettings,
+  openFullScreenIntentPermissionSettings,
+} from "../../../core/notifications/notifeeSetup";
 import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
@@ -19,6 +26,41 @@ function cycleNext<T>(options: T[], current: T): T {
 export function AlarmDefaultsScreen() {
   const { t } = useTranslation();
   const { settings, updateAlarmDefaults } = useSettingsUpdate();
+  const [deliveryStatus, setDeliveryStatus] =
+    useState<AlarmDeliveryStatus | null>(null);
+
+  const refreshDeliveryStatus = useCallback(async () => {
+    try {
+      setDeliveryStatus(await getAlarmDeliveryStatus());
+    } catch {
+      setDeliveryStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshDeliveryStatus().catch(() => {});
+  }, [refreshDeliveryStatus]);
+
+  const openDeliveryPermission = useCallback(async () => {
+    if (!deliveryStatus?.notificationsEnabled) {
+      await ensureNotificationPermissions();
+    } else if (!deliveryStatus.exactAlarmsEnabled) {
+      await openExactAlarmPermissionSettings();
+    } else if (!deliveryStatus.fullScreenIntentEnabled) {
+      await openFullScreenIntentPermissionSettings();
+    }
+    await refreshDeliveryStatus();
+  }, [deliveryStatus, refreshDeliveryStatus]);
+
+  const deliveryDescription = !deliveryStatus
+    ? t("settings.alarmDeliveryChecking")
+    : !deliveryStatus.notificationsEnabled
+      ? t("settings.alarmDeliveryNotificationsDisabled")
+      : !deliveryStatus.exactAlarmsEnabled
+        ? t("settings.alarmDeliveryExactAlarmsDisabled")
+        : !deliveryStatus.fullScreenIntentEnabled
+          ? t("settings.alarmDeliveryFullScreenDisabled")
+          : t("settings.alarmDeliveryReady");
 
   const renderVibrationSwitch = useCallback(
     () => (
@@ -98,6 +140,14 @@ export function AlarmDefaultsScreen() {
           title={t("settings.vibration")}
           right={renderVibrationSwitch}
           testID="vibration-item"
+        />
+        <List.Item
+          title={t("settings.alarmDelivery")}
+          description={deliveryDescription}
+          onPress={() => {
+            openDeliveryPermission().catch(() => {});
+          }}
+          testID="alarm-delivery-item"
         />
         {settings.alarmDefaults.dismissalMethod === "math" && (
           <View

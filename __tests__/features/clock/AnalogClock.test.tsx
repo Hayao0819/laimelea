@@ -5,6 +5,13 @@ import { PaperProvider } from "react-native-paper";
 import { AnalogClock } from "../../../src/features/clock/components/AnalogClock";
 import type { CustomTimeValue } from "../../../src/models/CustomTime";
 
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en" },
+  }),
+}));
+
 jest.mock("react-native-svg", () => {
   // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require("react");

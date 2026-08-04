@@ -1,3 +1,4 @@
+import notifee from "@notifee/react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
@@ -9,13 +10,16 @@ import { IconButton, Snackbar, useTheme } from "react-native-paper";
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import type { BulkAlarmParams } from "../../../models/Alarm";
+import type { Alarm, BulkAlarmParams } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
 import type { RootStackParamList } from "../../../navigation/types";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { BulkAlarmForm } from "../components/BulkAlarmForm";
-import { scheduleAlarm } from "../services/alarmScheduler";
-import { generateBulkAlarms } from "../services/bulkAlarmCreator";
+import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
+import {
+  ANDROID_ALARM_TRIGGER_LIMIT,
+  generateBulkAlarms,
+} from "../services/bulkAlarmCreator";
 
 type Props = NativeStackScreenProps<RootStackParamList, "BulkAlarm">;
 
@@ -41,6 +45,10 @@ export function BulkAlarmScreen() {
   const [label, setLabel] = useState("");
   const [saving, setSaving] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
+  const existingEnabledAlarmCount = useMemo(
+    () => alarms.filter((alarm) => alarm.enabled).length,
+    [alarms],
+  );
 
   const bulkParams: BulkAlarmParams = useMemo(
     () => ({
@@ -69,19 +77,42 @@ export function BulkAlarmScreen() {
   );
 
   const preview = useMemo(
-    () => generateBulkAlarms(bulkParams, cycleConfig, defaults, alarms.length),
-    [bulkParams, cycleConfig, defaults, alarms.length],
+    () =>
+      generateBulkAlarms(
+        bulkParams,
+        cycleConfig,
+        defaults,
+        existingEnabledAlarmCount,
+      ),
+    [bulkParams, cycleConfig, defaults, existingEnabledAlarmCount],
   );
 
   const handleSave = useCallback(async () => {
-    if (preview.alarms.length === 0 || saving) return;
+    if (preview.alarms.length === 0 || preview.limitExceeded || saving) return;
 
     setSaving(true);
+    const rollbackAlarms: Alarm[] = [];
     try {
-      const scheduledAlarms = [];
+      const triggerIds = await notifee.getTriggerNotificationIds();
+      if (
+        triggerIds.length + preview.alarms.length >
+        ANDROID_ALARM_TRIGGER_LIMIT
+      ) {
+        Alert.alert(
+          t("alarm.bulkCreate"),
+          t("alarm.bulkWarningLimit", {
+            total: triggerIds.length + preview.alarms.length,
+          }),
+        );
+        return;
+      }
+      const scheduledAlarms: Alarm[] = [];
       for (const alarm of preview.alarms) {
+        rollbackAlarms.push(alarm);
         const triggerId = await scheduleAlarm(alarm);
-        scheduledAlarms.push({ ...alarm, notifeeTriggerId: triggerId });
+        const scheduledAlarm = { ...alarm, notifeeTriggerId: triggerId };
+        rollbackAlarms[rollbackAlarms.length - 1] = scheduledAlarm;
+        scheduledAlarms.push(scheduledAlarm);
       }
       setAlarms([...alarms, ...scheduledAlarms]);
       requestClockWidgetUpdate();
@@ -90,23 +121,28 @@ export function BulkAlarmScreen() {
       );
       navigation.goBack();
     } catch {
-      Alert.alert("Error", "Failed to create alarms");
+      await Promise.allSettled(
+        rollbackAlarms.map((alarm) => cancelAlarm(alarm)),
+      );
+      Alert.alert(t("alarm.bulkCreate"), t("alarm.bulkCreateFailed"));
     } finally {
       setSaving(false);
     }
-  }, [preview.alarms, saving, alarms, setAlarms, navigation, t]);
+  }, [preview, saving, alarms, setAlarms, navigation, t]);
 
   const SaveButton = useCallback(
     () => (
       <IconButton
         icon="check"
         onPress={handleSave}
-        disabled={preview.alarms.length === 0 || saving}
+        disabled={
+          preview.alarms.length === 0 || preview.limitExceeded || saving
+        }
         testID="bulk-save-button"
         accessibilityLabel={t("alarm.bulkSave")}
       />
     ),
-    [handleSave, preview.alarms.length, saving, t],
+    [handleSave, preview.alarms.length, preview.limitExceeded, saving, t],
   );
 
   useLayoutEffect(() => {
@@ -132,7 +168,7 @@ export function BulkAlarmScreen() {
           cycleLengthMinutes={cycleConfig.cycleLengthMinutes}
           previewAlarms={preview.alarms}
           warning={preview.warning}
-          existingAlarmCount={alarms.length}
+          existingAlarmCount={existingEnabledAlarmCount}
           onFromTimeChange={setFromTime}
           onToTimeChange={setToTime}
           onTimeSystemChange={setTimeSystem}

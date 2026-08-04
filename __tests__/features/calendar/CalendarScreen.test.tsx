@@ -1,4 +1,10 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  renderAsync,
+  waitFor,
+} from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -12,7 +18,11 @@ import {
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { createPlatformServices } from "../../../src/core/platform/factory";
 import type { PlatformServices } from "../../../src/core/platform/types";
-import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
+import {
+  cancelAlarm,
+  recoverAlarmSchedule,
+  scheduleAlarm,
+} from "../../../src/features/alarm/services/alarmScheduler";
 import { CalendarScreen } from "../../../src/features/calendar/screens/CalendarScreen";
 import type { Alarm } from "../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../src/models/CalendarEvent";
@@ -45,6 +55,22 @@ jest.mock("@react-native-async-storage/async-storage", () => {
     },
   };
 });
+
+jest.mock("../../../src/core/storage/asyncStorageAdapter", () => ({
+  createAsyncStorage: () => {
+    const storage = new Map<string, unknown>();
+    return {
+      getItem: (key: string, initialValue: unknown) =>
+        storage.has(key) ? storage.get(key) : initialValue,
+      setItem: (key: string, value: unknown) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+    };
+  },
+}));
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -97,6 +123,11 @@ jest.mock("@notifee/react-native", () => ({
 }));
 
 jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
+  cancelAlarm: jest.fn().mockResolvedValue(undefined),
+  recoverAlarmSchedule: jest.fn(async (alarm: Alarm) => ({
+    ...alarm,
+    notifeeTriggerId: "trigger-id",
+  })),
   scheduleAlarm: jest.fn().mockResolvedValue("trigger-id"),
 }));
 
@@ -201,19 +232,20 @@ async function renderWithProviders(options?: {
   store.set(calendarSelectedDateAtom, selectedDate);
   store.set(calendarViewModeAtom, viewMode);
 
-  const utils = render(
+  const utils = await renderAsync(
     <JotaiProvider store={store}>
       <PaperProvider>
         <CalendarScreen />
       </PaperProvider>
     </JotaiProvider>,
   );
-  await act(async () => {});
+  renderedScreens.push(utils);
 
   return { ...utils, store, mockServices: currentMockServices };
 }
 
 const originalConsoleError = console.error;
+const renderedScreens: Array<Awaited<ReturnType<typeof renderAsync>>> = [];
 
 beforeEach(() => {
   console.error = (...args: unknown[]) => {
@@ -224,7 +256,11 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => {
+afterEach(async () => {
+  for (const screen of renderedScreens.splice(0)) {
+    await screen.unmountAsync();
+  }
+  cleanup();
   console.error = originalConsoleError;
 });
 
@@ -335,15 +371,17 @@ describe("CalendarScreen", () => {
   });
 
   it("should create alarm from event (handleCreateAlarm)", async () => {
+    const futureStart = Date.now() + 60 * 60 * 1000;
     const event = makeEvent({
       id: "event-alarm",
       title: "Important Meeting",
-      startTimestampMs: TODAY + 14 * 60 * 60 * 1000, // 14:00
-      endTimestampMs: TODAY + 15 * 60 * 60 * 1000,
+      startTimestampMs: futureStart,
+      endTimestampMs: futureStart + 60 * 60 * 1000,
     });
 
-    const { getByTestId } = await renderWithProviders({
+    const { getByTestId, store } = await renderWithProviders({
       events: [event],
+      selectedDate: startOfDay(futureStart),
     });
 
     await act(async () => {
@@ -356,6 +394,9 @@ describe("CalendarScreen", () => {
         linkedCalendarEventId: "event-alarm",
         enabled: true,
       }),
+    );
+    expect((store.get(alarmsAtom) as Alarm[])[0]?.notifeeTriggerId).toBe(
+      "trigger-id",
     );
   });
 
@@ -423,16 +464,18 @@ describe("CalendarScreen", () => {
     }
 
     it("should create alarm from event and add to empty alarms list", async () => {
+      const futureStart = Date.now() + 60 * 60 * 1000;
       const event = makeEvent({
         id: "new-event",
         title: "New Meeting",
-        startTimestampMs: TODAY + 14 * 60 * 60 * 1000,
-        endTimestampMs: TODAY + 15 * 60 * 60 * 1000,
+        startTimestampMs: futureStart,
+        endTimestampMs: futureStart + 60 * 60 * 1000,
       });
 
       const { getByTestId, store } = await renderWithProviders({
         events: [event],
         initialAlarms: [],
+        selectedDate: startOfDay(futureStart),
       });
 
       await act(async () => {
@@ -444,6 +487,7 @@ describe("CalendarScreen", () => {
       expect(alarms[0].label).toBe("New Meeting");
       expect(alarms[0].linkedCalendarEventId).toBe("new-event");
       expect(alarms[0].enabled).toBe(true);
+      expect(alarms[0].notifeeTriggerId).toBe("trigger-id");
     });
 
     it("should append alarm to existing alarms list", async () => {
@@ -453,16 +497,18 @@ describe("CalendarScreen", () => {
         targetTimestampMs: TODAY + 8 * 60 * 60 * 1000,
       });
 
+      const futureStart = Date.now() + 60 * 60 * 1000;
       const event = makeEvent({
         id: "event-append",
         title: "Appended Meeting",
-        startTimestampMs: TODAY + 16 * 60 * 60 * 1000,
-        endTimestampMs: TODAY + 17 * 60 * 60 * 1000,
+        startTimestampMs: futureStart,
+        endTimestampMs: futureStart + 60 * 60 * 1000,
       });
 
       const { getByTestId, store } = await renderWithProviders({
         events: [event],
         initialAlarms: [existingAlarm],
+        selectedDate: startOfDay(futureStart),
       });
 
       await act(async () => {
@@ -477,21 +523,71 @@ describe("CalendarScreen", () => {
       expect(alarms[1].linkedCalendarEventId).toBe("event-append");
     });
 
-    it("should sync linked alarm times when calendar events change", async () => {
+    it("does not persist a linked alarm when scheduling fails", async () => {
+      const futureStart = Date.now() + 60 * 60 * 1000;
+      const event = makeEvent({
+        id: "failed-event",
+        startTimestampMs: futureStart,
+        endTimestampMs: futureStart + 60 * 60 * 1000,
+      });
+      (scheduleAlarm as jest.Mock).mockRejectedValueOnce(new Error("failed"));
+
+      const { getByTestId, getByText, store } = await renderWithProviders({
+        events: [event],
+        selectedDate: startOfDay(futureStart),
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId("event-create-alarm-failed-event"));
+      });
+
+      expect(store.get(alarmsAtom)).toEqual([]);
+      await waitFor(() => {
+        expect(getByText("calendar.alarmScheduleFailed")).toBeTruthy();
+      });
+    });
+
+    it("does not schedule or persist a linked alarm for a past event", async () => {
+      const pastStart = Date.now() - 60 * 60 * 1000;
+      const event = makeEvent({
+        id: "past-event",
+        startTimestampMs: pastStart,
+        endTimestampMs: pastStart + 30 * 60 * 1000,
+      });
+
+      const { getByTestId, getByText, store } = await renderWithProviders({
+        events: [event],
+        selectedDate: startOfDay(pastStart),
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId("event-create-alarm-past-event"));
+      });
+
+      expect(scheduleAlarm).not.toHaveBeenCalled();
+      expect(store.get(alarmsAtom)).toEqual([]);
+      await waitFor(() => {
+        expect(getByText("calendar.alarmTimePassed")).toBeTruthy();
+      });
+    });
+
+    it("reschedules a linked alarm before persisting its new time", async () => {
+      const futureStart = Date.now() + 2 * 60 * 60 * 1000;
       const linkedAlarm = makeAlarm({
         id: "linked-alarm-1",
         label: "Linked Alarm",
         linkedCalendarEventId: "event-linked",
         linkedEventOffsetMs: -15 * 60 * 1000, // 15 min before
-        targetTimestampMs: TODAY + 10 * 60 * 60 * 1000 - 15 * 60 * 1000,
+        targetTimestampMs: futureStart - 75 * 60 * 1000,
+        notifeeTriggerId: "old-trigger-id",
       });
 
       const updatedEvent = makeEvent({
         id: "event-linked",
         sourceEventId: "src-linked",
         title: "Rescheduled Meeting",
-        startTimestampMs: TODAY + 12 * 60 * 60 * 1000, // moved from 10:00 to 12:00
-        endTimestampMs: TODAY + 13 * 60 * 60 * 1000,
+        startTimestampMs: futureStart,
+        endTimestampMs: futureStart + 60 * 60 * 1000,
       });
 
       const { store } = await renderWithProviders({
@@ -499,14 +595,232 @@ describe("CalendarScreen", () => {
         initialAlarms: [linkedAlarm],
       });
 
-      // The useEffect runs on mount with events, triggering syncCalendarAlarms
-      await act(async () => {});
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(linkedAlarm);
+      });
 
       const alarms = store.get(alarmsAtom) as Alarm[];
       expect(alarms).toHaveLength(1);
-      // targetTimestampMs should be updated: 12:00 - 15min = 11:45
-      const expectedTarget = TODAY + 12 * 60 * 60 * 1000 - 15 * 60 * 1000;
+      const expectedTarget = futureStart - 15 * 60 * 1000;
       expect(alarms[0].targetTimestampMs).toBe(expectedTarget);
+      expect(alarms[0].notifeeTriggerId).toBe("trigger-id");
+      expect(scheduleAlarm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "linked-alarm-1",
+          targetTimestampMs: expectedTarget,
+          notifeeTriggerId: null,
+        }),
+      );
+    });
+
+    it("restores the previous schedule and keeps the atom unchanged on update failure", async () => {
+      const futureStart = Date.now() + 2 * 60 * 60 * 1000;
+      const linkedAlarm = makeAlarm({
+        id: "rollback-alarm",
+        linkedCalendarEventId: "event-rollback",
+        linkedEventOffsetMs: -15 * 60 * 1000,
+        targetTimestampMs: futureStart - 75 * 60 * 1000,
+        notifeeTriggerId: "old-trigger-id",
+      });
+      const updatedEvent = makeEvent({
+        id: "event-rollback",
+        startTimestampMs: futureStart,
+        endTimestampMs: futureStart + 60 * 60 * 1000,
+      });
+      (scheduleAlarm as jest.Mock).mockRejectedValueOnce(new Error("failed"));
+      (recoverAlarmSchedule as jest.Mock).mockResolvedValueOnce({
+        ...linkedAlarm,
+        notifeeTriggerId: "restored-trigger-id",
+      });
+
+      const { getByText, store } = await renderWithProviders({
+        events: [updatedEvent],
+        initialAlarms: [linkedAlarm],
+      });
+
+      await waitFor(() => {
+        expect(recoverAlarmSchedule).toHaveBeenCalledWith(linkedAlarm);
+      });
+
+      expect(scheduleAlarm).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          targetTimestampMs: futureStart - 15 * 60 * 1000,
+        }),
+      );
+      expect(scheduleAlarm).toHaveBeenCalledTimes(1);
+      expect(store.get(alarmsAtom)).toEqual([
+        { ...linkedAlarm, notifeeTriggerId: "restored-trigger-id" },
+      ]);
+      expect(getByText("calendar.alarmRescheduleFailed")).toBeTruthy();
+    });
+
+    it("updates every linked alarm in one synchronization pass", async () => {
+      const firstStart = Date.now() + 3 * 60 * 60 * 1000;
+      const secondStart = Date.now() + 4 * 60 * 60 * 1000;
+      const firstAlarm = makeAlarm({
+        id: "linked-first",
+        linkedCalendarEventId: "event-first",
+        linkedEventOffsetMs: -5 * 60 * 1000,
+        targetTimestampMs: firstStart - 30 * 60 * 1000,
+        notifeeTriggerId: "first-old-trigger",
+      });
+      const secondAlarm = makeAlarm({
+        id: "linked-second",
+        linkedCalendarEventId: "event-second",
+        linkedEventOffsetMs: -10 * 60 * 1000,
+        targetTimestampMs: secondStart - 30 * 60 * 1000,
+        notifeeTriggerId: "second-old-trigger",
+      });
+      const firstEvent = makeEvent({
+        id: "event-first",
+        startTimestampMs: firstStart,
+        endTimestampMs: firstStart + 60 * 60 * 1000,
+      });
+      const secondEvent = makeEvent({
+        id: "event-second",
+        startTimestampMs: secondStart,
+        endTimestampMs: secondStart + 60 * 60 * 1000,
+      });
+      (scheduleAlarm as jest.Mock)
+        .mockResolvedValueOnce("first-new-trigger")
+        .mockResolvedValueOnce("second-new-trigger");
+
+      const { store } = await renderWithProviders({
+        events: [firstEvent, secondEvent],
+        initialAlarms: [firstAlarm, secondAlarm],
+      });
+
+      await waitFor(() => {
+        expect(scheduleAlarm).toHaveBeenCalledTimes(2);
+      });
+
+      expect(store.get(alarmsAtom)).toEqual([
+        expect.objectContaining({
+          id: "linked-first",
+          targetTimestampMs: firstStart - 5 * 60 * 1000,
+          notifeeTriggerId: "first-new-trigger",
+        }),
+        expect.objectContaining({
+          id: "linked-second",
+          targetTimestampMs: secondStart - 10 * 60 * 1000,
+          notifeeTriggerId: "second-new-trigger",
+        }),
+      ]);
+    });
+
+    it("updates a disabled linked alarm without scheduling it", async () => {
+      const futureStart = Date.now() + 2 * 60 * 60 * 1000;
+      const linkedAlarm = makeAlarm({
+        id: "disabled-linked-alarm",
+        enabled: false,
+        linkedCalendarEventId: "disabled-event",
+        targetTimestampMs: futureStart - 60 * 60 * 1000,
+      });
+      const event = makeEvent({
+        id: "disabled-event",
+        startTimestampMs: futureStart,
+        endTimestampMs: futureStart + 60 * 60 * 1000,
+      });
+
+      const { store } = await renderWithProviders({
+        events: [event],
+        initialAlarms: [linkedAlarm],
+      });
+
+      await waitFor(() => {
+        expect((store.get(alarmsAtom) as Alarm[])[0].targetTimestampMs).toBe(
+          futureStart,
+        );
+      });
+      expect(cancelAlarm).not.toHaveBeenCalled();
+      expect(scheduleAlarm).not.toHaveBeenCalled();
+      expect((store.get(alarmsAtom) as Alarm[])[0].enabled).toBe(false);
+    });
+
+    it("cancels a linked alarm when its event moves into the past", async () => {
+      const linkedAlarm = makeAlarm({
+        id: "past-linked-alarm",
+        linkedCalendarEventId: "past-linked-event",
+        targetTimestampMs: Date.now() + 60 * 60 * 1000,
+        notifeeTriggerId: "old-trigger",
+      });
+      const pastStart = Date.now() - 60 * 60 * 1000;
+      const event = makeEvent({
+        id: "past-linked-event",
+        startTimestampMs: pastStart,
+        endTimestampMs: pastStart + 30 * 60 * 1000,
+      });
+
+      const { getByText, store } = await renderWithProviders({
+        events: [event],
+        initialAlarms: [linkedAlarm],
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(linkedAlarm);
+      });
+      expect(scheduleAlarm).not.toHaveBeenCalled();
+      expect(store.get(alarmsAtom)).toEqual([
+        expect.objectContaining({
+          id: "past-linked-alarm",
+          enabled: false,
+          targetTimestampMs: pastStart,
+          notifeeTriggerId: null,
+        }),
+      ]);
+      expect(getByText("calendar.alarmTimePassed")).toBeTruthy();
+    });
+
+    it("restores a newer edit when calendar synchronization becomes stale", async () => {
+      const eventStart = Date.now() + 3 * 60 * 60 * 1000;
+      const linkedAlarm = makeAlarm({
+        id: "concurrent-linked-alarm",
+        linkedCalendarEventId: "concurrent-event",
+        targetTimestampMs: eventStart - 60 * 60 * 1000,
+        notifeeTriggerId: "old-trigger",
+      });
+      const event = makeEvent({
+        id: "concurrent-event",
+        startTimestampMs: eventStart,
+        endTimestampMs: eventStart + 60 * 60 * 1000,
+      });
+      let finishCalendarSchedule: ((triggerId: string) => void) | undefined;
+      (scheduleAlarm as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            finishCalendarSchedule = resolve;
+          }),
+      );
+
+      const { store } = await renderWithProviders({
+        events: [event],
+        initialAlarms: [linkedAlarm],
+      });
+      await waitFor(() => {
+        expect(scheduleAlarm).toHaveBeenCalledTimes(1);
+      });
+
+      const editedAlarm = {
+        ...linkedAlarm,
+        linkedCalendarEventId: null,
+        targetTimestampMs: eventStart + 2 * 60 * 60 * 1000,
+        notifeeTriggerId: "edited-trigger",
+      };
+      act(() => {
+        store.set(alarmsAtom, [editedAlarm]);
+      });
+      await act(async () => {
+        finishCalendarSchedule?.("stale-calendar-trigger");
+      });
+
+      await waitFor(() => {
+        expect(scheduleAlarm).toHaveBeenCalledTimes(2);
+      });
+      expect(scheduleAlarm).toHaveBeenLastCalledWith(editedAlarm);
+      expect(store.get(alarmsAtom)).toEqual([
+        { ...editedAlarm, notifeeTriggerId: "trigger-id" },
+      ]);
     });
   });
 });

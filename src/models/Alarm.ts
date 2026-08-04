@@ -12,6 +12,7 @@ export interface Alarm {
   label: string;
   enabled: boolean;
   targetTimestampMs: number;
+  recurrenceAnchorTimestampMs?: number | null;
   setInTimeSystem: "custom" | "24h";
   repeat: AlarmRepeat | null;
   dismissalMethod: DismissalMethod;
@@ -28,6 +29,8 @@ export interface Alarm {
   linkedEventOffsetMs: number;
   mathDifficulty: MathDifficulty;
   lastFiredAt: number | null;
+  activeOccurrenceTimestampMs?: number | null;
+  lastDeliveredOccurrenceTimestampMs?: number | null;
   createdAt: number;
   updatedAt: number;
 }

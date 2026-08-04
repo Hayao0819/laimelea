@@ -82,9 +82,15 @@ jobs:
                -alias "$RELEASE_KEY_ALIAS" > /dev/null 2>&1; then
             echo "verified=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::Release keystore verification failed — skipping release build"
+            echo "::error::Release keystore verification failed"
             rm -f android/app/release.keystore
           fi
+
+      - name: Require valid release signing
+        if: matrix.variant == 'release' && steps.decode-keystore.outputs.verified != 'true'
+        run: |
+          echo "::error::Release signing credentials are missing or invalid"
+          exit 1
 
       - name: Build APK
         id: build
@@ -96,6 +102,10 @@ jobs:
           RELEASE_KEY_ALIAS: ${{ vars.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew ${{ matrix.gradle-task }} ${{ matrix.gradle-flags }}
+
+      - name: Verify release APK signature
+        if: matrix.variant == 'release' && steps.build.outcome == 'success'
+        run: apksigner verify --verbose --print-certs "${{ matrix.apk-path }}"
 
       - name: Upload APK
         if: always() && steps.build.outcome == 'success'

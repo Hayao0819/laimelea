@@ -1,12 +1,17 @@
+import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { Alert } from "react-native";
 import { PaperProvider } from "react-native-paper";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { BulkAlarmScreen } from "../../../src/features/alarm/screens/BulkAlarmScreen";
-import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
+import {
+  cancelAlarm,
+  scheduleAlarm,
+} from "../../../src/features/alarm/services/alarmScheduler";
 import type { Alarm } from "../../../src/models/Alarm";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
@@ -56,6 +61,7 @@ jest.mock("@notifee/react-native", () => ({
   default: {
     createChannel: jest.fn().mockResolvedValue("alarm"),
     createTriggerNotification: jest.fn().mockResolvedValue("trigger-id"),
+    getTriggerNotificationIds: jest.fn().mockResolvedValue([]),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
     cancelNotification: jest.fn().mockResolvedValue(undefined),
     requestPermission: jest.fn().mockResolvedValue({ authorizationStatus: 1 }),
@@ -82,7 +88,36 @@ jest.mock("@react-navigation/native", () => ({
 
 jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
   scheduleAlarm: jest.fn().mockResolvedValue("trigger-id"),
+  cancelAlarm: jest.fn().mockResolvedValue(undefined),
 }));
+
+function makeAlarm(index: number, enabled = true): Alarm {
+  const now = Date.now();
+  return {
+    id: `existing-${index}`,
+    label: "Existing",
+    enabled,
+    targetTimestampMs: now + 60 * 60 * 1000,
+    setInTimeSystem: "24h",
+    repeat: null,
+    dismissalMethod: "simple",
+    gradualVolumeDurationSec: 30,
+    snoozeDurationMin: 5,
+    snoozeMaxCount: 3,
+    snoozeCount: 0,
+    autoSilenceMin: 15,
+    soundUri: null,
+    vibrationEnabled: true,
+    notifeeTriggerId: `trigger-existing-${index}`,
+    skipNextOccurrence: false,
+    linkedCalendarEventId: null,
+    linkedEventOffsetMs: 0,
+    mathDifficulty: 1,
+    lastFiredAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 async function renderWithProviders(
   store = createStore(),
@@ -104,6 +139,7 @@ async function renderWithProviders(
 describe("BulkAlarmScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue([]);
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-02-27T00:00:00Z"));
   });
@@ -221,5 +257,100 @@ describe("BulkAlarmScreen", () => {
     // Alarms should be stored in the atom
     const storedAlarms = store.get(alarmsAtom);
     expect(storedAlarms).toHaveLength(5);
+  });
+
+  it("allows the batch when it reaches exactly 50 enabled alarms", async () => {
+    await renderWithProviders(
+      createStore(),
+      Array.from({ length: 45 }, (_, index) => makeAlarm(index)),
+    );
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    expect(options.headerRight().props.disabled).toBe(false);
+  });
+
+  it("disables saving when the batch would create 51 enabled alarms", async () => {
+    await renderWithProviders(
+      createStore(),
+      Array.from({ length: 46 }, (_, index) => makeAlarm(index)),
+    );
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    expect(options.headerRight().props.disabled).toBe(true);
+    await options.headerRight().props.onPress();
+    expect(scheduleAlarm).not.toHaveBeenCalled();
+  });
+
+  it("does not count disabled alarms toward the 50-alarm limit", async () => {
+    await renderWithProviders(
+      createStore(),
+      Array.from({ length: 51 }, (_, index) => makeAlarm(index, false)),
+    );
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    expect(options.headerRight().props.disabled).toBe(false);
+  });
+
+  it("checks the native trigger count before scheduling", async () => {
+    (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue(
+      Array.from({ length: 46 }, (_, index) => `native-trigger-${index}`),
+    );
+    const alertSpy = jest.spyOn(Alert, "alert");
+    await renderWithProviders(createStore(), []);
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    await act(async () => {
+      await options.headerRight().props.onPress();
+    });
+
+    expect(scheduleAlarm).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      "alarm.bulkCreate",
+      'alarm.bulkWarningLimit:{"total":51}',
+    );
+    alertSpy.mockRestore();
+  });
+
+  it("rolls back every attempted alarm when scheduling fails partway", async () => {
+    const store = createStore();
+    (scheduleAlarm as jest.Mock)
+      .mockResolvedValueOnce("trigger-1")
+      .mockResolvedValueOnce("trigger-2")
+      .mockRejectedValueOnce(new Error("schedule failed"));
+    const alertSpy = jest.spyOn(Alert, "alert");
+    await renderWithProviders(store, []);
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    await act(async () => {
+      await options.headerRight().props.onPress();
+    });
+
+    await waitFor(() => {
+      expect(cancelAlarm).toHaveBeenCalledTimes(3);
+    });
+    expect(cancelAlarm).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ notifeeTriggerId: "trigger-1" }),
+    );
+    expect(cancelAlarm).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ notifeeTriggerId: "trigger-2" }),
+    );
+    expect(cancelAlarm).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ notifeeTriggerId: null }),
+    );
+    expect(await store.get(alarmsAtom)).toEqual([]);
+    expect(mockGoBack).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      "alarm.bulkCreate",
+      "alarm.bulkCreateFailed",
+    );
+    alertSpy.mockRestore();
   });
 });

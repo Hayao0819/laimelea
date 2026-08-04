@@ -24,7 +24,7 @@ import {
 import { radius, spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import { customToReal, realToCustom } from "../../../core/time/conversions";
+import { realToCustom } from "../../../core/time/conversions";
 import type { Alarm, AlarmRepeat } from "../../../models/Alarm";
 import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
 import type { RootStackParamList } from "../../../navigation/types";
@@ -33,7 +33,12 @@ import { AlarmSoundPicker } from "../components/AlarmSoundPicker";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
 import { DismissalPreview } from "../components/DismissalPreview";
 import { RepeatPicker } from "../components/RepeatPicker";
-import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
+import {
+  cancelAlarm,
+  recoverAlarmSchedule,
+  scheduleAlarm,
+} from "../services/alarmScheduler";
+import { getNextAlarmTimestamp } from "../services/alarmTime";
 import { getAllStrategies, getStrategy } from "../strategies";
 
 const SNOOZE_DURATION_OPTIONS = [1, 3, 5, 10, 15];
@@ -117,19 +122,7 @@ export function AlarmEditScreen() {
   const [testSnackbarVisible, setTestSnackbarVisible] = useState(false);
 
   const computeTargetTimestamp = useCallback(() => {
-    if (timeSystem === "custom") {
-      return customToReal(
-        { day: 0, hours: time.hours, minutes: time.minutes, seconds: 0 },
-        cycleConfig,
-      );
-    }
-    const now = new Date();
-    const target = new Date(now);
-    target.setHours(time.hours, time.minutes, 0, 0);
-    if (target.getTime() <= now.getTime()) {
-      target.setDate(target.getDate() + 1);
-    }
-    return target.getTime();
+    return getNextAlarmTimestamp(time, timeSystem, cycleConfig);
   }, [time, timeSystem, cycleConfig]);
 
   const handleSave = useCallback(async () => {
@@ -163,15 +156,23 @@ export function AlarmEditScreen() {
       updatedAt: now,
     };
 
-    if (existingAlarm) {
-      await cancelAlarm(existingAlarm);
-    }
-
     try {
+      if (existingAlarm) {
+        await cancelAlarm(existingAlarm);
+      }
       const triggerId = await scheduleAlarm(alarm);
       alarm.notifeeTriggerId = triggerId;
     } catch {
-      // Scheduling may fail on some devices; save alarm data regardless
+      if (existingAlarm) {
+        const recoveredAlarm = await recoverAlarmSchedule(existingAlarm, now);
+        setAlarms(
+          alarms.map((storedAlarm) =>
+            storedAlarm.id === existingAlarm.id ? recoveredAlarm : storedAlarm,
+          ),
+        );
+      }
+      Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
+      return;
     }
 
     if (existingAlarm) {
@@ -199,6 +200,7 @@ export function AlarmEditScreen() {
     alarms,
     setAlarms,
     navigation,
+    t,
   ]);
 
   const handleDelete = useCallback(async () => {
@@ -209,10 +211,22 @@ export function AlarmEditScreen() {
         text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
-          await cancelAlarm(existingAlarm);
-          setAlarms(alarms.filter((a) => a.id !== existingAlarm.id));
-          requestClockWidgetUpdate();
-          navigation.goBack();
+          try {
+            await cancelAlarm(existingAlarm);
+            setAlarms(alarms.filter((a) => a.id !== existingAlarm.id));
+            requestClockWidgetUpdate();
+            navigation.goBack();
+          } catch {
+            const recoveredAlarm = await recoverAlarmSchedule(existingAlarm);
+            setAlarms(
+              alarms.map((storedAlarm) =>
+                storedAlarm.id === existingAlarm.id
+                  ? recoveredAlarm
+                  : storedAlarm,
+              ),
+            );
+            Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+          }
         },
       },
     ]);

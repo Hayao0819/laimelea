@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, StyleSheet, View } from "react-native";
+import { Alert, FlatList, StyleSheet, View } from "react-native";
 import { FAB, Snackbar, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
@@ -13,7 +13,12 @@ import type { Alarm } from "../../../models/Alarm";
 import type { RootStackParamList } from "../../../navigation/types";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmCard } from "../components/AlarmCard";
-import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
+import { getAlarmToSchedule } from "../services/alarmRescheduler";
+import {
+  cancelAlarm,
+  recoverAlarmSchedule,
+  scheduleAlarm,
+} from "../services/alarmScheduler";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -35,18 +40,44 @@ export function AlarmListScreen() {
       };
 
       if (updated.enabled) {
-        const triggerId = await scheduleAlarm(updated);
-        updated.notifeeTriggerId = triggerId;
+        const alarmToSchedule = getAlarmToSchedule(
+          updated,
+          settings.cycleConfig,
+        );
+        if (!alarmToSchedule) {
+          Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
+          return;
+        }
+        try {
+          const triggerId = await scheduleAlarm(alarmToSchedule);
+          updated.targetTimestampMs = alarmToSchedule.targetTimestampMs;
+          updated.skipNextOccurrence = alarmToSchedule.skipNextOccurrence;
+          updated.notifeeTriggerId = triggerId;
+        } catch {
+          Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
+          return;
+        }
         setSnackMessage(t("alarm.scheduled"));
       } else {
-        await cancelAlarm(alarm);
+        try {
+          await cancelAlarm(alarm);
+        } catch {
+          const recoveredAlarm = await recoverAlarmSchedule(alarm);
+          setAlarms(
+            alarms.map((storedAlarm) =>
+              storedAlarm.id === alarm.id ? recoveredAlarm : storedAlarm,
+            ),
+          );
+          Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
+          return;
+        }
         updated.notifeeTriggerId = null;
       }
 
       setAlarms(alarms.map((a) => (a.id === alarm.id ? updated : a)));
       requestClockWidgetUpdate();
     },
-    [alarms, setAlarms, t],
+    [alarms, setAlarms, settings.cycleConfig, t],
   );
 
   const handlePress = useCallback(
@@ -58,11 +89,61 @@ export function AlarmListScreen() {
 
   const handleLongPress = useCallback(
     async (alarm: Alarm) => {
-      await cancelAlarm(alarm);
-      setAlarms(alarms.filter((a) => a.id !== alarm.id));
-      requestClockWidgetUpdate();
+      try {
+        await cancelAlarm(alarm);
+        setAlarms(alarms.filter((a) => a.id !== alarm.id));
+        requestClockWidgetUpdate();
+      } catch {
+        const recoveredAlarm = await recoverAlarmSchedule(alarm);
+        setAlarms(
+          alarms.map((storedAlarm) =>
+            storedAlarm.id === alarm.id ? recoveredAlarm : storedAlarm,
+          ),
+        );
+        Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
+      }
     },
-    [alarms, setAlarms],
+    [alarms, setAlarms, t],
+  );
+
+  const handleSkipNext = useCallback(
+    async (alarm: Alarm) => {
+      const alarmToSchedule = getAlarmToSchedule(
+        { ...alarm, skipNextOccurrence: true },
+        settings.cycleConfig,
+      );
+      if (!alarmToSchedule) {
+        Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
+        return;
+      }
+
+      try {
+        await cancelAlarm(alarm);
+        const triggerId = await scheduleAlarm(alarmToSchedule);
+        const now = Date.now();
+        setAlarms(
+          alarms.map((current) =>
+            current.id === alarm.id
+              ? {
+                  ...alarmToSchedule,
+                  notifeeTriggerId: triggerId,
+                  updatedAt: now,
+                }
+              : current,
+          ),
+        );
+        requestClockWidgetUpdate();
+      } catch {
+        const recoveredAlarm = await recoverAlarmSchedule(alarm);
+        setAlarms(
+          alarms.map((storedAlarm) =>
+            storedAlarm.id === alarm.id ? recoveredAlarm : storedAlarm,
+          ),
+        );
+        Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
+      }
+    },
+    [alarms, setAlarms, settings.cycleConfig, t],
   );
 
   const renderItem = useCallback(
@@ -71,11 +152,18 @@ export function AlarmListScreen() {
         alarm={item}
         cycleConfig={settings.cycleConfig}
         onToggle={handleToggle}
+        onSkipNext={handleSkipNext}
         onPress={handlePress}
         onLongPress={handleLongPress}
       />
     ),
-    [settings.cycleConfig, handleToggle, handlePress, handleLongPress],
+    [
+      settings.cycleConfig,
+      handleToggle,
+      handleSkipNext,
+      handlePress,
+      handleLongPress,
+    ],
   );
 
   const keyExtractor = useCallback((item: Alarm) => item.id, []);

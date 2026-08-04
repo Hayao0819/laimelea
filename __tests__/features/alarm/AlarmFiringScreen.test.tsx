@@ -2,15 +2,22 @@ import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { DeviceEventEmitter } from "react-native";
 import { PaperProvider } from "react-native-paper";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { AlarmFiringScreen } from "../../../src/features/alarm/screens/AlarmFiringScreen";
-import { scheduleAlarm } from "../../../src/features/alarm/services/alarmScheduler";
-import { GradualVolumeManager } from "../../../src/features/alarm/services/gradualVolumeManager";
+import {
+  cancelAlarm,
+  scheduleAlarm,
+} from "../../../src/features/alarm/services/alarmScheduler";
+import { RingtoneService } from "../../../src/features/alarm/services/ringtoneService";
 import type { Alarm } from "../../../src/models/Alarm";
-import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+import {
+  type AppSettings,
+  DEFAULT_SETTINGS,
+} from "../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -58,18 +65,20 @@ jest.mock("@notifee/react-native", () => ({
   __esModule: true,
   default: {
     cancelNotification: jest.fn(() => Promise.resolve()),
+    cancelDisplayedNotification: jest.fn(() => Promise.resolve()),
   },
 }));
 
 jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
+  cancelAlarm: jest.fn(() => Promise.resolve()),
   scheduleAlarm: jest.fn(() => Promise.resolve("trigger-id")),
 }));
 
-jest.mock("../../../src/features/alarm/services/gradualVolumeManager", () => ({
-  GradualVolumeManager: jest.fn().mockImplementation(() => ({
-    start: jest.fn(),
-    stop: jest.fn(),
-  })),
+jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
+  RingtoneService: {
+    stopAlarmSound: jest.fn(() => Promise.resolve()),
+    setAlarmVolumeButtonBehavior: jest.fn(() => Promise.resolve()),
+  },
 }));
 
 let mockDismissalContainerProps: Record<string, unknown> = {};
@@ -139,8 +148,9 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
 async function renderWithProviders(
   store = createStore(),
   initialAlarms: Alarm[] = [],
+  initialSettings: AppSettings = DEFAULT_SETTINGS,
 ) {
-  store.set(settingsAtom, DEFAULT_SETTINGS);
+  store.set(settingsAtom, initialSettings);
   store.set(alarmsAtom, initialAlarms);
   const utils = await render(
     <JotaiProvider store={store}>
@@ -197,6 +207,18 @@ describe("AlarmFiringScreen", () => {
     expect(getByText("03:30")).toBeTruthy();
   });
 
+  it("displays the delivered occurrence after the next repeat is scheduled", async () => {
+    const { getByText } = await renderWithProviders(createStore(), [
+      makeAlarm({
+        targetTimestampMs: 20_000_000,
+        activeOccurrenceTimestampMs: 12_600_000,
+        lastDeliveredOccurrenceTimestampMs: 12_600_000,
+      }),
+    ]);
+
+    expect(getByText("03:30")).toBeTruthy();
+  });
+
   it('should show "Alarm not found" when alarm id doesn\'t match', async () => {
     mockRouteParams = { alarmId: "non-existent-alarm" };
     const { getByText, queryByTestId } = await renderWithProviders(
@@ -207,7 +229,7 @@ describe("AlarmFiringScreen", () => {
     expect(queryByTestId("alarm-firing-screen")).toBeNull();
   });
 
-  it("should call notifee.cancelNotification and update alarm on dismiss", async () => {
+  it("cancels the alarm and records the dismissal", async () => {
     const store = createStore();
     const alarm = makeAlarm();
     const { getByTestId } = await renderWithProviders(store, [alarm]);
@@ -217,13 +239,39 @@ describe("AlarmFiringScreen", () => {
     });
 
     await waitFor(() => {
-      expect(notifee.cancelNotification).toHaveBeenCalledWith("test-alarm-1");
+      expect(cancelAlarm).toHaveBeenCalledWith(alarm);
     });
 
-    // Verify alarms atom was updated with lastFiredAt
     const updatedAlarms = await store.get(alarmsAtom);
     expect(updatedAlarms[0].lastFiredAt).not.toBeNull();
     expect(updatedAlarms[0].lastFiredAt).toBeGreaterThan(0);
+  });
+
+  it("dismisses a delivered occurrence without cancelling its next repeat", async () => {
+    const store = createStore();
+    const alarm = makeAlarm({
+      repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+      targetTimestampMs: 2_000_000,
+      activeOccurrenceTimestampMs: 1_000_000,
+      lastDeliveredOccurrenceTimestampMs: 1_000_000,
+      notifeeTriggerId: "next-trigger",
+    });
+    const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("dismiss-button"));
+    });
+
+    expect(cancelAlarm).not.toHaveBeenCalled();
+    expect(notifee.cancelDisplayedNotification).toHaveBeenCalledWith(alarm.id);
+    expect(RingtoneService.stopAlarmSound).toHaveBeenCalledWith(alarm.id);
+    expect(scheduleAlarm).not.toHaveBeenCalled();
+    const updatedAlarms = await store.get(alarmsAtom);
+    expect(updatedAlarms[0]).toMatchObject({
+      targetTimestampMs: 2_000_000,
+      activeOccurrenceTimestampMs: null,
+      notifeeTriggerId: "next-trigger",
+    });
   });
 
   it("should navigate back on dismiss", async () => {
@@ -252,7 +300,6 @@ describe("AlarmFiringScreen", () => {
       expect(scheduleAlarm).toHaveBeenCalled();
     });
 
-    // Verify the scheduled alarm has updated targetTimestampMs
     const scheduledArg = (scheduleAlarm as jest.Mock).mock.calls[0][0];
     expect(scheduledArg.targetTimestampMs).toBeGreaterThan(Date.now() - 1000);
     expect(scheduledArg.snoozeCount).toBe(1);
@@ -273,14 +320,133 @@ describe("AlarmFiringScreen", () => {
     expect(updatedAlarms[0].snoozeCount).toBe(2);
   });
 
+  it("re-enables a delivered one-shot alarm when it is snoozed", async () => {
+    const store = createStore();
+    const occurrenceTimestampMs = Date.now() - 1_000;
+    const alarm = makeAlarm({
+      enabled: false,
+      targetTimestampMs: occurrenceTimestampMs,
+      activeOccurrenceTimestampMs: occurrenceTimestampMs,
+      lastDeliveredOccurrenceTimestampMs: occurrenceTimestampMs,
+    });
+    const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("snooze-button"));
+    });
+
+    expect(scheduleAlarm).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: true }),
+    );
+    expect((await store.get(alarmsAtom))[0].enabled).toBe(true);
+  });
+
+  it("resets the snooze count after final dismissal", async () => {
+    const store = createStore();
+    const occurrenceTimestampMs = Date.now() - 1_000;
+    const alarm = makeAlarm({
+      snoozeCount: 2,
+      repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+      targetTimestampMs: Date.now() + 60 * 60 * 1000,
+      activeOccurrenceTimestampMs: occurrenceTimestampMs,
+      lastDeliveredOccurrenceTimestampMs: occurrenceTimestampMs,
+    });
+    const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("dismiss-button"));
+    });
+
+    expect((await store.get(alarmsAtom))[0].snoozeCount).toBe(0);
+  });
+
+  it("ignores a second dismissal while the first is running", async () => {
+    let finishCancellation: (() => void) | undefined;
+    (cancelAlarm as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishCancellation = resolve;
+        }),
+    );
+    const { getByTestId } = await renderWithProviders(createStore(), [
+      makeAlarm(),
+    ]);
+
+    fireEvent.press(getByTestId("dismiss-button"));
+    fireEvent.press(getByTestId("dismiss-button"));
+    expect(cancelAlarm).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finishCancellation?.();
+    });
+  });
+
+  describe("hardware volume buttons", () => {
+    it("uses the configured snooze action", async () => {
+      await renderWithProviders(createStore(), [makeAlarm()]);
+
+      expect(RingtoneService.setAlarmVolumeButtonBehavior).toHaveBeenCalledWith(
+        "snooze",
+      );
+      await act(async () => {
+        DeviceEventEmitter.emit("AlarmVolumeButtonPressed", "snooze");
+      });
+      expect(scheduleAlarm).toHaveBeenCalled();
+    });
+
+    it("falls back to dismissal after the snooze limit", async () => {
+      await renderWithProviders(createStore(), [
+        makeAlarm({ snoozeCount: 3, snoozeMaxCount: 3 }),
+      ]);
+
+      expect(RingtoneService.setAlarmVolumeButtonBehavior).toHaveBeenCalledWith(
+        "dismiss",
+      );
+    });
+
+    it("leaves volume keys to Android in volume mode", async () => {
+      await renderWithProviders(createStore(), [makeAlarm()], {
+        ...DEFAULT_SETTINGS,
+        alarmDefaults: {
+          ...DEFAULT_SETTINGS.alarmDefaults,
+          volumeButtonBehavior: "volume",
+        },
+      });
+
+      expect(RingtoneService.setAlarmVolumeButtonBehavior).toHaveBeenCalledWith(
+        null,
+      );
+    });
+  });
+
+  it("bases snooze recurrence on the delivered occurrence", async () => {
+    const activeOccurrenceTimestampMs = 1_000_000;
+    const alarm = makeAlarm({
+      repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+      targetTimestampMs: 2_000_000,
+      activeOccurrenceTimestampMs,
+      lastDeliveredOccurrenceTimestampMs: activeOccurrenceTimestampMs,
+      notifeeTriggerId: "next-trigger",
+    });
+    const { getByTestId } = await renderWithProviders(createStore(), [alarm]);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("snooze-button"));
+    });
+
+    const snoozedAlarm = (scheduleAlarm as jest.Mock).mock.calls[0][0];
+    expect(cancelAlarm).toHaveBeenCalledWith(alarm);
+    expect(snoozedAlarm.recurrenceAnchorTimestampMs).toBe(
+      activeOccurrenceTimestampMs,
+    );
+    expect(snoozedAlarm.activeOccurrenceTimestampMs).toBeNull();
+  });
+
   it("should pass canSnooze=false to DismissalContainer when snoozeCount >= snoozeMaxCount", async () => {
-    // snoozeCount = 3, snoozeMaxCount = 3 => canSnooze = false
     const alarm = makeAlarm({ snoozeCount: 3, snoozeMaxCount: 3 });
     const { queryByTestId } = await renderWithProviders(createStore(), [alarm]);
 
-    // When canSnooze is false, snooze button should not be rendered
     expect(queryByTestId("snooze-button")).toBeNull();
-    // Dismiss button should still be present
     expect(queryByTestId("dismiss-button")).toBeTruthy();
   });
 
@@ -320,12 +486,6 @@ describe("AlarmFiringScreen", () => {
       mockRouteParams = { isPreview: true, alarm: makeAlarm() };
     });
 
-    it("should not start GradualVolumeManager in preview mode", async () => {
-      await renderWithProviders(createStore());
-
-      expect(GradualVolumeManager).not.toHaveBeenCalled();
-    });
-
     it("should display preview badge", async () => {
       const { getByTestId } = await renderWithProviders(createStore());
 
@@ -348,25 +508,25 @@ describe("AlarmFiringScreen", () => {
       expect(mockGoBack).toHaveBeenCalled();
     });
 
-    it("should not call notifee.cancelNotification on dismiss", async () => {
+    it("does not cancel a stored alarm on preview dismiss", async () => {
       const { getByTestId } = await renderWithProviders(createStore());
 
       await act(async () => {
         fireEvent.press(getByTestId("dismiss-button"));
       });
 
-      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(cancelAlarm).not.toHaveBeenCalled();
       expect(mockGoBack).toHaveBeenCalled();
     });
 
-    it("should not call notifee.cancelNotification on snooze", async () => {
+    it("does not schedule or cancel an alarm on preview snooze", async () => {
       const { getByTestId } = await renderWithProviders(createStore());
 
       await act(async () => {
         fireEvent.press(getByTestId("snooze-button"));
       });
 
-      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(cancelAlarm).not.toHaveBeenCalled();
       expect(scheduleAlarm).not.toHaveBeenCalled();
       expect(mockGoBack).toHaveBeenCalled();
     });
@@ -419,7 +579,7 @@ describe("AlarmFiringScreen", () => {
         jest.advanceTimersByTime(60 * 60 * 1000);
       });
 
-      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(cancelAlarm).not.toHaveBeenCalled();
       expect(mockGoBack).not.toHaveBeenCalled();
     });
 
@@ -431,7 +591,7 @@ describe("AlarmFiringScreen", () => {
         jest.advanceTimersByTime(60 * 60 * 1000);
       });
 
-      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(cancelAlarm).not.toHaveBeenCalled();
       expect(mockGoBack).not.toHaveBeenCalled();
     });
 
@@ -446,7 +606,7 @@ describe("AlarmFiringScreen", () => {
         jest.advanceTimersByTime(10 * 60 * 1000);
       });
 
-      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(cancelAlarm).not.toHaveBeenCalled();
       expect(mockGoBack).not.toHaveBeenCalled();
     });
   });
@@ -465,7 +625,7 @@ describe("AlarmFiringScreen", () => {
       });
 
       await waitFor(() => {
-        expect(notifee.cancelNotification).toHaveBeenCalledWith("test-alarm-1");
+        expect(cancelAlarm).toHaveBeenCalledWith(alarm);
         expect(mockGoBack).toHaveBeenCalled();
       });
     });
@@ -478,7 +638,7 @@ describe("AlarmFiringScreen", () => {
         jest.advanceTimersByTime(60 * 60 * 1000);
       });
 
-      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(cancelAlarm).not.toHaveBeenCalled();
       expect(mockGoBack).not.toHaveBeenCalled();
     });
 
@@ -505,7 +665,7 @@ describe("AlarmFiringScreen", () => {
         jest.advanceTimersByTime(10 * 60 * 1000 - 1);
       });
 
-      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(cancelAlarm).not.toHaveBeenCalled();
       expect(mockGoBack).not.toHaveBeenCalled();
 
       // Now advance past the threshold
@@ -514,9 +674,21 @@ describe("AlarmFiringScreen", () => {
       });
 
       await waitFor(() => {
-        expect(notifee.cancelNotification).toHaveBeenCalled();
+        expect(cancelAlarm).toHaveBeenCalled();
         expect(mockGoBack).toHaveBeenCalled();
       });
+    });
+
+    it("stops native alarm audio when the screen unmounts", async () => {
+      const { unmount } = await renderWithProviders(createStore(), [
+        makeAlarm(),
+      ]);
+
+      unmount();
+
+      expect(RingtoneService.stopAlarmSound).toHaveBeenCalledWith(
+        "test-alarm-1",
+      );
     });
   });
 });

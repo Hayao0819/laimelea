@@ -1,18 +1,27 @@
 import type { Alarm } from "../../../models/Alarm";
+import type { CycleConfig } from "../../../models/CustomTime";
 import { scheduleAlarm } from "./alarmScheduler";
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DEFAULT_CYCLE_LENGTH_MINUTES = 24 * 60;
 
-/**
- * Calculate the next alarm time for a repeating alarm.
- * Returns null if the alarm has no repeat and its target is in the past.
- */
-export function calculateNextAlarmTime(alarm: Alarm): number | null {
-  const now = Date.now();
+export function calculateNextAlarmTime(
+  alarm: Alarm,
+  cycleConfig?: CycleConfig,
+  now = Date.now(),
+): number | null {
+  if (
+    alarm.recurrenceAnchorTimestampMs != null &&
+    alarm.targetTimestampMs > now
+  ) {
+    return alarm.targetTimestampMs;
+  }
 
   if (!alarm.repeat) {
     return alarm.targetTimestampMs > now ? alarm.targetTimestampMs : null;
   }
+
+  const recurrenceAnchorTimestampMs =
+    alarm.recurrenceAnchorTimestampMs ?? alarm.targetTimestampMs;
 
   switch (alarm.repeat.type) {
     case "weekdays": {
@@ -20,7 +29,11 @@ export function calculateNextAlarmTime(alarm: Alarm): number | null {
       if (!weekdays || weekdays.length === 0) {
         return null;
       }
-      return calculateNextWeekdayTime(alarm.targetTimestampMs, weekdays, now);
+      return calculateNextWeekdayTime(
+        recurrenceAnchorTimestampMs,
+        weekdays,
+        now,
+      );
     }
     case "interval": {
       const intervalMs = alarm.repeat.intervalMs;
@@ -28,7 +41,7 @@ export function calculateNextAlarmTime(alarm: Alarm): number | null {
         return null;
       }
       return calculateNextIntervalTime(
-        alarm.targetTimestampMs,
+        recurrenceAnchorTimestampMs,
         intervalMs,
         now,
       );
@@ -38,9 +51,13 @@ export function calculateNextAlarmTime(alarm: Alarm): number | null {
       if (!cycleDays || cycleDays <= 0) {
         return null;
       }
-      const intervalMs = cycleDays * MS_PER_DAY;
+      const intervalMs =
+        cycleDays *
+        (cycleConfig?.cycleLengthMinutes ?? DEFAULT_CYCLE_LENGTH_MINUTES) *
+        60 *
+        1000;
       return calculateNextIntervalTime(
-        alarm.targetTimestampMs,
+        recurrenceAnchorTimestampMs,
         intervalMs,
         now,
       );
@@ -48,6 +65,60 @@ export function calculateNextAlarmTime(alarm: Alarm): number | null {
     default:
       return null;
   }
+}
+
+export function getAlarmToSchedule(
+  alarm: Alarm,
+  cycleConfig?: CycleConfig,
+  now = Date.now(),
+): Alarm | null {
+  const nextTime = calculateNextAlarmTime(alarm, cycleConfig, now);
+  if (nextTime === null) {
+    return null;
+  }
+
+  const scheduledTime = alarm.skipNextOccurrence
+    ? calculateNextAlarmTime(
+        { ...alarm, targetTimestampMs: nextTime },
+        cycleConfig,
+        nextTime,
+      )
+    : nextTime;
+
+  if (scheduledTime === null) {
+    return null;
+  }
+
+  return {
+    ...alarm,
+    targetTimestampMs: scheduledTime,
+    recurrenceAnchorTimestampMs: null,
+    skipNextOccurrence: false,
+  };
+}
+
+export async function scheduleNextAlarmOccurrence(
+  alarm: Alarm,
+  cycleConfig?: CycleConfig,
+  now = Date.now(),
+): Promise<Alarm> {
+  const alarmToSchedule = getAlarmToSchedule(alarm, cycleConfig, now);
+  if (alarmToSchedule === null) {
+    return {
+      ...alarm,
+      enabled: false,
+      notifeeTriggerId: null,
+      skipNextOccurrence: false,
+      updatedAt: now,
+    };
+  }
+
+  const triggerId = await scheduleAlarm(alarmToSchedule);
+  return {
+    ...alarmToSchedule,
+    notifeeTriggerId: triggerId,
+    updatedAt: now,
+  };
 }
 
 function calculateNextWeekdayTime(
@@ -64,7 +135,6 @@ function calculateNextWeekdayTime(
   const nowDate = new Date(now);
   const currentDay = nowDate.getDay(); // 0=Sun, 6=Sat
 
-  // Check each of the next 7 days (today through 6 days ahead)
   for (let offset = 0; offset < 7; offset++) {
     const candidateDay = (currentDay + offset) % 7;
     if (!weekdays.includes(candidateDay)) {
@@ -86,7 +156,6 @@ function calculateNextWeekdayTime(
     }
   }
 
-  // All candidate days this week are in the past; wrap to next week's first match
   const firstWeekday = weekdays
     .slice()
     .sort((a, b) => a - b)
@@ -95,7 +164,6 @@ function calculateNextWeekdayTime(
     return null;
   }
 
-  // Find the soonest matching weekday in the next full week
   for (let offset = 1; offset <= 7; offset++) {
     const candidateDay = (currentDay + offset) % 7;
     if (!weekdays.includes(candidateDay)) {
@@ -129,36 +197,51 @@ function calculateNextIntervalTime(
     return targetTimestampMs;
   }
 
-  // Calculate how many intervals have passed and jump to the next one
   const elapsed = now - targetTimestampMs;
   const intervalsPassed = Math.floor(elapsed / intervalMs);
   const nextTime = targetTimestampMs + (intervalsPassed + 1) * intervalMs;
   return nextTime;
 }
 
-/**
- * Reschedule all enabled alarms that have a future fire time.
- * Each alarm is scheduled independently so one failure does not block others.
- */
 export async function rescheduleAllEnabledAlarms(
   alarms: Alarm[],
-): Promise<void> {
-  const enabledAlarms = alarms.filter((a) => a.enabled);
+  cycleConfig?: CycleConfig,
+): Promise<Alarm[]> {
+  const now = Date.now();
+  const updatedAlarms: Alarm[] = [];
 
-  for (const alarm of enabledAlarms) {
+  for (const alarm of alarms) {
+    if (!alarm.enabled) {
+      updatedAlarms.push(alarm);
+      continue;
+    }
     try {
-      const nextTime = calculateNextAlarmTime(alarm);
-      if (nextTime === null) {
+      const alarmToSchedule = getAlarmToSchedule(alarm, cycleConfig, now);
+      if (alarmToSchedule === null) {
+        updatedAlarms.push({
+          ...alarm,
+          enabled: false,
+          notifeeTriggerId: null,
+          skipNextOccurrence: false,
+          updatedAt: now,
+        });
         continue;
       }
-
-      const alarmToSchedule: Alarm = {
-        ...alarm,
-        targetTimestampMs: nextTime,
-      };
-      await scheduleAlarm(alarmToSchedule);
+      const triggerId = await scheduleAlarm(alarmToSchedule);
+      updatedAlarms.push({
+        ...alarmToSchedule,
+        notifeeTriggerId: triggerId,
+        updatedAt:
+          alarmToSchedule.targetTimestampMs === alarm.targetTimestampMs &&
+          alarmToSchedule.skipNextOccurrence === alarm.skipNextOccurrence &&
+          alarm.notifeeTriggerId === triggerId
+            ? alarm.updatedAt
+            : now,
+      });
     } catch {
-      // Individual alarm failure should not prevent other alarms from being scheduled
+      updatedAlarms.push(alarm);
     }
   }
+
+  return updatedAlarms;
 }

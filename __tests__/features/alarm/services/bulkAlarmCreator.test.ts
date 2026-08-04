@@ -123,7 +123,7 @@ describe("generateBulkAlarms", () => {
     expect(result.alarms).toHaveLength(3);
   });
 
-  it("should set warning when total alarms reach the limit", () => {
+  it("allows exactly 50 enabled alarms", () => {
     const params = makeParams({
       fromHour: 7,
       fromMinute: 0,
@@ -135,11 +135,23 @@ describe("generateBulkAlarms", () => {
       params,
       defaultCycleConfig,
       defaults,
-      ANDROID_ALARM_TRIGGER_LIMIT - 3,
+      ANDROID_ALARM_TRIGGER_LIMIT - 5,
     );
 
-    // 5 alarms + (50-3)=47 existing = 52 >= 50
+    expect(result.warning).toBeNull();
+    expect(result.limitExceeded).toBe(false);
+  });
+
+  it("rejects 51 enabled alarms", () => {
+    const result = generateBulkAlarms(
+      makeParams(),
+      defaultCycleConfig,
+      defaults,
+      ANDROID_ALARM_TRIGGER_LIMIT - 4,
+    );
+
     expect(result.warning).toBe("alarm.bulkWarningLimit");
+    expect(result.limitExceeded).toBe(true);
   });
 
   it("should not set warning when under limit", () => {
@@ -147,6 +159,7 @@ describe("generateBulkAlarms", () => {
     const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
 
     expect(result.warning).toBeNull();
+    expect(result.limitExceeded).toBe(false);
   });
 
   it("should return empty array when interval is 0", () => {
@@ -209,6 +222,26 @@ describe("generateBulkAlarms", () => {
     for (const alarm of result.alarms) {
       expect(typeof alarm.targetTimestampMs).toBe("number");
       expect(alarm.targetTimestampMs).toBeGreaterThan(0);
+    }
+  });
+
+  it("schedules custom times in a future cycle when the base time is old", () => {
+    const result = generateBulkAlarms(
+      makeParams({
+        fromHour: 2,
+        fromMinute: 0,
+        toHour: 4,
+        toMinute: 0,
+        intervalMinutes: 60,
+        timeSystem: "custom",
+      }),
+      defaultCycleConfig,
+      defaults,
+      0,
+    );
+
+    for (const alarm of result.alarms) {
+      expect(alarm.targetTimestampMs).toBeGreaterThan(Date.now());
     }
   });
 

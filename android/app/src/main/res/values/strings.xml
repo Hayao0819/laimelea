@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Laimelea</string>
+    <string name="alarm_audio_title">Alarm is ringing</string>
+    <string name="alarm_audio_description">Open the alarm notification to dismiss or snooze</string>
 </resources>

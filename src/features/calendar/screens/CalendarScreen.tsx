@@ -1,6 +1,12 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useAtomValue, useSetAtom } from "jotai";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import {
@@ -15,17 +21,27 @@ import {
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
-import { visibleCalendarEventsAtom } from "../../../atoms/calendarAtoms";
+import {
+  resolvedCalendarEventsAtom,
+  visibleCalendarEventsAtom,
+} from "../../../atoms/calendarAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import { syncCalendarAlarms } from "../../../core/calendar/calendarAlarmSync";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
 import type { Alarm } from "../../../models/Alarm";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
-import { scheduleAlarm } from "../../alarm/services/alarmScheduler";
+import {
+  cancelAlarm,
+  scheduleAlarm,
+} from "../../alarm/services/alarmScheduler";
 import { AgendaView } from "../components/AgendaView";
 import { MonthView } from "../components/MonthView";
 import { WeekView } from "../components/WeekView";
 import { useCalendarView } from "../hooks/useCalendarView";
+import {
+  LinkedAlarmTransactionError,
+  rescheduleLinkedAlarm,
+  scheduleNewLinkedAlarm,
+} from "../services/linkedAlarmTransaction";
 
 function formatNavigationTitle(
   viewMode: CalendarViewMode,
@@ -69,38 +85,202 @@ export function CalendarScreen() {
     goToNext,
   } = useCalendarView();
   const settings = useAtomValue(resolvedSettingsAtom);
+  const alarms = useAtomValue(alarmsAtom);
+  const alarmsRef = useRef(alarms);
+  alarmsRef.current = alarms;
   const setAlarms = useSetAtom(alarmsAtom);
   const { error, sync, isStale } = useCalendarSync();
+  const allEvents = useAtomValue(resolvedCalendarEventsAtom);
   const events = useAtomValue(visibleCalendarEventsAtom);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [rescheduleAttempt, setRescheduleAttempt] = useState(0);
+  const linkedAlarmSyncQueue = useRef(Promise.resolve());
+  const failedReschedules = useRef(new Set<string>());
+  const hasFocused = useRef(false);
+  const mounted = useRef(true);
 
-  // Auto-sync when tab is focused and cache is stale
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
+      if (hasFocused.current) {
+        failedReschedules.current.clear();
+        setRescheduleAttempt((attempt) => attempt + 1);
+      } else {
+        hasFocused.current = true;
+      }
       if (isStale) {
         sync();
       }
     }, [isStale, sync]),
   );
 
-  // Sync linked alarm times when calendar events change
   useEffect(() => {
-    if (events.length === 0) return;
-    setAlarms((prevAlarms) => {
-      // Guard: atomWithStorage with async storage may pass a Promise
-      // before the stored value is resolved
-      if (!Array.isArray(prevAlarms)) return prevAlarms;
-      const linkedAlarms = prevAlarms.filter(
-        (a) => a.linkedCalendarEventId != null,
-      );
-      if (linkedAlarms.length === 0) return prevAlarms;
-      const { updatedAlarms } = syncCalendarAlarms(prevAlarms, events);
-      const hasChanges = updatedAlarms.some(
-        (a, i) => a.updatedAt !== prevAlarms[i]?.updatedAt,
-      );
-      return hasChanges ? updatedAlarms : prevAlarms;
-    });
-  }, [events, setAlarms]);
+    if (!Array.isArray(alarms) || allEvents.length === 0) return;
+
+    const eventsById = new Map<string, CalendarEvent>();
+    for (const event of allEvents) {
+      eventsById.set(event.id, event);
+      eventsById.set(event.sourceEventId, event);
+    }
+
+    const synchronize = async () => {
+      const updatedAlarms = new Map<
+        string,
+        { previousTargetTimestampMs: number; alarm: Alarm }
+      >();
+      let failed = false;
+      let movedToPast = false;
+
+      const reconcileStaleMutation = async (
+        originalAlarm: Alarm,
+        scheduledAlarm: Alarm,
+      ): Promise<boolean> => {
+        const latestAlarm = alarmsRef.current.find(
+          (current) => current.id === originalAlarm.id,
+        );
+        if (
+          latestAlarm &&
+          latestAlarm.targetTimestampMs === originalAlarm.targetTimestampMs &&
+          latestAlarm.linkedCalendarEventId ===
+            originalAlarm.linkedCalendarEventId
+        ) {
+          return false;
+        }
+
+        await cancelAlarm(scheduledAlarm).catch(() => {});
+        if (latestAlarm?.enabled) {
+          try {
+            const notifeeTriggerId = await scheduleAlarm(latestAlarm);
+            setAlarms((current) =>
+              Array.isArray(current)
+                ? current.map((item) =>
+                    item.id === latestAlarm.id &&
+                    item.targetTimestampMs === latestAlarm.targetTimestampMs
+                      ? { ...item, notifeeTriggerId }
+                      : item,
+                  )
+                : current,
+            );
+          } catch {
+            setAlarms((current) =>
+              Array.isArray(current)
+                ? current.map((item) =>
+                    item.id === latestAlarm.id &&
+                    item.targetTimestampMs === latestAlarm.targetTimestampMs
+                      ? {
+                          ...item,
+                          enabled: false,
+                          notifeeTriggerId: null,
+                          updatedAt: Date.now(),
+                        }
+                      : item,
+                  )
+                : current,
+            );
+          }
+        }
+        return true;
+      };
+
+      for (const capturedAlarm of alarms) {
+        const alarm = alarmsRef.current.find(
+          (current) => current.id === capturedAlarm.id,
+        );
+        if (
+          !alarm ||
+          alarm.targetTimestampMs !== capturedAlarm.targetTimestampMs ||
+          alarm.linkedCalendarEventId !== capturedAlarm.linkedCalendarEventId ||
+          alarm.linkedCalendarEventId == null
+        ) {
+          continue;
+        }
+        const event = eventsById.get(alarm.linkedCalendarEventId);
+        if (!event) continue;
+
+        const targetTimestampMs =
+          event.startTimestampMs + alarm.linkedEventOffsetMs;
+        if (targetTimestampMs === alarm.targetTimestampMs) continue;
+
+        if (!alarm.enabled) {
+          updatedAlarms.set(alarm.id, {
+            previousTargetTimestampMs: alarm.targetTimestampMs,
+            alarm: {
+              ...alarm,
+              targetTimestampMs,
+              updatedAt: Date.now(),
+            },
+          });
+          continue;
+        }
+
+        const rescheduleKey = `${alarm.id}:${alarm.targetTimestampMs}:${targetTimestampMs}`;
+        if (failedReschedules.current.has(rescheduleKey)) continue;
+
+        try {
+          const updatedAlarm = await rescheduleLinkedAlarm(
+            alarm,
+            targetTimestampMs,
+          );
+          if (await reconcileStaleMutation(alarm, updatedAlarm)) continue;
+          updatedAlarms.set(alarm.id, {
+            previousTargetTimestampMs: alarm.targetTimestampMs,
+            alarm: updatedAlarm,
+          });
+          failedReschedules.current.delete(rescheduleKey);
+          movedToPast ||= !updatedAlarm.enabled;
+        } catch (rescheduleError) {
+          const recoveredAlarm =
+            rescheduleError instanceof LinkedAlarmTransactionError
+              ? rescheduleError.recoveredAlarm
+              : undefined;
+          if (await reconcileStaleMutation(alarm, recoveredAlarm ?? alarm)) {
+            continue;
+          }
+          failed = true;
+          failedReschedules.current.add(rescheduleKey);
+          updatedAlarms.set(alarm.id, {
+            previousTargetTimestampMs: alarm.targetTimestampMs,
+            alarm: recoveredAlarm ?? {
+              ...alarm,
+              enabled: false,
+              notifeeTriggerId: null,
+              updatedAt: Date.now(),
+            },
+          });
+        }
+      }
+
+      if (updatedAlarms.size > 0) {
+        setAlarms((current) =>
+          Array.isArray(current)
+            ? current.map((item) => {
+                const update = updatedAlarms.get(item.id);
+                return update &&
+                  item.targetTimestampMs === update.previousTargetTimestampMs
+                  ? update.alarm
+                  : item;
+              })
+            : current,
+        );
+      }
+      if (mounted.current && failed) {
+        setSnackbar(t("calendar.alarmRescheduleFailed"));
+      } else if (mounted.current && movedToPast) {
+        setSnackbar(t("calendar.alarmTimePassed"));
+      }
+    };
+
+    linkedAlarmSyncQueue.current = linkedAlarmSyncQueue.current.then(
+      synchronize,
+      synchronize,
+    );
+  }, [alarms, allEvents, rescheduleAttempt, setAlarms, t]);
 
   const handleCreateAlarm = useCallback(
     async (event: CalendarEvent) => {
@@ -109,7 +289,7 @@ export function CalendarScreen() {
       const { alarmDefaults } = settings;
 
       const alarm: Alarm = {
-        id: `alarm-${now}`,
+        id: `alarm-${now}-${Math.random().toString(36).slice(2, 8)}`,
         label: event.title,
         enabled: true,
         targetTimestampMs: event.startTimestampMs + offsetMs,
@@ -133,9 +313,22 @@ export function CalendarScreen() {
         updatedAt: now,
       };
 
-      setAlarms((prev) => (Array.isArray(prev) ? [...prev, alarm] : [alarm]));
-      await scheduleAlarm(alarm);
-      setSnackbar(t("calendar.alarmCreated", { title: event.title }));
+      try {
+        const scheduledAlarm = await scheduleNewLinkedAlarm(alarm);
+        setAlarms((prev) =>
+          Array.isArray(prev) ? [...prev, scheduledAlarm] : [scheduledAlarm],
+        );
+        setSnackbar(t("calendar.alarmCreated", { title: event.title }));
+      } catch (scheduleError) {
+        setSnackbar(
+          t(
+            scheduleError instanceof LinkedAlarmTransactionError &&
+              scheduleError.reason === "past"
+              ? "calendar.alarmTimePassed"
+              : "calendar.alarmScheduleFailed",
+          ),
+        );
+      }
     },
     [settings, setAlarms, t],
   );

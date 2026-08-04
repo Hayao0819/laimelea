@@ -1,19 +1,16 @@
-import { customToReal } from "../../../core/time/conversions";
 import type { Alarm, BulkAlarmParams } from "../../../models/Alarm";
 import type { CycleConfig } from "../../../models/CustomTime";
 import type { AlarmDefaults } from "../../../models/Settings";
+import { getNextAlarmTimestamp } from "./alarmTime";
 
 export const ANDROID_ALARM_TRIGGER_LIMIT = 50;
 
 export interface BulkAlarmResult {
   alarms: Alarm[];
   warning: string | null;
+  limitExceeded: boolean;
 }
 
-/**
- * Generate time slots (in minutes from cycle/day start) between from and to
- * with the given interval. Handles wraparound when to <= from.
- */
 function generateTimeSlots(
   fromMinutes: number,
   toMinutes: number,
@@ -22,7 +19,6 @@ function generateTimeSlots(
 ): number[] {
   if (intervalMinutes <= 0) return [];
 
-  // from == to means exactly one alarm at that time
   if (fromMinutes === toMinutes) {
     return [fromMinutes];
   }
@@ -40,48 +36,27 @@ function generateTimeSlots(
   return slots;
 }
 
-/**
- * Convert a time slot (minutes from start) to a real timestamp.
- * If the computed timestamp is in the past, advance by one cycle/day.
- */
 function slotToTimestamp(
   minutes: number,
   timeSystem: "custom" | "24h",
   cycleConfig: CycleConfig,
+  now: number,
 ): number {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-
-  if (timeSystem === "custom") {
-    const ts = customToReal(
-      { day: 0, hours, minutes: mins, seconds: 0 },
-      cycleConfig,
-    );
-    if (ts <= Date.now()) {
-      const cycleLengthMs = cycleConfig.cycleLengthMinutes * 60 * 1000;
-      return ts + cycleLengthMs;
-    }
-    return ts;
-  }
-
-  const now = new Date();
-  const target = new Date(now);
-  target.setHours(hours, mins, 0, 0);
-  if (target.getTime() <= now.getTime()) {
-    target.setDate(target.getDate() + 1);
-  }
-  return target.getTime();
+  return getNextAlarmTimestamp(
+    { hours, minutes: mins },
+    timeSystem,
+    cycleConfig,
+    now,
+  );
 }
 
-/**
- * Generate multiple alarms from bulk parameters.
- * Pure function - does not schedule alarms (caller is responsible for that).
- */
 export function generateBulkAlarms(
   params: BulkAlarmParams,
   cycleConfig: CycleConfig,
   defaults: AlarmDefaults,
-  existingAlarmCount: number,
+  existingEnabledAlarmCount: number,
 ): BulkAlarmResult {
   const maxMinutes =
     params.timeSystem === "custom" ? cycleConfig.cycleLengthMinutes : 1440;
@@ -106,6 +81,7 @@ export function generateBulkAlarms(
       slotMinutes,
       params.timeSystem,
       cycleConfig,
+      now,
     ),
     setInTimeSystem: params.timeSystem,
     repeat: null,
@@ -127,9 +103,9 @@ export function generateBulkAlarms(
     updatedAt: now,
   }));
 
-  const totalCount = existingAlarmCount + alarms.length;
-  const warning =
-    totalCount >= ANDROID_ALARM_TRIGGER_LIMIT ? `alarm.bulkWarningLimit` : null;
+  const totalCount = existingEnabledAlarmCount + alarms.length;
+  const limitExceeded = totalCount > ANDROID_ALARM_TRIGGER_LIMIT;
+  const warning = limitExceeded ? `alarm.bulkWarningLimit` : null;
 
-  return { alarms, warning };
+  return { alarms, warning, limitExceeded };
 }

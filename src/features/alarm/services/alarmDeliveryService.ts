@@ -1,0 +1,198 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { STORAGE_KEYS } from "../../../core/storage/keys";
+import type { Alarm } from "../../../models/Alarm";
+import { type AppSettings, DEFAULT_SETTINGS } from "../../../models/Settings";
+import { scheduleNextAlarmOccurrence } from "./alarmRescheduler";
+
+export interface AlarmDeliveryData {
+  alarmId?: unknown;
+  occurrenceTimestampMs?: unknown;
+}
+
+export interface AlarmDeliveryResult {
+  handled: boolean;
+  alarms: Alarm[] | null;
+  updatedAlarm: Alarm | null;
+  rescheduleFailed: boolean;
+}
+
+export type AlarmDeliveryUpdateHandler = (alarms: Alarm[]) => void;
+
+let deliveryQueue: Promise<void> = Promise.resolve();
+
+function enqueueDelivery<T>(task: () => Promise<T>): Promise<T> {
+  const result = deliveryQueue.then(task, task);
+  deliveryQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+function parseStoredSettings(rawSettings: string | null): AppSettings {
+  if (!rawSettings) {
+    return DEFAULT_SETTINGS;
+  }
+  let stored: Partial<AppSettings>;
+  try {
+    stored = JSON.parse(rawSettings) as Partial<AppSettings>;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    cycleConfig: {
+      ...DEFAULT_SETTINGS.cycleConfig,
+      ...stored.cycleConfig,
+    },
+  };
+}
+
+function parseOccurrenceTimestamp(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+async function processAlarmDeliveryInternal(
+  data: AlarmDeliveryData | undefined,
+  now: number,
+): Promise<AlarmDeliveryResult> {
+  if (typeof data?.alarmId !== "string") {
+    return {
+      handled: false,
+      alarms: null,
+      updatedAlarm: null,
+      rescheduleFailed: false,
+    };
+  }
+
+  const [rawAlarms, rawSettings] = await Promise.all([
+    AsyncStorage.getItem(STORAGE_KEYS.ALARMS),
+    AsyncStorage.getItem(STORAGE_KEYS.SETTINGS),
+  ]);
+  if (!rawAlarms) {
+    return {
+      handled: false,
+      alarms: null,
+      updatedAlarm: null,
+      rescheduleFailed: false,
+    };
+  }
+
+  let alarms: Alarm[];
+  try {
+    alarms = JSON.parse(rawAlarms) as Alarm[];
+  } catch {
+    return {
+      handled: false,
+      alarms: null,
+      updatedAlarm: null,
+      rescheduleFailed: false,
+    };
+  }
+  const alarmIndex = alarms.findIndex((alarm) => alarm.id === data.alarmId);
+  if (alarmIndex < 0) {
+    return {
+      handled: false,
+      alarms,
+      updatedAlarm: null,
+      rescheduleFailed: false,
+    };
+  }
+
+  const alarm = alarms[alarmIndex];
+  if (!alarm.enabled) {
+    return {
+      handled: false,
+      alarms,
+      updatedAlarm: alarm,
+      rescheduleFailed: false,
+    };
+  }
+  const suppliedOccurrenceTimestampMs = parseOccurrenceTimestamp(
+    data.occurrenceTimestampMs,
+  );
+  const occurrenceTimestampMs =
+    suppliedOccurrenceTimestampMs ??
+    alarm.activeOccurrenceTimestampMs ??
+    alarm.targetTimestampMs;
+
+  if (alarm.lastDeliveredOccurrenceTimestampMs === occurrenceTimestampMs) {
+    return {
+      handled: false,
+      alarms,
+      updatedAlarm: alarm,
+      rescheduleFailed: false,
+    };
+  }
+  if (
+    suppliedOccurrenceTimestampMs != null &&
+    suppliedOccurrenceTimestampMs !== alarm.targetTimestampMs &&
+    suppliedOccurrenceTimestampMs !== alarm.activeOccurrenceTimestampMs
+  ) {
+    return {
+      handled: false,
+      alarms,
+      updatedAlarm: alarm,
+      rescheduleFailed: false,
+    };
+  }
+
+  const settings = parseStoredSettings(rawSettings);
+  const deliveredAlarm: Alarm = {
+    ...alarm,
+    targetTimestampMs: occurrenceTimestampMs,
+  };
+  let nextAlarm: Alarm;
+  let rescheduleFailed = false;
+  try {
+    nextAlarm = await scheduleNextAlarmOccurrence(
+      deliveredAlarm,
+      settings.cycleConfig,
+      Math.max(now, occurrenceTimestampMs),
+    );
+  } catch {
+    rescheduleFailed = true;
+    nextAlarm = {
+      ...deliveredAlarm,
+      enabled: false,
+      notifeeTriggerId: null,
+      updatedAt: now,
+    };
+  }
+  const updatedAlarm: Alarm = {
+    ...nextAlarm,
+    activeOccurrenceTimestampMs: occurrenceTimestampMs,
+    lastDeliveredOccurrenceTimestampMs: occurrenceTimestampMs,
+  };
+  const updatedAlarms = alarms.map((storedAlarm, index) =>
+    index === alarmIndex ? updatedAlarm : storedAlarm,
+  );
+
+  await AsyncStorage.setItem(
+    STORAGE_KEYS.ALARMS,
+    JSON.stringify(updatedAlarms),
+  );
+  return {
+    handled: true,
+    alarms: updatedAlarms,
+    updatedAlarm,
+    rescheduleFailed,
+  };
+}
+
+export async function processAlarmDelivery(
+  data: AlarmDeliveryData | undefined,
+  onAlarmsUpdated?: AlarmDeliveryUpdateHandler,
+  now = Date.now(),
+): Promise<AlarmDeliveryResult> {
+  return enqueueDelivery(async () => {
+    const result = await processAlarmDeliveryInternal(data, now);
+    if (result.handled && result.alarms) {
+      onAlarmsUpdated?.(result.alarms);
+    }
+    return result;
+  });
+}

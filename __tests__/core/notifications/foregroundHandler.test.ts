@@ -1,8 +1,14 @@
 import notifee from "@notifee/react-native";
 
 import { setupForegroundHandler } from "../../../src/core/notifications/foregroundHandler";
+import { processAlarmDelivery } from "../../../src/features/alarm/services/alarmDeliveryService";
 
-let registeredCallback: (event: { type: number; detail: unknown }) => void;
+let registeredCallback: (event: {
+  type: number;
+  detail: {
+    notification?: { data?: Record<string, unknown> };
+  };
+}) => Promise<void>;
 
 jest.mock("@notifee/react-native", () => ({
   __esModule: true,
@@ -13,6 +19,10 @@ jest.mock("@notifee/react-native", () => ({
     }),
   },
   EventType: { PRESS: 1, ACTION_PRESS: 7, DISMISSED: 2, DELIVERED: 3 },
+}));
+
+jest.mock("../../../src/features/alarm/services/alarmDeliveryService", () => ({
+  processAlarmDelivery: jest.fn().mockResolvedValue({ handled: true }),
 }));
 
 describe("setupForegroundHandler", () => {
@@ -46,6 +56,37 @@ describe("setupForegroundHandler", () => {
     });
 
     expect(onAlarmFired).toHaveBeenCalledWith("alarm-123");
+  });
+
+  it("reschedules a delivered alarm and forwards the persisted alarms", async () => {
+    const onAlarmsUpdated = jest.fn();
+    const data = {
+      alarmId: "alarm-123",
+      occurrenceTimestampMs: "1000000",
+    };
+    setupForegroundHandler(onAlarmFired, onAlarmsUpdated);
+
+    await registeredCallback({
+      type: 3,
+      detail: { notification: { data } },
+    });
+
+    expect(processAlarmDelivery).toHaveBeenCalledWith(data, onAlarmsUpdated);
+    expect(onAlarmFired).not.toHaveBeenCalled();
+  });
+
+  it("propagates delivery persistence failures", async () => {
+    (processAlarmDelivery as jest.Mock).mockRejectedValueOnce(
+      new Error("schedule failed"),
+    );
+    setupForegroundHandler(onAlarmFired);
+
+    await expect(
+      registeredCallback({
+        type: 3,
+        detail: { notification: { data: { alarmId: "alarm-123" } } },
+      }),
+    ).rejects.toThrow("schedule failed");
   });
 
   it("should call onAlarmFired on ACTION_PRESS event with alarmId", () => {

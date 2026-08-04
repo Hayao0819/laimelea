@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { rescheduleAllEnabledAlarms } from "../../../../src/features/alarm/services/alarmRescheduler";
 import type { Alarm } from "../../../../src/models/Alarm";
+import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -63,6 +64,9 @@ describe("bootRescheduleTask", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (rescheduleAllEnabledAlarms as jest.Mock).mockImplementation(
+      (alarms: Alarm[]) => Promise.resolve(alarms),
+    );
     // Re-import to get a fresh module each time
     bootRescheduleTask =
       require("../../../../src/features/alarm/services/bootRescheduleTask").default;
@@ -77,7 +81,14 @@ describe("bootRescheduleTask", () => {
     await bootRescheduleTask();
 
     expect(AsyncStorage.getItem).toHaveBeenCalledWith("@laimelea/alarms");
-    expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(alarms);
+    expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(
+      alarms,
+      DEFAULT_SETTINGS.cycleConfig,
+    );
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      "@laimelea/alarms",
+      JSON.stringify(alarms),
+    );
   });
 
   it("does nothing when AsyncStorage has no alarms", async () => {

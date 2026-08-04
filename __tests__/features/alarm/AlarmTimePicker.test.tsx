@@ -13,6 +13,13 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en" },
+  }),
+}));
+
 function renderPicker(
   props: Partial<React.ComponentProps<typeof AlarmTimePicker>> = {},
 ) {

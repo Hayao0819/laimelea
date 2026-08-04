@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, cleanup, fireEvent, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -91,6 +91,8 @@ describe("AgendaView", () => {
   });
 
   afterEach(() => {
+    cleanup();
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 

@@ -1,7 +1,11 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authorize, refresh, revoke } from "react-native-app-auth";
 
-import { STORAGE_KEYS } from "../../storage/keys";
+import { SECURE_STORAGE_SERVICES, STORAGE_KEYS } from "../../storage/keys";
+import {
+  getSecureItem,
+  removeSecureItem,
+  setSecureItem,
+} from "../../storage/secureStorage";
 import { extractEmailFromIdToken } from "../aosp/tokenUtils";
 import type { AuthResult, PlatformAuthService } from "../types";
 import { HMS_AUTH_CONFIG } from "./authConfig";
@@ -15,22 +19,34 @@ interface StoredAuthState {
 }
 
 async function loadAuthState(): Promise<StoredAuthState | null> {
-  const json = await AsyncStorage.getItem(STORAGE_KEYS.HMS_AUTH_STATE);
+  const json = await getSecureItem(
+    SECURE_STORAGE_SERVICES.HMS_AUTH_STATE,
+    STORAGE_KEYS.HMS_AUTH_STATE,
+  );
   if (!json) {
     return null;
   }
-  return JSON.parse(json);
+  try {
+    return JSON.parse(json) as StoredAuthState;
+  } catch {
+    await clearAuthState();
+    return null;
+  }
 }
 
 async function saveAuthState(state: StoredAuthState): Promise<void> {
-  await AsyncStorage.setItem(
-    STORAGE_KEYS.HMS_AUTH_STATE,
+  await setSecureItem(
+    SECURE_STORAGE_SERVICES.HMS_AUTH_STATE,
     JSON.stringify(state),
+    STORAGE_KEYS.HMS_AUTH_STATE,
   );
 }
 
 async function clearAuthState(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEYS.HMS_AUTH_STATE);
+  await removeSecureItem(
+    SECURE_STORAGE_SERVICES.HMS_AUTH_STATE,
+    STORAGE_KEYS.HMS_AUTH_STATE,
+  );
 }
 
 export function createHmsAuthService(): PlatformAuthService {
@@ -86,7 +102,6 @@ export function createHmsAuthService(): PlatformAuthService {
         return state.accessToken;
       }
 
-      // Token expired — attempt refresh
       try {
         const result = await refresh(HMS_AUTH_CONFIG, {
           refreshToken: state.refreshToken,
@@ -103,7 +118,6 @@ export function createHmsAuthService(): PlatformAuthService {
 
         return result.accessToken;
       } catch {
-        // Refresh failed — user needs to sign in again
         return null;
       }
     },

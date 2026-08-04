@@ -1,22 +1,36 @@
 import { HMS_AUTH_CONFIG } from "../../../../src/core/platform/hms/authConfig";
 import { createHmsAuthService } from "../../../../src/core/platform/hms/authService";
-import { STORAGE_KEYS } from "../../../../src/core/storage/keys";
+import { SECURE_STORAGE_SERVICES } from "../../../../src/core/storage/keys";
 
 const mockStore: Record<string, string> = {};
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: {
-    getItem: jest.fn((key: string) => Promise.resolve(mockStore[key] ?? null)),
-    setItem: jest.fn((key: string, value: string) => {
-      mockStore[key] = value;
-      return Promise.resolve();
-    }),
-    removeItem: jest.fn((key: string) => {
-      delete mockStore[key];
-      return Promise.resolve();
-    }),
+    getItem: jest.fn(() => Promise.resolve(null)),
+    removeItem: jest.fn(() => Promise.resolve()),
   },
+}));
+
+jest.mock("react-native-keychain", () => ({
+  __esModule: true,
+  getGenericPassword: jest.fn(({ service }: { service: string }) =>
+    Promise.resolve(
+      mockStore[service]
+        ? { username: "laimelea", password: mockStore[service] }
+        : false,
+    ),
+  ),
+  setGenericPassword: jest.fn(
+    (_username: string, password: string, { service }: { service: string }) => {
+      mockStore[service] = password;
+      return Promise.resolve(true);
+    },
+  ),
+  resetGenericPassword: jest.fn(({ service }: { service: string }) => {
+    delete mockStore[service];
+    return Promise.resolve(true);
+  }),
 }));
 
 const mockAuthorize = jest.fn();
@@ -86,7 +100,9 @@ describe("createHmsAuthService", () => {
         idToken: "valid-id-token",
       });
 
-      const stored = JSON.parse(mockStore[STORAGE_KEYS.HMS_AUTH_STATE]);
+      const stored = JSON.parse(
+        mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE],
+      );
       expect(stored).toEqual({
         accessToken: "access-token-123",
         refreshToken: "refresh-token-456",
@@ -111,14 +127,16 @@ describe("createHmsAuthService", () => {
       expect(result.email).toBe("");
       expect(result.idToken).toBeUndefined();
 
-      const stored = JSON.parse(mockStore[STORAGE_KEYS.HMS_AUTH_STATE]);
+      const stored = JSON.parse(
+        mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE],
+      );
       expect(stored.email).toBe("");
     });
   });
 
   describe("signOut", () => {
     it("should revoke token and clear auth state", async () => {
-      mockStore[STORAGE_KEYS.HMS_AUTH_STATE] = JSON.stringify({
+      mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE] = JSON.stringify({
         accessToken: "at",
         refreshToken: "rt",
         idToken: "it",
@@ -134,11 +152,11 @@ describe("createHmsAuthService", () => {
       expect(mockRevoke).toHaveBeenCalledWith(HMS_AUTH_CONFIG, {
         tokenToRevoke: "rt",
       });
-      expect(mockStore[STORAGE_KEYS.HMS_AUTH_STATE]).toBeUndefined();
+      expect(mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE]).toBeUndefined();
     });
 
     it("should clear auth state even if revocation fails", async () => {
-      mockStore[STORAGE_KEYS.HMS_AUTH_STATE] = JSON.stringify({
+      mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE] = JSON.stringify({
         accessToken: "at",
         refreshToken: "rt",
         idToken: "it",
@@ -151,7 +169,7 @@ describe("createHmsAuthService", () => {
       await auth.signOut();
 
       expect(mockRevoke).toHaveBeenCalledTimes(1);
-      expect(mockStore[STORAGE_KEYS.HMS_AUTH_STATE]).toBeUndefined();
+      expect(mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE]).toBeUndefined();
     });
 
     it("should clear auth state when no stored state exists", async () => {
@@ -159,13 +177,13 @@ describe("createHmsAuthService", () => {
       await auth.signOut();
 
       expect(mockRevoke).not.toHaveBeenCalled();
-      expect(mockStore[STORAGE_KEYS.HMS_AUTH_STATE]).toBeUndefined();
+      expect(mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE]).toBeUndefined();
     });
   });
 
   describe("getAccessToken", () => {
     it("should return stored token when not expired", async () => {
-      mockStore[STORAGE_KEYS.HMS_AUTH_STATE] = JSON.stringify({
+      mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE] = JSON.stringify({
         accessToken: "valid-token",
         refreshToken: "rt",
         idToken: "it",
@@ -181,7 +199,7 @@ describe("createHmsAuthService", () => {
     });
 
     it("should refresh token when expired", async () => {
-      mockStore[STORAGE_KEYS.HMS_AUTH_STATE] = JSON.stringify({
+      mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE] = JSON.stringify({
         accessToken: "expired-token",
         refreshToken: "rt",
         idToken: "it",
@@ -206,7 +224,7 @@ describe("createHmsAuthService", () => {
     });
 
     it("should update stored state after successful refresh", async () => {
-      mockStore[STORAGE_KEYS.HMS_AUTH_STATE] = JSON.stringify({
+      mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE] = JSON.stringify({
         accessToken: "expired-token",
         refreshToken: "rt",
         idToken: "it",
@@ -223,7 +241,9 @@ describe("createHmsAuthService", () => {
       const auth = createHmsAuthService();
       await auth.getAccessToken();
 
-      const stored = JSON.parse(mockStore[STORAGE_KEYS.HMS_AUTH_STATE]);
+      const stored = JSON.parse(
+        mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE],
+      );
       expect(stored.accessToken).toBe("refreshed-token");
       expect(stored.refreshToken).toBe("refreshed-rt");
       expect(stored.expirationDate).toBe("2099-06-01T00:00:00Z");
@@ -239,8 +259,17 @@ describe("createHmsAuthService", () => {
       expect(mockRefresh).not.toHaveBeenCalled();
     });
 
+    it("should clear a malformed stored state", async () => {
+      mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE] = "not-json";
+
+      const auth = createHmsAuthService();
+
+      await expect(auth.getAccessToken()).resolves.toBeNull();
+      expect(mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE]).toBeUndefined();
+    });
+
     it("should return null when refresh fails", async () => {
-      mockStore[STORAGE_KEYS.HMS_AUTH_STATE] = JSON.stringify({
+      mockStore[SECURE_STORAGE_SERVICES.HMS_AUTH_STATE] = JSON.stringify({
         accessToken: "expired-token",
         refreshToken: "rt",
         idToken: "it",

@@ -75,7 +75,9 @@ jest.mock("../../src/core/notifications/notifeeSetup", () => ({
 }));
 
 jest.mock("../../src/features/alarm/services/alarmRescheduler", () => ({
-  rescheduleAllEnabledAlarms: jest.fn(),
+  rescheduleAllEnabledAlarms: jest.fn((alarms: Alarm[]) =>
+    Promise.resolve(alarms),
+  ),
 }));
 
 jest.mock("../../src/core/platform/detection", () => ({
@@ -190,7 +192,10 @@ describe("Providers", () => {
       const alarms = [makeAlarm()];
       await renderProviders(createStore(), alarms);
 
-      expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(alarms);
+      expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(
+        alarms,
+        DEFAULT_SETTINGS.cycleConfig,
+      );
     });
 
     it("calls rescheduleAllEnabledAlarms when AppState changes to active", async () => {
@@ -203,7 +208,10 @@ describe("Providers", () => {
         appStateCallback?.("active");
       });
 
-      expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(alarms);
+      expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(
+        alarms,
+        DEFAULT_SETTINGS.cycleConfig,
+      );
     });
 
     it("does not call reschedule when AppState changes to background", async () => {
@@ -258,7 +266,10 @@ describe("Providers", () => {
     it("registers setupForegroundHandler on mount", async () => {
       await renderProviders();
 
-      expect(setupForegroundHandler).toHaveBeenCalledWith(expect.any(Function));
+      expect(setupForegroundHandler).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.any(Function),
+      );
     });
 
     it("unsubscribes foreground handler on unmount", async () => {
@@ -288,6 +299,24 @@ describe("Providers", () => {
       handler("alarm-abc");
 
       expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("updates the alarms atom when a foreground delivery is processed", async () => {
+      const store = createStore();
+      const alarm = makeAlarm();
+      await renderProviders(store, [alarm]);
+      const deliveredAlarm = {
+        ...alarm,
+        targetTimestampMs: alarm.targetTimestampMs + 60_000,
+      };
+      const onAlarmsUpdated = (setupForegroundHandler as jest.Mock).mock
+        .calls[0][1];
+
+      act(() => {
+        onAlarmsUpdated([deliveredAlarm]);
+      });
+
+      expect(store.get(mockAlarmsAtom)).toEqual([deliveredAlarm]);
     });
   });
 

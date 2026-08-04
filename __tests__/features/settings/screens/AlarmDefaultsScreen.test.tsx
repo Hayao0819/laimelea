@@ -1,6 +1,8 @@
+import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { NativeModules } from "react-native";
 import { PaperProvider } from "react-native-paper";
 
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
@@ -10,6 +12,21 @@ import {
   DEFAULT_ALARM_DEFAULTS,
   DEFAULT_SETTINGS,
 } from "../../../../src/models/Settings";
+
+jest.mock("@notifee/react-native", () => ({
+  __esModule: true,
+  default: {
+    getNotificationSettings: jest.fn().mockResolvedValue({
+      authorizationStatus: 1,
+      android: { alarm: 1 },
+    }),
+    requestPermission: jest.fn().mockResolvedValue({ authorizationStatus: 1 }),
+    openAlarmPermissionSettings: jest.fn().mockResolvedValue(undefined),
+  },
+  AndroidImportance: { HIGH: 4, DEFAULT: 3 },
+  AndroidNotificationSetting: { ENABLED: 1, DISABLED: 0 },
+  AuthorizationStatus: { AUTHORIZED: 1, DENIED: 0 },
+}));
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -66,6 +83,15 @@ async function renderScreen(settingsOverride?: Partial<AppSettings>) {
 }
 
 describe("AlarmDefaultsScreen", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
+    (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
+      authorizationStatus: 1,
+      android: { alarm: 1 },
+    });
+  });
+
   it("should render the screen", async () => {
     const { getByTestId } = await renderScreen();
     expect(getByTestId("alarm-defaults-screen")).toBeTruthy();
@@ -94,6 +120,67 @@ describe("AlarmDefaultsScreen", () => {
   it("should render vibration switch", async () => {
     const { getByTestId } = await renderScreen();
     expect(getByTestId("vibration-item")).toBeTruthy();
+  });
+
+  it("shows disabled notification permission and requests it when pressed", async () => {
+    (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
+      authorizationStatus: 0,
+      android: { alarm: 1 },
+    });
+    const { getByTestId, getByText } = await renderScreen();
+
+    await waitFor(() => {
+      expect(
+        getByText("settings.alarmDeliveryNotificationsDisabled"),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId("alarm-delivery-item"));
+    });
+
+    expect(notifee.requestPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens exact-alarm settings when exact alarms are disabled", async () => {
+    (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
+      authorizationStatus: 1,
+      android: { alarm: 0 },
+    });
+    const { getByTestId, getByText } = await renderScreen();
+
+    await waitFor(() => {
+      expect(
+        getByText("settings.alarmDeliveryExactAlarmsDisabled"),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId("alarm-delivery-item"));
+    });
+
+    expect(notifee.openAlarmPermissionSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens full-screen settings when that capability is disabled", async () => {
+    const openFullScreenIntentSettings = jest.fn().mockResolvedValue(undefined);
+    (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+      getAlarmCapabilities: jest.fn().mockResolvedValue({
+        canScheduleExactAlarms: true,
+        canUseFullScreenIntent: false,
+      }),
+      openFullScreenIntentSettings,
+    };
+    const { getByTestId, getByText } = await renderScreen();
+
+    await waitFor(() => {
+      expect(
+        getByText("settings.alarmDeliveryFullScreenDisabled"),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId("alarm-delivery-item"));
+    });
+
+    expect(openFullScreenIntentSettings).toHaveBeenCalledTimes(1);
   });
 
   it("should not show math difficulty when dismissalMethod is not math", async () => {

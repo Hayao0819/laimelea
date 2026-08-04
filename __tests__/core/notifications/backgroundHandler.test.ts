@@ -1,5 +1,7 @@
 import notifee from "@notifee/react-native";
 
+import { processAlarmDelivery } from "../../../src/features/alarm/services/alarmDeliveryService";
+
 let registeredHandler: (event: {
   type: number;
   detail: {
@@ -15,7 +17,11 @@ jest.mock("@notifee/react-native", () => ({
     }),
     cancelNotification: jest.fn().mockResolvedValue(undefined),
   },
-  EventType: { PRESS: 1, ACTION_PRESS: 7, DISMISSED: 2 },
+  EventType: { PRESS: 1, ACTION_PRESS: 7, DISMISSED: 2, DELIVERED: 3 },
+}));
+
+jest.mock("../../../src/features/alarm/services/alarmDeliveryService", () => ({
+  processAlarmDelivery: jest.fn().mockResolvedValue({ handled: true }),
 }));
 
 // Import triggers the module-level onBackgroundEvent registration
@@ -24,6 +30,7 @@ require("../../../src/core/notifications/backgroundHandler");
 describe("backgroundHandler", () => {
   beforeEach(() => {
     (notifee.cancelNotification as jest.Mock).mockClear();
+    (processAlarmDelivery as jest.Mock).mockClear();
   });
 
   it("should register a background event handler", () => {
@@ -38,6 +45,39 @@ describe("backgroundHandler", () => {
     });
 
     expect(notifee.cancelNotification).toHaveBeenCalledWith("timer-notif-1");
+  });
+
+  it("reschedules a delivered alarm without a foreground screen", async () => {
+    const data = {
+      alarmId: "alarm-1",
+      occurrenceTimestampMs: "1000000",
+    };
+
+    await registeredHandler({
+      type: 3,
+      detail: { notification: { id: "alarm-1", data } },
+    });
+
+    expect(processAlarmDelivery).toHaveBeenCalledWith(data);
+    expect(notifee.cancelNotification).not.toHaveBeenCalled();
+  });
+
+  it("propagates delivery persistence failures", async () => {
+    (processAlarmDelivery as jest.Mock).mockRejectedValueOnce(
+      new Error("schedule failed"),
+    );
+
+    await expect(
+      registeredHandler({
+        type: 3,
+        detail: {
+          notification: {
+            id: "alarm-1",
+            data: { alarmId: "alarm-1" },
+          },
+        },
+      }),
+    ).rejects.toThrow("schedule failed");
   });
 
   it("should cancel non-alarm notification on ACTION_PRESS event", async () => {

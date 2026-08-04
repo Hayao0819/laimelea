@@ -44,6 +44,10 @@ export const calendarSelectedDateAtom = atom<number>(
 const syncLastSyncAtom = unwrap(calendarLastSyncAtom, (prev) => prev ?? null);
 const syncEventsAtom = unwrap(calendarEventsAtom, (prev) => prev ?? []);
 
+export const resolvedCalendarEventsAtom = atom<CalendarEvent[]>((get) =>
+  get(syncEventsAtom),
+);
+
 export const calendarCacheStaleAtom = atom((get) => {
   const lastSync = get(syncLastSyncAtom);
   if (lastSync == null) return true;
@@ -51,7 +55,7 @@ export const calendarCacheStaleAtom = atom((get) => {
 });
 
 export const visibleCalendarEventsAtom = atom<CalendarEvent[]>((get) => {
-  const events = get(syncEventsAtom);
+  const events = get(resolvedCalendarEventsAtom);
   const { visibleCalendarIds } = get(resolvedSettingsAtom);
   if (visibleCalendarIds.length === 0) return events;
   return events.filter((e) => visibleCalendarIds.includes(e.calendarId));

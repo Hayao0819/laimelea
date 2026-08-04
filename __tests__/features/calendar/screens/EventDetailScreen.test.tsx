@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
@@ -8,6 +8,7 @@ import { calendarEventsAtom } from "../../../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
 import { scheduleAlarm } from "../../../../src/features/alarm/services/alarmScheduler";
 import { EventDetailScreen } from "../../../../src/features/calendar/screens/EventDetailScreen";
+import type { Alarm } from "../../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../../src/models/CalendarEvent";
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 
@@ -28,6 +29,22 @@ jest.mock("@react-native-async-storage/async-storage", () => {
     },
   };
 });
+
+jest.mock("../../../../src/core/storage/asyncStorageAdapter", () => ({
+  createAsyncStorage: () => {
+    const storage = new Map<string, unknown>();
+    return {
+      getItem: (key: string, initialValue: unknown) =>
+        storage.has(key) ? storage.get(key) : initialValue,
+      setItem: (key: string, value: unknown) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+    };
+  },
+}));
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -63,7 +80,12 @@ jest.mock("@notifee/react-native", () => ({
 }));
 
 jest.mock("../../../../src/features/alarm/services/alarmScheduler", () => ({
-  scheduleAlarm: jest.fn().mockResolvedValue(undefined),
+  cancelAlarm: jest.fn().mockResolvedValue(undefined),
+  recoverAlarmSchedule: jest.fn(async (alarm: Alarm) => ({
+    ...alarm,
+    notifeeTriggerId: "trigger-id",
+  })),
+  scheduleAlarm: jest.fn().mockResolvedValue("trigger-id"),
 }));
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
@@ -209,11 +231,12 @@ describe("EventDetailScreen", () => {
   });
 
   it("creates alarm when button is pressed", async () => {
+    const futureStart = Date.now() + 60 * 60 * 1000;
     const event = makeEvent({
       id: "event-alarm",
       title: "Important Meeting",
-      startTimestampMs: new Date("2026-03-01T14:00:00").getTime(),
-      endTimestampMs: new Date("2026-03-01T15:00:00").getTime(),
+      startTimestampMs: futureStart,
+      endTimestampMs: futureStart + 60 * 60 * 1000,
     });
 
     const { getByTestId, store } = await renderWithProviders({
@@ -238,8 +261,58 @@ describe("EventDetailScreen", () => {
     expect(alarms.length).toBe(1);
     expect(alarms[0].label).toBe("Important Meeting");
     expect(alarms[0].linkedCalendarEventId).toBe("event-alarm");
+    expect(alarms[0].notifeeTriggerId).toBe("trigger-id");
 
     // Verify navigation.goBack was called
     expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  it("does not persist or navigate when scheduling fails", async () => {
+    const futureStart = Date.now() + 60 * 60 * 1000;
+    const event = makeEvent({
+      id: "failed-event",
+      startTimestampMs: futureStart,
+      endTimestampMs: futureStart + 60 * 60 * 1000,
+    });
+    (scheduleAlarm as jest.Mock).mockRejectedValueOnce(new Error("failed"));
+
+    const { getByTestId, getByText, store } = await renderWithProviders({
+      events: [event],
+      routeEventId: "failed-event",
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId("create-alarm-button"));
+    });
+
+    expect(store.get(alarmsAtom)).toEqual([]);
+    expect(mockGoBack).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(getByText("calendar.alarmScheduleFailed")).toBeTruthy();
+    });
+  });
+
+  it("does not schedule a past event", async () => {
+    const pastStart = Date.now() - 60 * 60 * 1000;
+    const event = makeEvent({
+      id: "past-event",
+      startTimestampMs: pastStart,
+      endTimestampMs: pastStart + 30 * 60 * 1000,
+    });
+
+    const { getByTestId, getByText, store } = await renderWithProviders({
+      events: [event],
+      routeEventId: "past-event",
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId("create-alarm-button"));
+    });
+
+    expect(scheduleAlarm).not.toHaveBeenCalled();
+    expect(store.get(alarmsAtom)).toEqual([]);
+    await waitFor(() => {
+      expect(getByText("calendar.alarmTimePassed")).toBeTruthy();
+    });
   });
 });

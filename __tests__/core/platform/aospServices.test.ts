@@ -2,7 +2,10 @@ import { createAospAuthService } from "../../../src/core/platform/aosp/authServi
 import { createAospBackupService } from "../../../src/core/platform/aosp/backupService";
 import { createAospCalendarService } from "../../../src/core/platform/aosp/calendarService";
 import { createAospSleepService } from "../../../src/core/platform/aosp/sleepService";
-import { STORAGE_KEYS } from "../../../src/core/storage/keys";
+import {
+  SECURE_STORAGE_SERVICES,
+  STORAGE_KEYS,
+} from "../../../src/core/storage/keys";
 
 const mockStore: Record<string, string> = {};
 
@@ -19,6 +22,27 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
       return Promise.resolve();
     }),
   },
+}));
+
+jest.mock("react-native-keychain", () => ({
+  __esModule: true,
+  getGenericPassword: jest.fn(({ service }: { service: string }) =>
+    Promise.resolve(
+      mockStore[service]
+        ? { username: "laimelea", password: mockStore[service] }
+        : false,
+    ),
+  ),
+  setGenericPassword: jest.fn(
+    (_username: string, password: string, { service }: { service: string }) => {
+      mockStore[service] = password;
+      return Promise.resolve({ service, storage: "KeystoreAESGCM_NoAuth" });
+    },
+  ),
+  resetGenericPassword: jest.fn(({ service }: { service: string }) => {
+    delete mockStore[service];
+    return Promise.resolve(true);
+  }),
 }));
 
 const mockAuthorize = jest.fn();
@@ -89,8 +113,9 @@ describe("AOSP AuthService", () => {
     expect(result.accessToken).toBe("access-token-123");
     expect(result.idToken).toBe(idToken);
 
-    // Verify saved to AsyncStorage
-    const stored = JSON.parse(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]);
+    const stored = JSON.parse(
+      mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE],
+    );
     expect(stored.accessToken).toBe("access-token-123");
     expect(stored.refreshToken).toBe("refresh-token-456");
     expect(stored.email).toBe("user@gmail.com");
@@ -104,7 +129,7 @@ describe("AOSP AuthService", () => {
   });
 
   it("signOut should call revoke and clear storage", async () => {
-    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+    mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE] = JSON.stringify({
       accessToken: "at",
       refreshToken: "rt",
       idToken: "it",
@@ -117,11 +142,11 @@ describe("AOSP AuthService", () => {
     await auth.signOut();
 
     expect(mockRevoke).toHaveBeenCalledTimes(1);
-    expect(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]).toBeUndefined();
+    expect(mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE]).toBeUndefined();
   });
 
   it("signOut should clear storage even if revoke fails", async () => {
-    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+    mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE] = JSON.stringify({
       accessToken: "at",
       refreshToken: "rt",
       idToken: "it",
@@ -134,11 +159,11 @@ describe("AOSP AuthService", () => {
     await auth.signOut();
 
     expect(mockRevoke).toHaveBeenCalledTimes(1);
-    expect(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]).toBeUndefined();
+    expect(mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE]).toBeUndefined();
   });
 
   it("getAccessToken should return valid token", async () => {
-    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+    mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE] = JSON.stringify({
       accessToken: "valid-token",
       refreshToken: "rt",
       idToken: "it",
@@ -153,7 +178,7 @@ describe("AOSP AuthService", () => {
   });
 
   it("getAccessToken should refresh expired token", async () => {
-    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+    mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE] = JSON.stringify({
       accessToken: "expired-token",
       refreshToken: "rt",
       idToken: "it",
@@ -174,13 +199,15 @@ describe("AOSP AuthService", () => {
     expect(mockRefresh).toHaveBeenCalledTimes(1);
 
     // Verify updated in storage
-    const stored = JSON.parse(mockStore[STORAGE_KEYS.AOSP_AUTH_STATE]);
+    const stored = JSON.parse(
+      mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE],
+    );
     expect(stored.accessToken).toBe("new-token");
     expect(stored.refreshToken).toBe("new-rt");
   });
 
   it("getAccessToken should return null when refresh fails", async () => {
-    mockStore[STORAGE_KEYS.AOSP_AUTH_STATE] = JSON.stringify({
+    mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE] = JSON.stringify({
       accessToken: "expired-token",
       refreshToken: "rt",
       idToken: "it",

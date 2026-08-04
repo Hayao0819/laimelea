@@ -35,6 +35,7 @@ export function Providers({ children }: ProvidersProps) {
   const systemColorScheme = useColorScheme();
   const settings = useAtomValue(settingsAtom);
   const alarms = useAtomValue(alarmsAtom);
+  const setAlarms = useSetAtom(alarmsAtom);
   const setPlatformType = useSetAtom(platformTypeAtom);
   const alarmsRef = useRef(alarms);
   alarmsRef.current = alarms;
@@ -47,27 +48,38 @@ export function Providers({ children }: ProvidersProps) {
   }, [setPlatformType]);
 
   useEffect(() => {
-    rescheduleAllEnabledAlarms(alarmsRef.current);
+    let cancelled = false;
+    const reschedule = async () => {
+      const rescheduledAlarms = await rescheduleAllEnabledAlarms(
+        alarmsRef.current,
+        settings.cycleConfig,
+      );
+      if (!cancelled) {
+        setAlarms(rescheduledAlarms);
+      }
+    };
+    reschedule();
 
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active") {
-        rescheduleAllEnabledAlarms(alarmsRef.current);
+        reschedule();
       }
     });
 
     return () => {
+      cancelled = true;
       subscription.remove();
     };
-  }, []);
+  }, [setAlarms, settings.cycleConfig]);
 
   useEffect(() => {
     const unsubscribe = setupForegroundHandler((alarmId) => {
       if (navigationRef.isReady()) {
         navigationRef.navigate("AlarmFiring", { alarmId });
       }
-    });
+    }, setAlarms);
     return unsubscribe;
-  }, []);
+  }, [setAlarms]);
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | null = null;

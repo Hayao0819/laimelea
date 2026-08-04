@@ -128,25 +128,23 @@ export function AgendaView({
   }, [sections, selectedDayStart]);
 
   useEffect(() => {
-    if (
-      sectionListRef.current &&
-      sections.length > 0 &&
-      selectedSectionIndex < sections.length
-    ) {
-      const timer = setTimeout(() => {
-        try {
-          sectionListRef.current?.scrollToLocation({
-            sectionIndex: selectedSectionIndex,
-            itemIndex: 0,
-            animated: false,
-            viewOffset: 0,
-          });
-        } catch {
-          // scrollToLocation can throw if layout isn't ready
-        }
-      }, 100);
-      return () => clearTimeout(timer);
+    if (sections.length === 0 || selectedSectionIndex >= sections.length) {
+      return;
     }
+
+    const timer = setTimeout(() => {
+      try {
+        sectionListRef.current?.scrollToLocation({
+          sectionIndex: selectedSectionIndex,
+          itemIndex: 0,
+          animated: false,
+          viewOffset: 0,
+        });
+      } catch {
+        // scrollToLocation can throw if layout isn't ready
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [selectedSectionIndex, sections.length]);
 
   const renderSectionHeader = useCallback(

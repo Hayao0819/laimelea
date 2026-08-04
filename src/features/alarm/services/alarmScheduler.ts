@@ -4,51 +4,67 @@ import notifee, {
   TriggerType,
 } from "@notifee/react-native";
 
-import { ALARM_CHANNEL_ID } from "../../../core/notifications/notifeeSetup";
+import {
+  createAlarmDeliveryChannel,
+  getAlarmDeliveryStatus,
+} from "../../../core/notifications/notifeeSetup";
 import type { Alarm } from "../../../models/Alarm";
+import { cancelAlarmAudio, scheduleAlarmAudio } from "./ringtoneService";
 
-function resolveSound(soundUri: string | null): string {
-  if (!soundUri) {
-    return "default";
-  }
-  try {
-    // Basic URI validation: must contain a scheme separator
-    if (soundUri.includes("://") || soundUri.includes(":")) {
-      return soundUri;
-    }
-    return "default";
-  } catch {
-    return "default";
+export type AlarmSchedulingFailure =
+  | "notifications-disabled"
+  | "exact-alarms-disabled";
+
+export class AlarmSchedulingError extends Error {
+  readonly failure: AlarmSchedulingFailure;
+
+  constructor(failure: AlarmSchedulingFailure) {
+    super(failure);
+    this.name = "AlarmSchedulingError";
+    this.failure = failure;
   }
 }
 
 export async function scheduleAlarm(alarm: Alarm): Promise<string> {
+  const deliveryStatus = await getAlarmDeliveryStatus();
+  if (!deliveryStatus.notificationsEnabled) {
+    throw new AlarmSchedulingError("notifications-disabled");
+  }
+  if (!deliveryStatus.exactAlarmsEnabled) {
+    throw new AlarmSchedulingError("exact-alarms-disabled");
+  }
+
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp: alarm.targetTimestampMs,
     alarmManager: { allowWhileIdle: true },
   };
 
-  const sound = resolveSound(alarm.soundUri);
-  const vibrationPattern = alarm.vibrationEnabled ? [300, 500, 200, 500] : [];
+  const channelId = await createAlarmDeliveryChannel(alarm.vibrationEnabled);
+  const timeoutAfter =
+    alarm.autoSilenceMin > 0 ? alarm.autoSilenceMin * 60 * 1000 : undefined;
 
   const triggerId = await notifee.createTriggerNotification(
     {
       id: alarm.id,
       title: alarm.label || "Alarm",
       body: new Date(alarm.targetTimestampMs).toLocaleTimeString(),
-      data: { alarmId: alarm.id },
+      data: {
+        alarmId: alarm.id,
+        occurrenceTimestampMs: String(alarm.targetTimestampMs),
+      },
       android: {
-        channelId: ALARM_CHANNEL_ID,
+        channelId,
         category: AndroidCategory.ALARM,
-        fullScreenAction: {
-          id: "alarm-fullscreen",
-          launchActivity: "default",
-        },
+        fullScreenAction: deliveryStatus.fullScreenIntentEnabled
+          ? {
+              id: "alarm-fullscreen",
+              launchActivity: "default",
+            }
+          : undefined,
         pressAction: { id: "default" },
-        loopSound: true,
-        sound,
-        vibrationPattern,
+        loopSound: false,
+        timeoutAfter,
         autoCancel: false,
         ongoing: true,
       },
@@ -56,14 +72,58 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
     trigger,
   );
 
+  try {
+    if (alarm.soundUri === "__silent__") {
+      await cancelAlarmAudio(alarm.id);
+    } else {
+      await scheduleAlarmAudio(
+        alarm.id,
+        alarm.targetTimestampMs,
+        alarm.soundUri,
+        alarm.gradualVolumeDurationSec * 1000,
+        timeoutAfter ?? 0,
+      );
+    }
+  } catch (error) {
+    await notifee.cancelTriggerNotification(triggerId);
+    throw error;
+  }
+
   return triggerId;
 }
 
 export async function cancelAlarm(alarm: Alarm): Promise<void> {
+  const operations: Promise<unknown>[] = [
+    cancelAlarmAudio(alarm.id),
+    notifee.cancelNotification(alarm.id),
+  ];
   if (alarm.notifeeTriggerId) {
-    await notifee.cancelTriggerNotification(alarm.notifeeTriggerId);
+    operations.push(notifee.cancelTriggerNotification(alarm.notifeeTriggerId));
   }
-  await notifee.cancelNotification(alarm.id);
+  const results = await Promise.allSettled(operations);
+  const failure = results.find(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  if (failure) {
+    throw failure.reason;
+  }
+}
+
+export async function recoverAlarmSchedule(
+  alarm: Alarm,
+  now = Date.now(),
+): Promise<Alarm> {
+  try {
+    const notifeeTriggerId = await scheduleAlarm(alarm);
+    return { ...alarm, notifeeTriggerId };
+  } catch {
+    return {
+      ...alarm,
+      enabled: false,
+      notifeeTriggerId: null,
+      updatedAt: now,
+    };
+  }
 }
 
 export async function rescheduleAllAlarms(alarms: Alarm[]): Promise<void> {

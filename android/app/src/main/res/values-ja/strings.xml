@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Laimelea</string>
+    <string name="alarm_audio_title">アラームが鳴っています</string>
+    <string name="alarm_audio_description">アラーム通知を開いて解除またはスヌーズしてください</string>
 </resources>

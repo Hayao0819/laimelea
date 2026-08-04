@@ -2,7 +2,14 @@ import { format } from "date-fns";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { Card, Icon, Switch, Text, useTheme } from "react-native-paper";
+import {
+  Card,
+  Icon,
+  IconButton,
+  Switch,
+  Text,
+  useTheme,
+} from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
 import { realToCustom } from "../../../core/time/conversions";
@@ -14,6 +21,7 @@ interface AlarmCardProps {
   alarm: Alarm;
   cycleConfig: CycleConfig;
   onToggle: (alarm: Alarm) => void;
+  onSkipNext?: (alarm: Alarm) => void;
   onPress: (alarm: Alarm) => void;
   onLongPress: (alarm: Alarm) => void;
 }
@@ -22,6 +30,7 @@ export function AlarmCard({
   alarm,
   cycleConfig,
   onToggle,
+  onSkipNext,
   onPress,
   onLongPress,
 }: AlarmCardProps) {
@@ -98,6 +107,15 @@ export function AlarmCard({
           accessibilityLabel={`${alarm.label || t("alarm.title")} ${alarm.enabled ? t("alarm.enabled") : t("alarm.disabled")}`}
           accessibilityRole="switch"
         />
+        {alarm.repeat && onSkipNext && (
+          <IconButton
+            icon="skip-next"
+            onPress={() => onSkipNext(alarm)}
+            disabled={!alarm.enabled}
+            testID={`alarm-skip-next-${alarm.id}`}
+            accessibilityLabel={t("alarm.skipNext")}
+          />
+        )}
       </View>
     </Card>
   );

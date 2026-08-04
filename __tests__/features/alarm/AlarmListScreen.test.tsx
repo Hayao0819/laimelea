@@ -1,16 +1,28 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { Alert } from "react-native";
 import { PaperProvider } from "react-native-paper";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { AlarmListScreen } from "../../../src/features/alarm/screens/AlarmListScreen";
+import {
+  cancelAlarm,
+  recoverAlarmSchedule,
+  scheduleAlarm,
+} from "../../../src/features/alarm/services/alarmScheduler";
 import type { Alarm } from "../../../src/models/Alarm";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
   requestClockWidgetUpdate: jest.fn(),
+}));
+
+jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
+  scheduleAlarm: jest.fn().mockResolvedValue("trigger-id"),
+  cancelAlarm: jest.fn().mockResolvedValue(undefined),
+  recoverAlarmSchedule: jest.fn(),
 }));
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -64,6 +76,10 @@ jest.mock("@notifee/react-native", () => ({
 }));
 
 const mockNavigate = jest.fn();
+const mockCancelAlarm = cancelAlarm as jest.MockedFunction<typeof cancelAlarm>;
+const mockRecoverAlarmSchedule = recoverAlarmSchedule as jest.MockedFunction<
+  typeof recoverAlarmSchedule
+>;
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
     navigate: mockNavigate,
@@ -125,6 +141,10 @@ async function renderWithProviders(
 describe("AlarmListScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRecoverAlarmSchedule.mockImplementation(async (alarm) => ({
+      ...alarm,
+      notifeeTriggerId: "recovered-trigger-id",
+    }));
   });
 
   it("should show empty state when no alarms", async () => {
@@ -167,5 +187,76 @@ describe("AlarmListScreen", () => {
     expect(mockNavigate).toHaveBeenCalledWith("AlarmEdit", {
       alarmId: "test-alarm-1",
     });
+  });
+
+  it("calculates a future timestamp before re-enabling a repeating alarm", async () => {
+    const now = Date.now();
+    const alarm = makeAlarm({
+      enabled: false,
+      targetTimestampMs: now - 60 * 60 * 1000,
+      repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+    });
+    const { getByTestId, store } = await renderWithProviders(createStore(), [
+      alarm,
+    ]);
+
+    await act(async () => {
+      fireEvent(getByTestId("alarm-switch-test-alarm-1"), "valueChange", true);
+    });
+
+    expect(scheduleAlarm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: alarm.id,
+        targetTimestampMs: expect.any(Number),
+      }),
+    );
+    const storedAlarms = await store.get(alarmsAtom);
+    expect(storedAlarms[0].targetTimestampMs).toBeGreaterThan(now);
+  });
+
+  it("skips one occurrence from the repeating alarm card", async () => {
+    const now = Date.now();
+    const alarm = makeAlarm({
+      targetTimestampMs: now - 10 * 60 * 1000,
+      repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+    });
+    const { getByTestId, store } = await renderWithProviders(createStore(), [
+      alarm,
+    ]);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("alarm-skip-next-test-alarm-1"));
+    });
+
+    const storedAlarms = await store.get(alarmsAtom);
+    expect(scheduleAlarm).toHaveBeenCalledTimes(1);
+    expect(storedAlarms[0].targetTimestampMs).toBeGreaterThan(
+      now + 50 * 60 * 1000,
+    );
+    expect(storedAlarms[0].skipNextOccurrence).toBe(false);
+  });
+
+  it("recovers the schedule when disabling cannot fully cancel it", async () => {
+    const alarm = makeAlarm({ notifeeTriggerId: "old-trigger-id" });
+    mockCancelAlarm.mockRejectedValueOnce(new Error("cancel failed"));
+    const alertSpy = jest.spyOn(Alert, "alert");
+    const { getByTestId, store } = await renderWithProviders(createStore(), [
+      alarm,
+    ]);
+
+    await act(async () => {
+      fireEvent(getByTestId("alarm-switch-test-alarm-1"), "valueChange", false);
+    });
+
+    await waitFor(async () => {
+      const storedAlarms = await store.get(alarmsAtom);
+      expect(storedAlarms[0].notifeeTriggerId).toBe("recovered-trigger-id");
+    });
+    expect(mockRecoverAlarmSchedule).toHaveBeenCalledWith(alarm);
+    expect(alertSpy).toHaveBeenCalledWith(
+      "alarm.saveAlarm",
+      "alarm.scheduleFailed",
+    );
+    alertSpy.mockRestore();
   });
 });
