@@ -9,6 +9,7 @@ import {
   Snackbar,
   Text,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { calendarListAtom } from "../../../atoms/calendarAtoms";
@@ -27,6 +28,7 @@ function cycleNext<T>(options: T[], current: T): T {
 export function CalendarSettingsScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
+  const insets = useSafeAreaInsets();
   const calendars = useAtomValue(calendarListAtom);
   const {
     visible: snackbarVisible,
@@ -48,7 +50,14 @@ export function CalendarSettingsScreen() {
   return (
     <>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: spacing.xl + insets.bottom,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         testID="calendar-settings-screen"
       >

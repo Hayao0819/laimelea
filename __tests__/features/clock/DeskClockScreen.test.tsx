@@ -1,13 +1,19 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { DeskClockScreen } from "../../../src/features/clock/screens/DeskClockScreen";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 const mockGoBack = jest.fn();
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 12, bottom: 34, left: 0 },
+};
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ goBack: mockGoBack }),
 }));
@@ -45,9 +51,11 @@ async function renderWithProviders(store = createStore()) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   const utils = await render(
     <JotaiProvider store={store}>
-      <PaperProvider>
-        <DeskClockScreen />
-      </PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>
+          <DeskClockScreen />
+        </PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   await act(async () => {});
@@ -93,5 +101,13 @@ describe("DeskClockScreen", () => {
     const { getByTestId } = await renderWithProviders();
     await fireEvent.press(getByTestId("desk-clock-close"));
     expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  it("positions the close button below cutouts and transient bars", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(
+      StyleSheet.flatten(getByTestId("desk-clock-close-target").props.style),
+    ).toMatchObject({ top: 32, right: 20 });
   });
 });

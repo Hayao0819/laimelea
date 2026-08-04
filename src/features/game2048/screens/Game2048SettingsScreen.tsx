@@ -9,6 +9,7 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import {
@@ -23,6 +24,7 @@ import type { BoardSize } from "../logic/gameTypes";
 export function Game2048SettingsScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const settings = useAtomValue(settingsAtom);
   const hasGameStarted = useAtomValue(hasGameStartedAtom);
   const currentGame = useAtomValue(currentGameAtom);
@@ -49,7 +51,14 @@ export function Game2048SettingsScreen(): React.JSX.Element {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[
+        styles.scroll,
+        {
+          paddingBottom: spacing.xl + insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
       keyboardShouldPersistTaps="handled"
       testID="game2048-settings-screen"
     >

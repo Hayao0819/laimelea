@@ -21,6 +21,7 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { useSleepSync } from "../../../hooks/useSleepSync";
@@ -49,6 +50,7 @@ function formatDate(ms: number): string {
 export function SleepLogScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { sessions, loading, error, sync, deleteEntry } = useSleepSync();
   const [deleteTarget, setDeleteTarget] = useState<SleepSession | null>(null);
@@ -202,16 +204,20 @@ export function SleepLogScreen() {
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
         }
-        contentContainerStyle={
-          sortedSessions.length === 0 ? styles.emptyList : styles.list
-        }
+        contentContainerStyle={[
+          sortedSessions.length === 0 ? styles.emptyList : styles.list,
+          {
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
         testID="sleep-session-list"
       />
 
       <FAB
         icon="plus"
         onPress={handleAddEntry}
-        style={styles.fab}
+        style={[styles.fab, { right: spacing.base + insets.right }]}
         testID="add-sleep-fab"
         accessibilityLabel={t("sleep.addEntry")}
       />

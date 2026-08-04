@@ -133,6 +133,7 @@ describe("CountdownTimer", () => {
       <CountdownTimer />,
     );
 
+    expect(getByTestId("timer-list")).toBeTruthy();
     expect(getByTestId("timer-card-mock-t-1")).toBeTruthy();
     expect(getByTestId("timer-card-mock-t-2")).toBeTruthy();
     expect(queryByTestId("no-timers-text")).toBeNull();

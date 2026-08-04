@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, Switch, TextInput } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import type { WidgetSettings } from "../../../models/Settings";
@@ -11,6 +12,7 @@ import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 export function WidgetSettingsScreen() {
   const { t } = useTranslation();
   const { settings, updateWidgetSettings } = useSettingsUpdate();
+  const insets = useSafeAreaInsets();
 
   const widgetSettings = settings.widgetSettings ?? DEFAULT_WIDGET_SETTINGS;
 
@@ -79,7 +81,14 @@ export function WidgetSettingsScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[
+        styles.scroll,
+        {
+          paddingBottom: spacing.xl + insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
       keyboardShouldPersistTaps="handled"
       testID="widget-settings-screen"
     >

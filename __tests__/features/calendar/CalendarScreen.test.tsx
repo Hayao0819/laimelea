@@ -8,6 +8,7 @@ import {
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import {
@@ -27,6 +28,11 @@ import { CalendarScreen } from "../../../src/features/calendar/screens/CalendarS
 import type { Alarm } from "../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../src/models/CalendarEvent";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 20, bottom: 34, left: 12 },
+};
 
 jest.mock("@react-native-google-signin/google-signin", () => ({
   GoogleSignin: {
@@ -234,9 +240,11 @@ async function renderWithProviders(options?: {
 
   const utils = await renderAsync(
     <JotaiProvider store={store}>
-      <PaperProvider>
-        <CalendarScreen />
-      </PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>
+          <CalendarScreen />
+        </PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   renderedScreens.push(utils);

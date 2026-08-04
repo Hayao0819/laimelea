@@ -3,6 +3,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, List, Text, TextInput } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
@@ -11,6 +12,7 @@ import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 export function CycleConfigScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
+  const insets = useSafeAreaInsets();
 
   const cycleHours = Math.floor(settings.cycleConfig.cycleLengthMinutes / 60);
   const cycleMinutes = settings.cycleConfig.cycleLengthMinutes % 60;
@@ -55,7 +57,14 @@ export function CycleConfigScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[
+        styles.scroll,
+        {
+          paddingBottom: spacing.xl + insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
       keyboardShouldPersistTaps="handled"
       testID="cycle-config-screen"
     >

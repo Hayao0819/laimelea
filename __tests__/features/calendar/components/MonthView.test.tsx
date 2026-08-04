@@ -2,11 +2,17 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
 import { MonthView } from "../../../../src/features/calendar/components/MonthView";
 import type { CalendarEvent } from "../../../../src/models/CalendarEvent";
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
+
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 20, bottom: 34, left: 12 },
+};
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
@@ -76,7 +82,9 @@ async function renderWithProviders(
   store.set(settingsAtom, DEFAULT_SETTINGS);
   const utils = await render(
     <JotaiProvider store={store}>
-      <PaperProvider>{ui}</PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>{ui}</PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   await act(async () => {});

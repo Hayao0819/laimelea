@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Icon, Surface, Text, TextInput } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { radius, spacing } from "../../../app/spacing";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
@@ -30,6 +31,7 @@ export function SetupScreen() {
   const [baseTimeMs, setBaseTimeMs] = useState<number | null>(null);
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const insets = useSafeAreaInsets();
   const { isConnected } = useNetworkStatus();
 
   const cycleLengthMinutes = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
@@ -76,8 +78,17 @@ export function SetupScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingTop: 64 + insets.top,
+          paddingRight: spacing.base + insets.right,
+          paddingBottom: spacing.base + insets.bottom,
+          paddingLeft: spacing.base + insets.left,
+        },
+      ]}
       keyboardShouldPersistTaps="handled"
+      testID="setup-scroll"
     >
       <Text
         variant="headlineMedium"

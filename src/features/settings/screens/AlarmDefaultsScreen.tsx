@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, SegmentedButtons, Switch, Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import {
@@ -26,6 +27,7 @@ function cycleNext<T>(options: T[], current: T): T {
 export function AlarmDefaultsScreen() {
   const { t } = useTranslation();
   const { settings, updateAlarmDefaults } = useSettingsUpdate();
+  const insets = useSafeAreaInsets();
   const [deliveryStatus, setDeliveryStatus] =
     useState<AlarmDeliveryStatus | null>(null);
 
@@ -75,7 +77,14 @@ export function AlarmDefaultsScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[
+        styles.scroll,
+        {
+          paddingBottom: spacing.xl + insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
       keyboardShouldPersistTaps="handled"
       testID="alarm-defaults-screen"
     >

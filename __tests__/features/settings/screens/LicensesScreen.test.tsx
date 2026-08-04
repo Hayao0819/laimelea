@@ -1,7 +1,9 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { spacing } from "../../../../src/app/spacing";
 import { LicensesScreen } from "../../../../src/features/settings/screens/LicensesScreen";
 
 jest.mock("react-i18next", () => ({
@@ -41,9 +43,16 @@ jest.mock(
 
 function renderWithProviders() {
   return render(
-    <PaperProvider>
-      <LicensesScreen />
-    </PaperProvider>,
+    <SafeAreaProvider
+      initialMetrics={{
+        frame: { x: 0, y: 0, width: 390, height: 844 },
+        insets: { top: 0, right: 16, bottom: 24, left: 12 },
+      }}
+    >
+      <PaperProvider>
+        <LicensesScreen />
+      </PaperProvider>
+    </SafeAreaProvider>,
   );
 }
 
@@ -55,6 +64,20 @@ describe("LicensesScreen", () => {
   it("should render without crashing", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("licenses-screen")).toBeTruthy();
+  });
+
+  it("adds the bottom safe-area inset to the list padding", () => {
+    const { getByTestId } = renderWithProviders();
+
+    expect(getByTestId("licenses-screen").props.contentContainerStyle).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          paddingBottom: spacing.xl + 24,
+          paddingLeft: 12,
+          paddingRight: 16,
+        }),
+      ]),
+    );
   });
 
   it("should display license entries from JSON", async () => {

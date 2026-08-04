@@ -4,6 +4,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, List, Snackbar } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -19,6 +20,7 @@ import { useSnackbar } from "../hooks/useSnackbar";
 export function BackupScreen() {
   const { t } = useTranslation();
   const { settings, update, setSettings } = useSettingsUpdate();
+  const insets = useSafeAreaInsets();
   const alarms = useAtomValue(alarmsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
   const sleepSessions = useAtomValue(sleepSessionsAtom);
@@ -94,7 +96,14 @@ export function BackupScreen() {
   return (
     <>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: spacing.xl + insets.bottom,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         testID="backup-screen"
       >

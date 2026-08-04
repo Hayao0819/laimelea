@@ -12,6 +12,7 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
@@ -67,6 +68,7 @@ export function ManualSleepEntryScreen() {
   const route = useRoute<Props["route"]>();
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useAtom(sleepSessionsAtom);
 
   const sessionId = route.params?.sessionId;
@@ -180,8 +182,16 @@ export function ManualSleepEntryScreen() {
       testID="manual-sleep-entry-screen"
     >
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingRight: spacing.base + insets.right,
+            paddingBottom: spacing.base + insets.bottom,
+            paddingLeft: spacing.base + insets.left,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
+        testID="manual-sleep-entry-scroll"
       >
         <Text
           variant="titleMedium"

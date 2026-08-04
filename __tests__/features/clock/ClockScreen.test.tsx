@@ -1,12 +1,19 @@
 import { act, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { ClockScreen } from "../../../src/features/clock/screens/ClockScreen";
 import type { AppSettings } from "../../../src/models/Settings";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 20, bottom: 34, left: 12 },
+};
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
@@ -81,9 +88,11 @@ async function renderWithProviders(
   store.set(settingsAtom, { ...DEFAULT_SETTINGS, ...overrides });
   const utils = await render(
     <JotaiProvider store={store}>
-      <PaperProvider>
-        <ClockScreen />
-      </PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>
+          <ClockScreen />
+        </PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   await act(async () => {});
@@ -134,6 +143,16 @@ describe("ClockScreen", () => {
   it("should render custom day indicator", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("custom-day-indicator")).toBeTruthy();
+  });
+
+  it("keeps the clock content clear of side cutouts", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(
+      StyleSheet.flatten(
+        getByTestId("clock-screen").props.contentContainerStyle,
+      ),
+    ).toMatchObject({ paddingLeft: 28, paddingRight: 36 });
   });
 
   describe("mode integration", () => {

@@ -2,7 +2,9 @@ import NetInfo from "@react-native-community/netinfo";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { createPlatformServices } from "../../../src/core/platform/factory";
@@ -53,6 +55,10 @@ const mockCreatePlatformServices =
   createPlatformServices as jest.MockedFunction<typeof createPlatformServices>;
 
 const mockSignIn = jest.fn();
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 12, right: 8, bottom: 24, left: 4 },
+};
 
 function createMockServices(): PlatformServices {
   return {
@@ -87,11 +93,13 @@ function renderWithProviders(store = createStore()) {
   mockCreatePlatformServices.mockReturnValue(createMockServices());
 
   const utils = render(
-    <JotaiProvider store={store}>
-      <PaperProvider>
-        <SetupScreen />
-      </PaperProvider>
-    </JotaiProvider>,
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <SetupScreen />
+        </PaperProvider>
+      </JotaiProvider>
+    </SafeAreaProvider>,
   );
   return { ...utils, store };
 }
@@ -105,6 +113,18 @@ describe("SetupScreen", () => {
     const { getByText } = await renderWithProviders();
     expect(getByText("setup.welcome")).toBeTruthy();
     expect(getByText("setup.description")).toBeTruthy();
+  });
+
+  it("adds safe-area insets to scroll content", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const contentStyle = StyleSheet.flatten(
+      getByTestId("setup-scroll").props.contentContainerStyle,
+    );
+
+    expect(contentStyle.paddingTop).toBe(76);
+    expect(contentStyle.paddingRight).toBe(24);
+    expect(contentStyle.paddingBottom).toBe(40);
+    expect(contentStyle.paddingLeft).toBe(20);
   });
 
   it("should have done button disabled initially", async () => {

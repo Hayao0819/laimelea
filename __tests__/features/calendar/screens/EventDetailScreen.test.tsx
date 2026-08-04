@@ -1,7 +1,9 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { alarmsAtom } from "../../../../src/atoms/alarmAtoms";
 import { calendarEventsAtom } from "../../../../src/atoms/calendarAtoms";
@@ -56,6 +58,10 @@ jest.mock("react-i18next", () => ({
 
 const mockGoBack = jest.fn();
 let mockRouteParams = { eventId: "event-1" };
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, right: 0, bottom: 24, left: 0 },
+};
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ goBack: mockGoBack }),
@@ -119,11 +125,13 @@ async function renderWithProviders(options?: {
   store.set(calendarEventsAtom, events);
 
   const utils = render(
-    <JotaiProvider store={store}>
-      <PaperProvider>
-        <EventDetailScreen />
-      </PaperProvider>
-    </JotaiProvider>,
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <EventDetailScreen />
+        </PaperProvider>
+      </JotaiProvider>
+    </SafeAreaProvider>,
   );
 
   await act(async () => {});
@@ -154,6 +162,16 @@ describe("EventDetailScreen", () => {
   it("renders event title", async () => {
     const { getByText } = await renderWithProviders();
     expect(getByText("Team Meeting")).toBeTruthy();
+  });
+
+  it("adds the bottom safe-area inset to scroll content", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(
+      StyleSheet.flatten(
+        getByTestId("event-detail-scroll").props.contentContainerStyle,
+      ).paddingBottom,
+    ).toBe(40);
   });
 
   it("shows event not found when event doesn't exist", async () => {

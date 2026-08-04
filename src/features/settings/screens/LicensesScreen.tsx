@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { FlatList, Linking, StyleSheet, View } from "react-native";
 import { Divider, List, Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import licensesData from "../../../generated/licenses.json";
@@ -17,6 +18,7 @@ const licenses = licensesData as LicenseEntry[];
 
 export function LicensesScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const handlePress = useCallback(async (repository: string) => {
     try {
@@ -66,7 +68,14 @@ export function LicensesScreen() {
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       ItemSeparatorComponent={Divider}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[
+        styles.list,
+        {
+          paddingBottom: spacing.xl + insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
       testID="licenses-screen"
     />
   );

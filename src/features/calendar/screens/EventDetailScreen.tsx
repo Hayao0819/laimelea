@@ -15,6 +15,7 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { radius, spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -45,6 +46,7 @@ export function EventDetailScreen() {
   const route = useRoute<Props["route"]>();
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const events = useAtomValue(calendarEventsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
@@ -132,7 +134,17 @@ export function EventDetailScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       testID="event-detail-screen"
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingRight: spacing.base + insets.right,
+            paddingBottom: spacing.base + insets.bottom,
+            paddingLeft: spacing.base + insets.left,
+          },
+        ]}
+        testID="event-detail-scroll"
+      >
         <View style={styles.header}>
           <View
             style={[

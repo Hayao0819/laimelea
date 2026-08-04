@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { SegmentedButtons } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { CountdownTimer } from "../components/CountdownTimer";
@@ -12,9 +13,16 @@ type TimerTab = "countdown" | "stopwatch";
 export function TimerScreen() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TimerTab>("countdown");
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container} testID="timer-screen">
+    <View
+      style={[
+        styles.container,
+        { paddingLeft: insets.left, paddingRight: insets.right },
+      ]}
+      testID="timer-screen"
+    >
       <View style={styles.toggle}>
         <SegmentedButtons<TimerTab>
           value={tab}

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Linking, ScrollView, StyleSheet, View } from "react-native";
 import { Divider, List, Snackbar, Text, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { useSnackbar } from "../hooks/useSnackbar";
@@ -22,6 +23,7 @@ export function AboutScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const snackbar = useSnackbar();
 
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -86,7 +88,16 @@ export function AboutScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       testID="about-screen"
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: spacing.xl + insets.bottom,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <View style={styles.header}>
           <Text variant="headlineMedium" style={styles.appName}>
             Laimelea

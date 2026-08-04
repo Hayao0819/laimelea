@@ -3,6 +3,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Linking, ScrollView, StyleSheet, View } from "react-native";
 import { List, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 
@@ -17,6 +18,7 @@ export function LegalScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const handleOpenURL = useCallback(async (url: string) => {
     try {
@@ -38,7 +40,16 @@ export function LegalScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       testID="legal-screen"
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: spacing.xl + insets.bottom,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <List.Section title={t("settings.appLicense")}>
           <List.Item
             title={t("settings.mitLicense")}

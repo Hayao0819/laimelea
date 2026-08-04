@@ -2,8 +2,9 @@ import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { DeviceEventEmitter } from "react-native";
+import { DeviceEventEmitter, StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
@@ -83,6 +84,11 @@ jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
 
 let mockDismissalContainerProps: Record<string, unknown> = {};
 
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 12, bottom: 34, left: 8 },
+};
+
 jest.mock(
   "../../../src/features/alarm/components/dismissal/DismissalContainer",
   () => ({
@@ -154,9 +160,11 @@ async function renderWithProviders(
   store.set(alarmsAtom, initialAlarms);
   const utils = await render(
     <JotaiProvider store={store}>
-      <PaperProvider>
-        <AlarmFiringScreen />
-      </PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>
+          <AlarmFiringScreen />
+        </PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   // Flush pending async atom resolutions
@@ -181,6 +189,21 @@ describe("AlarmFiringScreen", () => {
       makeAlarm(),
     ]);
     expect(getByTestId("alarm-firing-screen")).toBeTruthy();
+  });
+
+  it("positions dismissal controls within safe area insets", async () => {
+    const { getByTestId } = await renderWithProviders(createStore(), [
+      makeAlarm(),
+    ]);
+
+    expect(
+      StyleSheet.flatten(getByTestId("alarm-firing-screen").props.style),
+    ).toMatchObject({
+      paddingTop: 56,
+      paddingRight: 44,
+      paddingBottom: 66,
+      paddingLeft: 40,
+    });
   });
 
   it("should display alarm label when present", async () => {
@@ -245,6 +268,21 @@ describe("AlarmFiringScreen", () => {
     const updatedAlarms = await store.get(alarmsAtom);
     expect(updatedAlarms[0].lastFiredAt).not.toBeNull();
     expect(updatedAlarms[0].lastFiredAt).toBeGreaterThan(0);
+  });
+
+  it("removes a test alarm after dismissal", async () => {
+    const store = createStore();
+    const alarm = makeAlarm({ isTest: true });
+    const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("dismiss-button"));
+    });
+
+    await waitFor(async () => {
+      expect(await store.get(alarmsAtom)).toEqual([]);
+    });
+    expect(cancelAlarm).toHaveBeenCalledWith(alarm);
   });
 
   it("dismisses a delivered occurrence without cancelling its next repeat", async () => {

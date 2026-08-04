@@ -3,6 +3,7 @@ import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { Alert } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
@@ -14,6 +15,11 @@ import {
 } from "../../../src/features/alarm/services/alarmScheduler";
 import type { Alarm } from "../../../src/models/Alarm";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
+
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 20, bottom: 34, left: 12 },
+};
 
 jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
   requestClockWidgetUpdate: jest.fn(),
@@ -127,9 +133,11 @@ async function renderWithProviders(
   store.set(alarmsAtom, initialAlarms);
   const utils = await render(
     <JotaiProvider store={store}>
-      <PaperProvider>
-        <AlarmListScreen />
-      </PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>
+          <AlarmListScreen />
+        </PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   // Flush pending async atom resolutions and FAB.Group animations
@@ -174,6 +182,16 @@ describe("AlarmListScreen", () => {
     ]);
 
     expect(getByTestId("alarm-card-test-alarm-1")).toBeTruthy();
+  });
+
+  it("does not show a pending test alarm in the list", async () => {
+    const { getByTestId, queryByTestId } = await renderWithProviders(
+      createStore(),
+      [makeAlarm({ isTest: true })],
+    );
+
+    expect(getByTestId("no-alarms-text")).toBeTruthy();
+    expect(queryByTestId("alarm-card-test-alarm-1")).toBeNull();
   });
 
   it("should navigate to AlarmEdit on alarm card press", async () => {

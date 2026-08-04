@@ -1,10 +1,16 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { SleepLogScreen } from "../../../src/features/sleep/screens/SleepLogScreen";
 import type { SleepSyncResult } from "../../../src/hooks/useSleepSync";
 import type { SleepSession } from "../../../src/models/SleepSession";
+
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 20, bottom: 34, left: 12 },
+};
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   const store: Record<string, string> = {};
@@ -107,9 +113,11 @@ function makeSession(overrides: Partial<SleepSession> = {}): SleepSession {
 
 async function renderScreen() {
   const utils = await render(
-    <PaperProvider>
-      <SleepLogScreen />
-    </PaperProvider>,
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <PaperProvider>
+        <SleepLogScreen />
+      </PaperProvider>
+    </SafeAreaProvider>,
   );
   await act(async () => {});
   return utils;
@@ -119,6 +127,11 @@ describe("SleepLogScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSyncResult = { ...defaultSyncResult };
+  });
+
+  it('should render with testID "sleep-log-screen"', async () => {
+    const { getByTestId } = await renderScreen();
+    expect(getByTestId("sleep-log-screen")).toBeTruthy();
   });
 
   it("should display empty state when there are no sessions", async () => {

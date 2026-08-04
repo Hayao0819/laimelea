@@ -4,9 +4,10 @@ import "../../../src/features/alarm/strategies";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { Alert } from "react-native";
+import { Alert, StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
 
+import { spacing } from "../../../src/app/spacing";
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { AlarmEditScreen } from "../../../src/features/alarm/screens/AlarmEditScreen";
@@ -22,6 +23,11 @@ jest.mock("react-native-shake", () => ({
   default: {
     addListener: jest.fn(() => ({ remove: jest.fn() })),
   },
+}));
+
+jest.mock("react-native-safe-area-context", () => ({
+  ...jest.requireActual("react-native-safe-area-context"),
+  useSafeAreaInsets: () => ({ top: 0, right: 20, bottom: 24, left: 12 }),
 }));
 
 jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
@@ -201,6 +207,21 @@ describe("AlarmEditScreen", () => {
   it("should show label input", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("label-input")).toBeTruthy();
+  });
+
+  it("keeps scroll controls within the system insets", async () => {
+    const { getByTestId } = await renderWithProviders();
+    const style = StyleSheet.flatten(
+      getByTestId("alarm-edit-scroll").props.contentContainerStyle,
+    );
+
+    expect(style).toEqual(
+      expect.objectContaining({
+        paddingRight: spacing.base + 20,
+        paddingBottom: spacing.base + 24,
+        paddingLeft: spacing.base + 12,
+      }),
+    );
   });
 
   it("should set navigation options with title and save button", async () => {
@@ -430,6 +451,7 @@ describe("AlarmEditScreen", () => {
 
       const alarmArg = mockScheduleAlarm.mock.calls[0][0];
       expect(alarmArg.id).toMatch(/^test-alarm-/);
+      expect(alarmArg.isTest).toBe(true);
       expect(alarmArg.targetTimestampMs).toBeGreaterThanOrEqual(
         before + 10_000,
       );
@@ -494,7 +516,7 @@ describe("AlarmEditScreen", () => {
     });
 
     it("shows math difficulty when math method is selected via dialog", async () => {
-      const { getByTestId, getByText } = await renderWithProviders();
+      const { getByTestId } = await renderWithProviders();
 
       await fireEvent.press(getByTestId("dismissal-method-item"));
       await waitFor(() => {
@@ -504,7 +526,9 @@ describe("AlarmEditScreen", () => {
       await fireEvent.press(getByTestId("dismissal-option-math"));
 
       await waitFor(() => {
-        expect(getByText("settings.mathDifficulty")).toBeTruthy();
+        expect(getByTestId("math-difficulty-easy")).toBeTruthy();
+        expect(getByTestId("math-difficulty-medium")).toBeTruthy();
+        expect(getByTestId("math-difficulty-hard")).toBeTruthy();
       });
     });
   });

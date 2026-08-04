@@ -28,6 +28,7 @@ export interface Alarm {
   linkedCalendarEventId: string | null;
   linkedEventOffsetMs: number;
   mathDifficulty: MathDifficulty;
+  isTest?: boolean;
   lastFiredAt: number | null;
   activeOccurrenceTimestampMs?: number | null;
   lastDeliveredOccurrenceTimestampMs?: number | null;

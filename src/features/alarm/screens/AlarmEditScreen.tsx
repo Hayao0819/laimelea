@@ -20,6 +20,7 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { radius, spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -236,7 +237,7 @@ export function AlarmEditScreen() {
     const now = Date.now();
     const testAlarm: Alarm = {
       id: `test-alarm-${now}`,
-      label: "Test Alarm",
+      label: t("alarm.testAlarm"),
       enabled: true,
       targetTimestampMs: now + 10_000,
       setInTimeSystem: timeSystem,
@@ -256,6 +257,7 @@ export function AlarmEditScreen() {
       linkedCalendarEventId: null,
       linkedEventOffsetMs: 0,
       mathDifficulty,
+      isTest: true,
       lastFiredAt: null,
       createdAt: now,
       updatedAt: now,
@@ -375,13 +377,24 @@ export function AlarmEditScreen() {
   );
 
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       testID="alarm-edit-screen"
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingRight: spacing.base + insets.right,
+            paddingBottom: spacing.base + insets.bottom,
+            paddingLeft: spacing.base + insets.left,
+          },
+        ]}
+        testID="alarm-edit-scroll"
+      >
         <Surface style={styles.timeCard} elevation={0}>
           <AlarmTimePicker
             value={time}
@@ -486,9 +499,21 @@ export function AlarmEditScreen() {
                     setMathDifficulty(Number(v) as MathDifficulty)
                   }
                   buttons={[
-                    { value: "1", label: t("settings.mathDifficultyEasy") },
-                    { value: "2", label: t("settings.mathDifficultyMedium") },
-                    { value: "3", label: t("settings.mathDifficultyHard") },
+                    {
+                      value: "1",
+                      label: t("settings.mathDifficultyEasy"),
+                      testID: "math-difficulty-easy",
+                    },
+                    {
+                      value: "2",
+                      label: t("settings.mathDifficultyMedium"),
+                      testID: "math-difficulty-medium",
+                    },
+                    {
+                      value: "3",
+                      label: t("settings.mathDifficultyHard"),
+                      testID: "math-difficulty-hard",
+                    },
                   ]}
                 />
               </View>

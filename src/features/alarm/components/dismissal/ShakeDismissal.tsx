@@ -39,16 +39,17 @@ export function ShakeDismissal({
       <Text variant="headlineSmall" style={styles.instruction}>
         {t("dismissal.shakeInstruction")}
       </Text>
-      <ProgressBar
-        progress={progress}
-        style={styles.progressBar}
-        testID="shake-progress"
-        accessibilityLabel={t("dismissal.shakeCount", {
-          current: shakeCount,
-          total: REQUIRED_SHAKES,
-        })}
-        accessibilityRole="progressbar"
-      />
+      <View style={styles.progressContainer} testID="shake-progress">
+        <ProgressBar
+          progress={progress}
+          style={styles.progressBar}
+          accessibilityLabel={t("dismissal.shakeCount", {
+            current: shakeCount,
+            total: REQUIRED_SHAKES,
+          })}
+          accessibilityRole="progressbar"
+        />
+      </View>
       <Text variant="bodyLarge" testID="shake-count">
         {t("dismissal.shakeCount", {
           current: shakeCount,
@@ -84,6 +85,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 8,
     borderRadius: 4,
+  },
+  progressContainer: {
+    alignSelf: "stretch",
   },
   snoozeButton: {
     marginTop: spacing.base,

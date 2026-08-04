@@ -1,7 +1,9 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
 import {
@@ -45,6 +47,11 @@ jest.mock("date-fns", () => ({
   format: jest.fn(() => "03/01 12:00"),
 }));
 
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, right: 0, bottom: 24, left: 0 },
+};
+
 function makeSnapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
   return {
     id: "test-1",
@@ -86,11 +93,13 @@ function createInitializedStore(
 
 async function renderWithProviders(store = createInitializedStore()) {
   const utils = await render(
-    <JotaiProvider store={store}>
-      <PaperProvider>
-        <Game2048TreeScreen />
-      </PaperProvider>
-    </JotaiProvider>,
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <Game2048TreeScreen />
+        </PaperProvider>
+      </JotaiProvider>
+    </SafeAreaProvider>,
   );
   await act(async () => {});
   return { store, ...utils };
@@ -105,6 +114,15 @@ describe("Game2048TreeScreen", () => {
     const { getByTestId, getByText } = await renderWithProviders();
     expect(getByTestId("game-2048-tree-screen")).toBeTruthy();
     expect(getByText("game2048.snapshotTree")).toBeTruthy();
+  });
+
+  it("adds the bottom safe-area inset to the list container", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(
+      StyleSheet.flatten(getByTestId("game-2048-tree-screen").props.style)
+        .paddingBottom,
+    ).toBe(40);
   });
 
   it("should show empty message when no snapshots", async () => {

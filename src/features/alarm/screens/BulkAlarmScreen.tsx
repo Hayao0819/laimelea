@@ -6,6 +6,7 @@ import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { IconButton, Snackbar, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -29,6 +30,7 @@ export function BulkAlarmScreen() {
   const [alarms, setAlarms] = useAtom(alarmsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   const defaults = settings.alarmDefaults;
   const cycleConfig = settings.cycleConfig;
@@ -157,7 +159,17 @@ export function BulkAlarmScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       testID="bulk-alarm-screen"
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingRight: spacing.base + insets.right,
+            paddingBottom: spacing.base + insets.bottom,
+            paddingLeft: spacing.base + insets.left,
+          },
+        ]}
+        testID="bulk-alarm-scroll"
+      >
         <BulkAlarmForm
           fromTime={fromTime}
           toTime={toTime}

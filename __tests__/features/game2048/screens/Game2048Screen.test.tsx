@@ -1,7 +1,9 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
 import {
@@ -18,6 +20,10 @@ import { Game2048Screen } from "../../../../src/features/game2048/screens/Game20
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 
 const mockNavigate = jest.fn();
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 20, bottom: 34, left: 12 },
+};
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
@@ -80,9 +86,11 @@ function createGameOverStore() {
 async function renderWithProviders(store = createInitializedStore()) {
   const utils = await render(
     <JotaiProvider store={store}>
-      <PaperProvider>
-        <Game2048Screen />
-      </PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>
+          <Game2048Screen />
+        </PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   await act(async () => {});
@@ -118,6 +126,22 @@ describe("Game2048Screen", () => {
   it("should display save/load button", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("open-saves-button")).toBeTruthy();
+  });
+
+  it("positions the save/load bar above the bottom system inset", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(getByTestId("game-2048-bottom-bar").props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ paddingBottom: 46 })]),
+    );
+  });
+
+  it("keeps game controls clear of side cutouts", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(
+      StyleSheet.flatten(getByTestId("game-2048-screen").props.style),
+    ).toMatchObject({ paddingLeft: 12, paddingRight: 20 });
   });
 
   describe("auto-save on game over", () => {

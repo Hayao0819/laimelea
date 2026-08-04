@@ -9,7 +9,14 @@ export function setupForegroundHandler(
 ) {
   return notifee.onForegroundEvent(async ({ type, detail }) => {
     if (type === EventType.DELIVERED) {
-      await processAlarmDelivery(detail.notification?.data, onAlarmsUpdated);
+      const result = await processAlarmDelivery(
+        detail.notification?.data,
+        onAlarmsUpdated,
+      );
+      const alarmId = detail.notification?.data?.alarmId;
+      if (result.handled && typeof alarmId === "string") {
+        onAlarmFired(alarmId);
+      }
       return;
     }
 

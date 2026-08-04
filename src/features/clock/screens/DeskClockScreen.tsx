@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { StatusBar, StyleSheet, useWindowDimensions, View } from "react-native";
 import { IconButton } from "react-native-paper";
 import { Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
@@ -19,6 +20,7 @@ export function DeskClockScreen() {
   const settings = useAtomValue(settingsAtom);
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   useFullscreen();
 
@@ -46,15 +48,22 @@ export function DeskClockScreen() {
   return (
     <View style={styles.container} testID="desk-clock-screen">
       <StatusBar hidden animated />
-      <IconButton
-        icon="close"
-        iconColor="rgba(255,255,255,0.3)"
-        size={24}
-        onPress={handleClose}
-        style={styles.closeButton}
-        accessibilityLabel={t("clock.exitDeskClock")}
-        testID="desk-clock-close"
-      />
+      <View
+        style={[
+          styles.closeButton,
+          { top: insets.top + spacing.sm, right: insets.right + spacing.sm },
+        ]}
+        testID="desk-clock-close-target"
+      >
+        <IconButton
+          icon="close"
+          iconColor="rgba(255,255,255,0.3)"
+          size={24}
+          onPress={handleClose}
+          accessibilityLabel={t("clock.exitDeskClock")}
+          testID="desk-clock-close"
+        />
+      </View>
       <View style={styles.content}>
         <Text
           style={[
@@ -84,8 +93,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
     zIndex: 1,
   },
   content: {

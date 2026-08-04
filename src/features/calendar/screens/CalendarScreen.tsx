@@ -17,6 +17,7 @@ import {
   Text,
   useTheme,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -73,6 +74,7 @@ export function CalendarScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const {
     viewMode,
     setViewMode,
@@ -389,7 +391,13 @@ export function CalendarScreen() {
   };
 
   return (
-    <View style={styles.container} testID="calendar-screen">
+    <View
+      style={[
+        styles.container,
+        { paddingLeft: insets.left, paddingRight: insets.right },
+      ]}
+      testID="calendar-screen"
+    >
       {/* View mode selector */}
       <View style={styles.segmentedContainer}>
         <SegmentedButtons<CalendarViewMode>

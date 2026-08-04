@@ -4,6 +4,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Divider, List, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { settingsAtom } from "../../../atoms/settingsAtoms";
@@ -14,6 +15,7 @@ export function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const rawSettings = useAtomValue(settingsAtom);
   const settings: AppSettings = { ...DEFAULT_SETTINGS, ...rawSettings };
 
@@ -95,7 +97,17 @@ export function SettingsScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       testID="settings-screen"
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: spacing.xl + insets.bottom,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+        testID="settings-scroll"
+      >
         <List.Section>
           <List.Subheader>{t("settings.categoryApp")}</List.Subheader>
           <List.Item

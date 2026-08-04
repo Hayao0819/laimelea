@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Button, IconButton, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import {
@@ -34,6 +35,7 @@ import type {
 export function Game2048Screen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const game = useAtomValue(currentGameAtom);
   const bestScores = useAtomValue(bestScoresAtom);
@@ -126,7 +128,14 @@ export function Game2048Screen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.background,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
       testID="game-2048-screen"
     >
       <GameHeader
@@ -174,7 +183,13 @@ export function Game2048Screen() {
         />
       </View>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: insets.bottom + spacing.md },
+        ]}
+        testID="game-2048-bottom-bar"
+      >
         <Button
           mode="outlined"
           onPress={() => setSaveListVisible(true)}
@@ -212,6 +227,6 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     alignItems: "center",
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
   },
 });

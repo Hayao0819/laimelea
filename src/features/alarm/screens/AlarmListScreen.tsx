@@ -5,6 +5,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, FlatList, StyleSheet, View } from "react-native";
 import { FAB, Snackbar, Text, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -30,6 +31,8 @@ export function AlarmListScreen() {
   const [snackMessage, setSnackMessage] = React.useState("");
   const [fabOpen, setFabOpen] = React.useState(false);
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const visibleAlarms = alarms.filter((alarm) => !alarm.isTest);
 
   const handleToggle = useCallback(
     async (alarm: Alarm) => {
@@ -170,7 +173,7 @@ export function AlarmListScreen() {
 
   return (
     <View style={styles.container} testID="alarm-list-screen">
-      {alarms.length === 0 ? (
+      {visibleAlarms.length === 0 ? (
         <View style={styles.empty}>
           <Text variant="bodyLarge" testID="no-alarms-text">
             {t("alarm.noAlarms")}
@@ -178,10 +181,16 @@ export function AlarmListScreen() {
         </View>
       ) : (
         <FlatList
-          data={alarms}
+          data={visibleAlarms}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[
+            styles.list,
+            {
+              paddingLeft: spacing.base + insets.left,
+              paddingRight: spacing.base + insets.right,
+            },
+          ]}
           testID="alarm-list"
         />
       )}

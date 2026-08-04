@@ -2,12 +2,18 @@ import { act, fireEvent, renderAsync } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { spacing } from "../../../src/app/spacing";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { SettingsScreen } from "../../../src/features/settings/screens/SettingsScreen";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 const mockNavigate = jest.fn();
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, right: 16, bottom: 24, left: 12 },
+};
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
@@ -47,9 +53,11 @@ async function renderWithProviders(store = createStore()) {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   const utils = await renderAsync(
     <JotaiProvider store={store}>
-      <PaperProvider>
-        <SettingsScreen />
-      </PaperProvider>
+      <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+        <PaperProvider>
+          <SettingsScreen />
+        </PaperProvider>
+      </SafeAreaProvider>
     </JotaiProvider>,
   );
   return { ...utils, store };
@@ -63,6 +71,20 @@ describe("SettingsScreen (hub)", () => {
   it("should render without crashing", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("settings-screen")).toBeTruthy();
+  });
+
+  it("adds the bottom safe-area inset to the scroll padding", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(getByTestId("settings-scroll").props.contentContainerStyle).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          paddingBottom: spacing.xl + 24,
+          paddingLeft: 12,
+          paddingRight: 16,
+        }),
+      ]),
+    );
   });
 
   it("should display category headers", async () => {

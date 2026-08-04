@@ -3,6 +3,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import {
@@ -18,6 +19,7 @@ import type { GameSnapshot } from "../logic/gameTypes";
 export function Game2048TreeScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const snapshots = useAtomValue(snapshotsAtom);
   const activeSnapshotId = useAtomValue(activeSnapshotIdAtom);
   const loadSnapshot = useSetAtom(loadSnapshotAtom);
@@ -45,7 +47,15 @@ export function Game2048TreeScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.background,
+          paddingRight: spacing.base + insets.right,
+          paddingBottom: spacing.base + insets.bottom,
+          paddingLeft: spacing.base + insets.left,
+        },
+      ]}
       testID="game-2048-tree-screen"
     >
       <Text variant="titleLarge" style={styles.title}>

@@ -58,7 +58,7 @@ describe("setupForegroundHandler", () => {
     expect(onAlarmFired).toHaveBeenCalledWith("alarm-123");
   });
 
-  it("reschedules a delivered alarm and forwards the persisted alarms", async () => {
+  it("opens a delivered alarm after persisting it", async () => {
     const onAlarmsUpdated = jest.fn();
     const data = {
       alarmId: "alarm-123",
@@ -72,6 +72,20 @@ describe("setupForegroundHandler", () => {
     });
 
     expect(processAlarmDelivery).toHaveBeenCalledWith(data, onAlarmsUpdated);
+    expect(onAlarmFired).toHaveBeenCalledWith("alarm-123");
+  });
+
+  it("does not open an alarm when delivery was ignored", async () => {
+    (processAlarmDelivery as jest.Mock).mockResolvedValueOnce({
+      handled: false,
+    });
+    setupForegroundHandler(onAlarmFired);
+
+    await registeredCallback({
+      type: 3,
+      detail: { notification: { data: { alarmId: "alarm-123" } } },
+    });
+
     expect(onAlarmFired).not.toHaveBeenCalled();
   });
 

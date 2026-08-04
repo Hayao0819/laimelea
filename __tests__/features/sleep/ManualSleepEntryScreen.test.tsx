@@ -1,7 +1,9 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
+import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { sleepSessionsAtom } from "../../../src/atoms/sleepAtoms";
 import { ManualSleepEntryScreen } from "../../../src/features/sleep/screens/ManualSleepEntryScreen";
@@ -43,6 +45,10 @@ jest.mock("react-i18next", () => ({
 const mockGoBack = jest.fn();
 const mockSetOptions = jest.fn();
 const mockRouteParams: { sessionId?: string } = {};
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, right: 0, bottom: 24, left: 0 },
+};
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
@@ -75,11 +81,13 @@ function renderWithProviders(
 ) {
   store.set(sleepSessionsAtom, initialSessions);
   const utils = render(
-    <JotaiProvider store={store}>
-      <PaperProvider>
-        <ManualSleepEntryScreen />
-      </PaperProvider>
-    </JotaiProvider>,
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <ManualSleepEntryScreen />
+        </PaperProvider>
+      </JotaiProvider>
+    </SafeAreaProvider>,
   );
   return { ...utils, store };
 }
@@ -97,6 +105,16 @@ describe("ManualSleepEntryScreen", () => {
     expect(getByTestId("start-time-input")).toBeTruthy();
     expect(getByTestId("end-date-input")).toBeTruthy();
     expect(getByTestId("end-time-input")).toBeTruthy();
+  });
+
+  it("adds the bottom safe-area inset to scroll content", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(
+      StyleSheet.flatten(
+        getByTestId("manual-sleep-entry-scroll").props.contentContainerStyle,
+      ).paddingBottom,
+    ).toBe(40);
   });
 
   it("should save a new session and call goBack on valid input", async () => {
@@ -154,6 +172,32 @@ describe("ManualSleepEntryScreen", () => {
     expect(getByTestId("start-time-input").props.value).toBe("22:30");
     expect(getByTestId("end-date-input").props.value).toBe("2026-02-21");
     expect(getByTestId("end-time-input").props.value).toBe("06:30");
+  });
+
+  it("should update an existing session on save", async () => {
+    const existingSession = makeSession();
+    mockRouteParams.sessionId = existingSession.id;
+    const store = createStore();
+    const { getByTestId } = await renderWithProviders(store, [existingSession]);
+
+    await fireEvent.changeText(getByTestId("start-time-input"), "22:30");
+    await fireEvent.press(getByTestId("save-button"));
+
+    await waitFor(() => {
+      expect(mockGoBack).toHaveBeenCalled();
+    });
+
+    const sessions = store.get(sleepSessionsAtom) as SleepSession[];
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      id: existingSession.id,
+      startTimestampMs: new Date("2026-02-25T22:30:00").getTime(),
+      endTimestampMs: existingSession.endTimestampMs,
+      durationMs: 8.5 * 60 * 60 * 1000,
+    });
+    expect(sessions[0].updatedAt).toBeGreaterThanOrEqual(
+      existingSession.updatedAt,
+    );
   });
 
   it("should create session with correct properties on save", async () => {

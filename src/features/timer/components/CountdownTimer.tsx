@@ -63,6 +63,7 @@ export function CountdownTimer() {
           keyExtractor={keyExtractor}
           style={styles.list}
           contentContainerStyle={styles.listContent}
+          testID="timer-list"
         />
       ) : (
         <View style={styles.empty}>

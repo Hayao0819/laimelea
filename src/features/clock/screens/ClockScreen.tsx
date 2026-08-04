@@ -2,6 +2,7 @@ import { useAtomValue } from "jotai";
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { primaryTimeDisplayAtom } from "../../../atoms/settingsAtoms";
@@ -18,13 +19,23 @@ export function ClockScreen() {
   const primaryTimeDisplay = useAtomValue(primaryTimeDisplayAtom);
   const [clockMode, setClockMode] = useState<ClockMode>("analog");
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const toggleClockMode = useCallback(() => {
     setClockMode((prev) => (prev === "analog" ? "digital" : "analog"));
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.container} testID="clock-screen">
+    <ScrollView
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingLeft: spacing.base + insets.left,
+          paddingRight: spacing.base + insets.right,
+        },
+      ]}
+      testID="clock-screen"
+    >
       <CustomDayIndicator realTimeMs={realTimeMs} />
       <Pressable
         onPress={toggleClockMode}

@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 
@@ -31,10 +32,13 @@ export function NumpadInput({ onStart }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { width: screenWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [digits, setDigits] = useState("");
   const numpadPadding = spacing.base * 2;
   const numpadGap = spacing.sm;
-  const buttonWidth = (screenWidth - numpadPadding - numpadGap * 2) / 3;
+  const buttonWidth =
+    (screenWidth - insets.left - insets.right - numpadPadding - numpadGap * 2) /
+    3;
   const buttonHeight = Math.max(56, buttonWidth * 0.55);
 
   const handleDigit = useCallback(

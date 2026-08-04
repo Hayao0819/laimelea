@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Text, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
@@ -124,8 +125,11 @@ export function MonthView({
   const { t } = useTranslation();
   const theme = useTheme();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  const cellSize = Math.floor(width / DAYS_IN_WEEK);
+  const cellSize = Math.floor(
+    (width - insets.left - insets.right) / DAYS_IN_WEEK,
+  );
   const today = startOfDay(Date.now());
   const selectedDayStart = startOfDay(selectedDate);
 

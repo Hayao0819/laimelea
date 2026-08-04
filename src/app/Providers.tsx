@@ -9,6 +9,10 @@ import { useAtomValue, useSetAtom } from "jotai";
 import React, { useEffect, useMemo, useRef } from "react";
 import { AppState, useColorScheme } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import {
+  initialWindowMetrics,
+  SafeAreaProvider,
+} from "react-native-safe-area-context";
 
 import { alarmsAtom } from "../atoms/alarmAtoms";
 import { platformTypeAtom } from "../atoms/platformAtoms";
@@ -139,10 +143,12 @@ export function Providers({ children }: ProvidersProps) {
   }, [isDark, theme]);
 
   return (
-    <PaperProvider theme={theme}>
-      <NavigationContainer ref={navigationRef} theme={navigationTheme}>
-        {children}
-      </NavigationContainer>
-    </PaperProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <PaperProvider theme={theme}>
+        <NavigationContainer ref={navigationRef} theme={navigationTheme}>
+          {children}
+        </NavigationContainer>
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }

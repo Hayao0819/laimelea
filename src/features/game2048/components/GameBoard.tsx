@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Dimensions, PanResponder, StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { useAnimatedBoard } from "../hooks/useAnimatedBoard";
@@ -26,8 +27,10 @@ export function GameBoard({
   direction,
 }: GameBoardProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const screenWidth = Dimensions.get("window").width;
-  const boardWidth = screenWidth - spacing.base * 2;
+  const boardWidth =
+    screenWidth - insets.left - insets.right - spacing.base * 2;
   const cellSize =
     (boardWidth - BOARD_PADDING * 2 - CELL_GAP * (boardSize - 1)) / boardSize;
 

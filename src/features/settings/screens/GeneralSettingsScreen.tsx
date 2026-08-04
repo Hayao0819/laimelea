@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, List, SegmentedButtons, Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { resolveLanguage } from "../../../core/i18n";
@@ -17,6 +18,7 @@ function batteryIcon(status: BatteryOptimizationStatus): string {
 export function GeneralSettingsScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
+  const insets = useSafeAreaInsets();
   const { ignored: batteryOptIgnored, requestExclusion } =
     useBatteryOptimization();
 
@@ -47,7 +49,14 @@ export function GeneralSettingsScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[
+        styles.scroll,
+        {
+          paddingBottom: spacing.xl + insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
       keyboardShouldPersistTaps="handled"
       testID="general-settings-screen"
     >

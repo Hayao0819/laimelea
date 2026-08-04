@@ -54,7 +54,9 @@ describe("ShakeDismissal", () => {
   it("should render shake instructions and progress", async () => {
     const { getByTestId, getByText } = await renderComponent();
     expect(getByTestId("dismissal-shake")).toBeTruthy();
-    expect(getByTestId("shake-progress")).toBeTruthy();
+    expect(getByTestId("shake-progress").props.style).toEqual({
+      alignSelf: "stretch",
+    });
     expect(getByText("dismissal.shakeInstruction")).toBeTruthy();
   });
 

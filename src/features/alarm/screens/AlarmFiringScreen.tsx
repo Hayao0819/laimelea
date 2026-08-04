@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, DeviceEventEmitter, StyleSheet, View } from "react-native";
 import { Button, Chip, Text, useTheme } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
@@ -37,6 +38,7 @@ export function AlarmFiringScreen() {
   const route = useRoute<Props["route"]>();
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [alarms, setAlarms] = useAtom(alarmsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const actionInProgress = useRef(false);
@@ -79,6 +81,18 @@ export function AlarmFiringScreen() {
     }
     if (actionInProgress.current) return;
     actionInProgress.current = true;
+    if (alarm.isTest) {
+      try {
+        await cancelAlarm(alarm);
+      } catch {
+        actionInProgress.current = false;
+        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+        return;
+      }
+      setAlarms(alarms.filter((storedAlarm) => storedAlarm.id !== alarm.id));
+      navigation.goBack();
+      return;
+    }
     const now = Date.now();
     let updatedAlarm: Alarm;
     const deliveredOccurrenceWasAdvanced =
@@ -255,12 +269,21 @@ export function AlarmFiringScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.background,
+          paddingTop: insets.top + spacing.xl,
+          paddingRight: insets.right + spacing.xl,
+          paddingBottom: insets.bottom + spacing.xl,
+          paddingLeft: insets.left + spacing.xl,
+        },
+      ]}
       testID="alarm-firing-screen"
     >
       {isPreview && (
         <Chip
-          style={styles.previewBadge}
+          style={[styles.previewBadge, { top: insets.top + spacing.xl }]}
           textStyle={{ color: theme.colors.onTertiaryContainer }}
           testID="preview-badge"
         >
@@ -321,7 +344,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.xl,
   },
   previewBadge: {
     position: "absolute",

@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, SegmentedButtons, Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import { TimezonePickerSheet } from "../components/TimezonePickerSheet";
@@ -10,6 +11,7 @@ import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 export function TimezoneSettingsScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
+  const insets = useSafeAreaInsets();
 
   const [tzPickerVisible, setTzPickerVisible] = useState(false);
   const [tzPickerTarget, setTzPickerTarget] = useState<"primary" | "secondary">(
@@ -43,7 +45,14 @@ export function TimezoneSettingsScreen() {
   return (
     <>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingBottom: spacing.xl + insets.bottom,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         testID="timezone-settings-screen"
       >

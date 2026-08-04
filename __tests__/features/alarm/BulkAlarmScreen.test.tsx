@@ -2,8 +2,9 @@ import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { Alert } from "react-native";
+import { Alert, StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
@@ -77,6 +78,10 @@ jest.mock("@notifee/react-native", () => ({
 
 const mockGoBack = jest.fn();
 const mockSetOptions = jest.fn();
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 0, right: 0, bottom: 24, left: 0 },
+};
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
@@ -126,11 +131,13 @@ async function renderWithProviders(
   store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, initialAlarms);
   const utils = await render(
-    <JotaiProvider store={store}>
-      <PaperProvider>
-        <BulkAlarmScreen />
-      </PaperProvider>
-    </JotaiProvider>,
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <JotaiProvider store={store}>
+        <PaperProvider>
+          <BulkAlarmScreen />
+        </PaperProvider>
+      </JotaiProvider>
+    </SafeAreaProvider>,
   );
   await act(async () => {});
   return { ...utils, store };
@@ -151,6 +158,16 @@ describe("BulkAlarmScreen", () => {
   it('should render with testID "bulk-alarm-screen"', async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("bulk-alarm-screen")).toBeTruthy();
+  });
+
+  it("adds the bottom safe-area inset to scroll content", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(
+      StyleSheet.flatten(
+        getByTestId("bulk-alarm-scroll").props.contentContainerStyle,
+      ).paddingBottom,
+    ).toBe(40);
   });
 
   it("should render BulkAlarmForm", async () => {

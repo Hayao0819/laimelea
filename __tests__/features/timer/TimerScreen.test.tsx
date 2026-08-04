@@ -1,8 +1,14 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { TimerScreen } from "../../../src/features/timer/screens/TimerScreen";
+
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 24, right: 20, bottom: 34, left: 12 },
+};
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -27,7 +33,11 @@ jest.mock("../../../src/features/timer/components/Stopwatch", () => ({
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
-  return render(<PaperProvider>{ui}</PaperProvider>);
+  return render(
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <PaperProvider>{ui}</PaperProvider>
+    </SafeAreaProvider>,
+  );
 }
 
 describe("TimerScreen", () => {
