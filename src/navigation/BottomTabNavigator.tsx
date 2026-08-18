@@ -1,3 +1,4 @@
+import { MaterialDesignIcons as Icon } from "@react-native-vector-icons/material-design-icons/static";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { CommonActions, useNavigation } from "@react-navigation/native";
@@ -5,7 +6,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Appbar, BottomNavigation } from "react-native-paper";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 import { AlarmListScreen } from "../features/alarm/screens/AlarmListScreen";
 import { CalendarScreen } from "../features/calendar/screens/CalendarScreen";

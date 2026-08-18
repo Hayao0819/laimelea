@@ -36,6 +36,12 @@
     "repository": "https://github.com/react-native-google-signin/google-signin"
   },
   {
+    "name": "@react-native-vector-icons/material-design-icons",
+    "version": "13.1.2",
+    "license": "MIT",
+    "repository": "https://github.com/oblador/react-native-vector-icons"
+  },
+  {
     "name": "@react-navigation/bottom-tabs",
     "version": "7.14.0",
     "license": "MIT",
@@ -160,12 +166,6 @@
     "version": "15.15.3",
     "license": "MIT",
     "repository": "https://github.com/react-native-community/react-native-svg"
-  },
-  {
-    "name": "react-native-vector-icons",
-    "version": "10.3.0",
-    "license": "MIT",
-    "repository": "git://github.com/oblador/react-native-vector-icons"
   },
   {
     "name": "react-native-worklets",

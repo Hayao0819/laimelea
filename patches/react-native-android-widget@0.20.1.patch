@@ -1,0 +1,21 @@
+diff --git a/android/build.gradle b/android/build.gradle
+index 2a1381608b22dacf1f73375d91e58b0c82c25a8f..62c63842783d3cc4aecd55b81d38175685895005 100644
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -68,3 +68,4 @@ android {
+   lintOptions {
+     disable 'GradleCompatible'
++    lintConfig file('lint.xml')
+   }
+diff --git a/android/lint.xml b/android/lint.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..fbef083467201d79daea40754087570d46594a4f
+--- /dev/null
++++ b/android/lint.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<lint>
++    <issue id="UnsafeOptInUsageError">
++        <option name="opt-in" value="com.facebook.react.common.annotations.UnstableReactNativeAPI" />
++    </issue>
++</lint>
