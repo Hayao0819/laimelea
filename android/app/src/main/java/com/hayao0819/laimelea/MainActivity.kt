@@ -1,6 +1,7 @@
 package com.hayao0819.laimelea
 
 import android.os.Bundle
+import android.content.Intent
 import android.view.KeyEvent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.facebook.react.ReactActivity
@@ -21,6 +22,12 @@ class MainActivity : ReactActivity() {
   }
 
   override fun getMainComponentName(): String = "Laimelea"
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    RingtoneModule.emitPendingAlarmDelivery(reactDelegate?.currentReactContext, intent)
+  }
 
   override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
     val isVolumeKey =

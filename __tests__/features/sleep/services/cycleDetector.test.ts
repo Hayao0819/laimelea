@@ -49,11 +49,7 @@ function createRegularCycleSessions(
     const minute = Math.floor(
       (((totalOnsetMinutes % 1440) + 1440) % 1440) % 60,
     );
-    // Place on successive calendar days, adjusting the day when onset wraps past midnight
-    const extraDays = Math.floor(totalOnsetMinutes / 1440);
-    sessions.push(
-      createSessionAtTime(2025, 1, 1 + i + extraDays, hour, minute),
-    );
+    sessions.push(createSessionAtTime(2025, 1, 1 + i, hour, minute));
   }
 
   return sessions;
@@ -122,6 +118,32 @@ describe("estimateCycle", () => {
   });
 
   describe("edge cases", () => {
+    it("uses elapsed calendar days when observations have gaps", () => {
+      const sessions = Array.from({ length: 7 }, (_, index) =>
+        createSessionAtTime(2025, 1, 1 + index * 2, 22 + index * 2, 0),
+      );
+      const result = estimateCycle(sessions);
+
+      expect(result).not.toBeNull();
+      expect(result!.driftMinutesPerDay).toBeCloseTo(60, -1);
+    });
+
+    it("treats consecutive local dates as one day across a DST-length day", () => {
+      const sessions = [
+        createSessionAtTime(2025, 3, 7, 23, 0),
+        createSessionAtTime(2025, 3, 8, 23, 0),
+        createSessionAtTime(2025, 3, 9, 23, 0),
+        createSessionAtTime(2025, 3, 10, 23, 0),
+        createSessionAtTime(2025, 3, 11, 23, 0),
+        createSessionAtTime(2025, 3, 12, 23, 0),
+        createSessionAtTime(2025, 3, 13, 23, 0),
+      ];
+      const result = estimateCycle(sessions);
+
+      expect(result).not.toBeNull();
+      expect(result!.driftMinutesPerDay).toBeCloseTo(0, 5);
+    });
+
     it("should handle midnight crossing (23:00 -> 01:00 transition) via unwrapping", () => {
       // Sessions that drift from 23:00 past midnight: +30 min/day
       // Day 0: 23:00, Day 1: 23:30, Day 2: 00:00+, Day 3: 00:30, ...

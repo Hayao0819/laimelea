@@ -5,6 +5,7 @@ import React from "react";
 import { AppState } from "react-native";
 
 import { timersAtom } from "../../src/atoms/timerAtoms";
+import { STORAGE_KEYS } from "../../src/core/storage/keys";
 import { useTimers } from "../../src/hooks/useTimers";
 
 jest.mock("@notifee/react-native", () => ({
@@ -19,10 +20,12 @@ jest.mock("@notifee/react-native", () => ({
   TriggerType: { TIMESTAMP: 0 },
 }));
 
+const storage: Record<string, string> = {};
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: {
-    getItem: jest.fn(() => Promise.resolve(null)),
+    getItem: jest.fn((key: string) => Promise.resolve(storage[key] ?? null)),
     setItem: jest.fn(() => Promise.resolve()),
     removeItem: jest.fn(() => Promise.resolve()),
   },
@@ -45,6 +48,7 @@ describe("useTimers", () => {
       .spyOn(AppState, "addEventListener")
       .mockReturnValue({ remove: jest.fn() } as never);
     jest.clearAllMocks();
+    for (const key of Object.keys(storage)) delete storage[key];
   });
 
   afterEach(() => {
@@ -132,6 +136,41 @@ describe("useTimers", () => {
 
     expect(result.current.timers[0].remainingMs).toBe(0);
     expect(result.current.timers[0].isRunning).toBe(false);
+  });
+
+  it("does not redisplay a completion notification after background completion", async () => {
+    const { Wrapper, store } = createWrapper();
+    const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+    act(() => {
+      store.set(timersAtom, [
+        {
+          id: "timer-completed-in-background",
+          label: "Background timer",
+          durationMs: 5000,
+          remainingMs: 1000,
+          isRunning: true,
+          startedAt: 0,
+          pausedElapsedMs: 0,
+        },
+      ]);
+    });
+    storage[STORAGE_KEYS.TIMER_COMPLETIONS] = JSON.stringify([
+      "timer-completed-in-background",
+    ]);
+
+    const appStateListener = (AppState.addEventListener as jest.Mock).mock
+      .calls[0][1];
+    (Date.now as jest.Mock).mockReturnValue(6000);
+    await act(async () => {
+      appStateListener("active");
+      await Promise.resolve();
+    });
+
+    expect(result.current.timers[0]).toMatchObject({
+      remainingMs: 0,
+      isRunning: false,
+    });
+    expect(notifee.displayNotification).not.toHaveBeenCalled();
   });
 
   it("should pause only the targeted timer", () => {
@@ -274,7 +313,7 @@ describe("useTimers", () => {
       );
     });
 
-    it("should cancel trigger when pausing a timer", () => {
+    it("should cancel trigger when pausing a timer", async () => {
       const { Wrapper } = createWrapper();
       const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
 
@@ -284,7 +323,7 @@ describe("useTimers", () => {
 
       const id = result.current.timers[0].id;
 
-      act(() => {
+      await act(async () => {
         result.current.pauseTimer(id);
       });
 
@@ -293,7 +332,7 @@ describe("useTimers", () => {
       );
     });
 
-    it("should cancel trigger when deleting a timer", () => {
+    it("should cancel trigger when deleting a timer", async () => {
       const { Wrapper } = createWrapper();
       const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
 
@@ -303,7 +342,7 @@ describe("useTimers", () => {
 
       const id = result.current.timers[0].id;
 
-      act(() => {
+      await act(async () => {
         result.current.deleteTimer(id);
       });
 
@@ -312,7 +351,7 @@ describe("useTimers", () => {
       );
     });
 
-    it("should cancel trigger when resetting a timer", () => {
+    it("should cancel trigger when resetting a timer", async () => {
       const { Wrapper } = createWrapper();
       const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
 
@@ -322,7 +361,7 @@ describe("useTimers", () => {
 
       const id = result.current.timers[0].id;
 
-      act(() => {
+      await act(async () => {
         result.current.resetTimer(id);
       });
 
@@ -331,7 +370,7 @@ describe("useTimers", () => {
       );
     });
 
-    it("should schedule a trigger when resuming a timer", () => {
+    it("should schedule a trigger when resuming a timer", async () => {
       const { Wrapper } = createWrapper();
       const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
 
@@ -346,14 +385,14 @@ describe("useTimers", () => {
         jest.advanceTimersByTime(3000);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.pauseTimer(id);
       });
 
       jest.clearAllMocks();
 
       (Date.now as jest.Mock).mockReturnValue(5000);
-      act(() => {
+      await act(async () => {
         result.current.resumeTimer(id);
       });
 
@@ -363,13 +402,12 @@ describe("useTimers", () => {
         }),
         expect.objectContaining({
           type: 0,
-          // completionTime = startedAt(5000) + durationMs(10000) - pausedElapsedMs(3000) = 12000
           timestamp: 12000,
         }),
       );
     });
 
-    it("should cancel trigger on foreground completion to prevent duplicates", () => {
+    it("does not display a second notification when the trigger completes", () => {
       const { Wrapper } = createWrapper();
       const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
 
@@ -385,15 +423,10 @@ describe("useTimers", () => {
         jest.advanceTimersByTime(6000);
       });
 
-      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
+      expect(notifee.cancelTriggerNotification).not.toHaveBeenCalledWith(
         `timer-${id}`,
       );
-      expect(notifee.displayNotification).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: "Short Timer",
-          body: "Timer complete",
-        }),
-      );
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
     });
   });
 });

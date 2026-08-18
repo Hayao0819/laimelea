@@ -255,7 +255,8 @@ describe("AOSP CalendarService", () => {
   it("fetchEvents should convert native instances to CalendarEvent", async () => {
     mockGetEventInstances.mockResolvedValue([
       {
-        id: "42",
+        id: "42:1700000000000",
+        sourceEventId: "42",
         calendarId: "1",
         calendarName: "My Calendar",
         title: "Meeting",
@@ -276,7 +277,7 @@ describe("AOSP CalendarService", () => {
     );
     expect(events).toEqual([
       {
-        id: "42",
+        id: "42:1700000000000",
         sourceEventId: "42",
         source: "local",
         title: "Meeting",
@@ -294,7 +295,8 @@ describe("AOSP CalendarService", () => {
   it("fetchEvents should handle allDay events", async () => {
     mockGetEventInstances.mockResolvedValue([
       {
-        id: "99",
+        id: "99:1700000000000",
+        sourceEventId: "99",
         calendarId: "2",
         calendarName: "Holidays",
         title: "National Holiday",
@@ -320,10 +322,12 @@ describe("AOSP CalendarService", () => {
     expect(await calendar.fetchEvents(0, 1000)).toEqual([]);
   });
 
-  it("fetchEvents should return empty array on error", async () => {
+  it("fetchEvents should propagate native errors", async () => {
     mockGetEventInstances.mockRejectedValue(new Error("ContentProvider error"));
     const calendar = createAospCalendarService();
-    expect(await calendar.fetchEvents(0, 1000)).toEqual([]);
+    await expect(calendar.fetchEvents(0, 1000)).rejects.toThrow(
+      "ContentProvider error",
+    );
   });
 
   it("getCalendarList should convert native calendars to CalendarInfo", async () => {
@@ -347,10 +351,12 @@ describe("AOSP CalendarService", () => {
     expect(await calendar.getCalendarList()).toEqual([]);
   });
 
-  it("getCalendarList should return empty array on error", async () => {
+  it("getCalendarList should propagate native errors", async () => {
     mockGetCalendars.mockRejectedValue(new Error("ContentProvider error"));
     const calendar = createAospCalendarService();
-    expect(await calendar.getCalendarList()).toEqual([]);
+    await expect(calendar.getCalendarList()).rejects.toThrow(
+      "ContentProvider error",
+    );
   });
 });
 

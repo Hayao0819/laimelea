@@ -3,6 +3,7 @@ import { atom, createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 
 import type { PlatformServices } from "../../src/core/platform/types";
+import { STORAGE_KEYS } from "../../src/core/storage/keys";
 import type { SleepSession } from "../../src/models/SleepSession";
 import type { CycleEstimation } from "../../src/models/SleepSession";
 
@@ -14,6 +15,7 @@ const mockSleepLoadingAtom = atom(false);
 const mockSleepErrorAtom = atom<string | null>(null);
 const mockSleepLastSyncAtom = atom<number | null>(null);
 const mockSleepCacheTtlMs = 10 * 60 * 1000;
+const mockAsyncStorageStore: Record<string, string> = {};
 const mockSleepCacheStaleAtom = atom((get) => {
   const lastSync = get(mockSleepLastSyncAtom);
   if (lastSync == null) return true;
@@ -36,9 +38,17 @@ jest.mock("../../src/features/sleep/services/cycleDetector");
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: {
-    getItem: jest.fn(() => Promise.resolve(null)),
-    setItem: jest.fn(() => Promise.resolve()),
-    removeItem: jest.fn(() => Promise.resolve()),
+    getItem: jest.fn((key: string) =>
+      Promise.resolve(mockAsyncStorageStore[key] ?? null),
+    ),
+    setItem: jest.fn((key: string, value: string) => {
+      mockAsyncStorageStore[key] = value;
+      return Promise.resolve();
+    }),
+    removeItem: jest.fn((key: string) => {
+      delete mockAsyncStorageStore[key];
+      return Promise.resolve();
+    }),
   },
 }));
 
@@ -64,6 +74,9 @@ const { createPlatformServices } = require("../../src/core/platform/factory");
 const {
   estimateCycle,
 } = require("../../src/features/sleep/services/cycleDetector");
+const {
+  createAospSleepService,
+} = require("../../src/core/platform/aosp/sleepService");
 
 const mockCreatePlatformServices = createPlatformServices as jest.Mock;
 const mockEstimateCycle = estimateCycle as jest.Mock;
@@ -77,7 +90,7 @@ function createMockSleep() {
 }
 
 function createMockServices(
-  sleepOverride?: ReturnType<typeof createMockSleep>,
+  sleepOverride?: PlatformServices["sleep"],
 ): PlatformServices {
   const sleep = sleepOverride ?? createMockSleep();
   return {
@@ -140,6 +153,9 @@ describe("useSleepSync", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    for (const key of Object.keys(mockAsyncStorageStore)) {
+      delete mockAsyncStorageStore[key];
+    }
     mockServices = createMockServices();
     mockCreatePlatformServices.mockReturnValue(mockServices);
     mockEstimateCycle.mockReturnValue(null);
@@ -191,6 +207,117 @@ describe("useSleepSync", () => {
     expect(store.get(mockCycleEstimationAtom)).toEqual(mockEstimation);
     expect(store.get(mockSleepLastSyncAtom)).toBeGreaterThan(0);
     expect(result.current.error).toBeNull();
+  });
+
+  it("does not duplicate AOSP manual sessions returned from persisted storage", async () => {
+    const manualSession: SleepSession = {
+      ...sampleSession,
+      id: "manual-1",
+      source: "manual",
+      updatedAt: 10,
+    };
+    mockAsyncStorageStore[STORAGE_KEYS.SLEEP_SESSIONS] = JSON.stringify([
+      manualSession,
+    ]);
+    mockServices = createMockServices(createAospSleepService());
+    mockCreatePlatformServices.mockReturnValue(mockServices);
+    const store = createStore();
+    store.set(mockSleepSessionsAtom, [manualSession]);
+    const { Wrapper } = createWrapper(store);
+    const { result } = renderHook(() => useSleepSync(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(store.get(mockSleepSessionsAtom)).toEqual([manualSession]);
+  });
+
+  it("removes cached Health Connect sessions that are no longer fetched", async () => {
+    const mockSleep = createMockSleep();
+    mockSleep.fetchSleepSessions.mockResolvedValue([]);
+    mockServices = createMockServices(mockSleep);
+    mockCreatePlatformServices.mockReturnValue(mockServices);
+    const store = createStore();
+    store.set(mockSleepSessionsAtom, [sampleSession]);
+    const { Wrapper } = createWrapper(store);
+    const { result } = renderHook(() => useSleepSync(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(store.get(mockSleepSessionsAtom)).toEqual([]);
+  });
+
+  it("keeps a manual edit made while a fetch is pending", async () => {
+    let resolveFetch: (sessions: SleepSession[]) => void;
+    const fetched = new Promise<SleepSession[]>((resolve) => {
+      resolveFetch = resolve;
+    });
+    const staleManual: SleepSession = {
+      ...sampleSession,
+      id: "manual-1",
+      source: "manual",
+      updatedAt: 10,
+    };
+    const editedManual = {
+      ...staleManual,
+      durationMs: 7 * 60 * 60 * 1000,
+      updatedAt: 20,
+    };
+    const mockSleep = createMockSleep();
+    mockSleep.fetchSleepSessions.mockReturnValue(fetched);
+    mockServices = createMockServices(mockSleep);
+    mockCreatePlatformServices.mockReturnValue(mockServices);
+    const store = createStore();
+    store.set(mockSleepSessionsAtom, [staleManual]);
+    const { Wrapper } = createWrapper(store);
+    const { result } = renderHook(() => useSleepSync(), { wrapper: Wrapper });
+
+    act(() => {
+      result.current.sync(true);
+    });
+    act(() => {
+      store.set(mockSleepSessionsAtom, [editedManual]);
+    });
+    await act(async () => {
+      resolveFetch!([staleManual]);
+    });
+
+    expect(store.get(mockSleepSessionsAtom)).toEqual([editedManual]);
+  });
+
+  it("does not restore a manual session deleted while a fetch is pending", async () => {
+    let resolveFetch: (sessions: SleepSession[]) => void;
+    const fetched = new Promise<SleepSession[]>((resolve) => {
+      resolveFetch = resolve;
+    });
+    const manualSession: SleepSession = {
+      ...sampleSession,
+      id: "manual-1",
+      source: "manual",
+    };
+    const mockSleep = createMockSleep();
+    mockSleep.fetchSleepSessions.mockReturnValue(fetched);
+    mockServices = createMockServices(mockSleep);
+    mockCreatePlatformServices.mockReturnValue(mockServices);
+    const store = createStore();
+    store.set(mockSleepSessionsAtom, [manualSession]);
+    const { Wrapper } = createWrapper(store);
+    const { result } = renderHook(() => useSleepSync(), { wrapper: Wrapper });
+
+    act(() => {
+      result.current.sync(true);
+    });
+    act(() => {
+      result.current.deleteEntry(manualSession.id);
+    });
+    await act(async () => {
+      resolveFetch!([manualSession]);
+    });
+
+    expect(store.get(mockSleepSessionsAtom)).toEqual([]);
   });
 
   it("should prevent concurrent sync calls via mutex", async () => {

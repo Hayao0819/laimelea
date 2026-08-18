@@ -43,6 +43,25 @@ export const calendarSelectedDateAtom = atom<number>(
 
 const syncLastSyncAtom = unwrap(calendarLastSyncAtom, (prev) => prev ?? null);
 const syncEventsAtom = unwrap(calendarEventsAtom, (prev) => prev ?? []);
+const CALENDAR_LOADING = Symbol("calendar-loading");
+const calendarEventsOrLoadingAtom = unwrap(
+  calendarEventsAtom,
+  () => CALENDAR_LOADING as never,
+);
+const calendarLastSyncOrLoadingAtom = unwrap(
+  calendarLastSyncAtom,
+  () => CALENDAR_LOADING as never,
+);
+
+export const calendarCacheHydratedAtom = atom<boolean>(
+  (get) =>
+    get(calendarEventsOrLoadingAtom) !== (CALENDAR_LOADING as never) &&
+    get(calendarLastSyncOrLoadingAtom) !== (CALENDAR_LOADING as never),
+);
+
+export const calendarHasSyncedAtom = atom<boolean>(
+  (get) => get(calendarCacheHydratedAtom) && get(syncLastSyncAtom) != null,
+);
 
 export const resolvedCalendarEventsAtom = atom<CalendarEvent[]>((get) =>
   get(syncEventsAtom),

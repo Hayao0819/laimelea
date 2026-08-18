@@ -2,7 +2,7 @@ import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { DeviceEventEmitter, StyleSheet } from "react-native";
+import { BackHandler, DeviceEventEmitter, StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -58,6 +58,10 @@ const mockGoBack = jest.fn();
 let mockRouteParams: Record<string, unknown> = { alarmId: "test-alarm-1" };
 
 jest.mock("@react-navigation/native", () => ({
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const ReactModule = require("react");
+    ReactModule.useEffect(effect, [effect]);
+  },
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack }),
   useRoute: () => ({ params: mockRouteParams }),
 }));
@@ -83,6 +87,13 @@ jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
 }));
 
 let mockDismissalContainerProps: Record<string, unknown> = {};
+let mockHardwareBackHandler: (() => boolean | null | undefined) | undefined;
+const mockBackHandlerRemove = jest.fn();
+
+jest.spyOn(BackHandler, "addEventListener").mockImplementation((_, handler) => {
+  mockHardwareBackHandler = handler;
+  return { remove: mockBackHandlerRemove };
+});
 
 const safeAreaMetrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
@@ -178,6 +189,7 @@ describe("AlarmFiringScreen", () => {
     jest.clearAllMocks();
     mockRouteParams = { alarmId: "test-alarm-1" };
     mockDismissalContainerProps = {};
+    mockHardwareBackHandler = undefined;
   });
 
   afterEach(() => {
@@ -189,6 +201,13 @@ describe("AlarmFiringScreen", () => {
       makeAlarm(),
     ]);
     expect(getByTestId("alarm-firing-screen")).toBeTruthy();
+  });
+
+  it("blocks the Android back button while an alarm is firing", async () => {
+    await renderWithProviders(createStore(), [makeAlarm()]);
+
+    expect(mockHardwareBackHandler?.()).toBe(true);
+    expect(mockGoBack).not.toHaveBeenCalled();
   });
 
   it("positions dismissal controls within safe area insets", async () => {
@@ -268,6 +287,37 @@ describe("AlarmFiringScreen", () => {
     const updatedAlarms = await store.get(alarmsAtom);
     expect(updatedAlarms[0].lastFiredAt).not.toBeNull();
     expect(updatedAlarms[0].lastFiredAt).toBeGreaterThan(0);
+  });
+
+  it("preserves concurrent updates to other alarms while dismissal is pending", async () => {
+    const store = createStore();
+    const alarm = makeAlarm({ id: "dismissed-alarm" });
+    const otherAlarm = makeAlarm({ id: "other-alarm", label: "Before" });
+    let resolveCancellation: (() => void) | undefined;
+    (cancelAlarm as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCancellation = resolve;
+        }),
+    );
+    mockRouteParams = { alarmId: alarm.id };
+    const { getByTestId } = await renderWithProviders(store, [
+      alarm,
+      otherAlarm,
+    ]);
+
+    fireEvent.press(getByTestId("dismiss-button"));
+    const updatedOtherAlarm = { ...otherAlarm, label: "Updated elsewhere" };
+    await act(async () => {
+      store.set(alarmsAtom, [alarm, updatedOtherAlarm]);
+    });
+    resolveCancellation?.();
+
+    await waitFor(() => {
+      expect(store.get(alarmsAtom)).toEqual(
+        expect.arrayContaining([updatedOtherAlarm]),
+      );
+    });
   });
 
   it("removes a test alarm after dismissal", async () => {
@@ -655,7 +705,10 @@ describe("AlarmFiringScreen", () => {
     });
 
     it("should auto-dismiss after autoSilenceMin minutes", async () => {
-      const alarm = makeAlarm({ autoSilenceMin: 5 });
+      const alarm = makeAlarm({
+        activeOccurrenceTimestampMs: Date.now(),
+        autoSilenceMin: 5,
+      });
       await renderWithProviders(createStore(), [alarm]);
 
       await act(async () => {
@@ -695,7 +748,10 @@ describe("AlarmFiringScreen", () => {
     });
 
     it("should not auto-dismiss before the timeout elapses", async () => {
-      const alarm = makeAlarm({ autoSilenceMin: 10 });
+      const alarm = makeAlarm({
+        activeOccurrenceTimestampMs: Date.now(),
+        autoSilenceMin: 10,
+      });
       await renderWithProviders(createStore(), [alarm]);
 
       // Advance to just before the timeout
@@ -714,6 +770,26 @@ describe("AlarmFiringScreen", () => {
       await waitFor(() => {
         expect(cancelAlarm).toHaveBeenCalled();
         expect(mockGoBack).toHaveBeenCalled();
+      });
+    });
+
+    it("uses only the remaining auto-silence duration after delivery", async () => {
+      const alarm = makeAlarm({
+        activeOccurrenceTimestampMs: Date.now() - 3 * 60 * 1000,
+        autoSilenceMin: 5,
+      });
+      await renderWithProviders(createStore(), [alarm]);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2 * 60 * 1000 - 1);
+      });
+      expect(cancelAlarm).not.toHaveBeenCalled();
+
+      await act(async () => {
+        jest.advanceTimersByTime(1);
+      });
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(alarm);
       });
     });
 

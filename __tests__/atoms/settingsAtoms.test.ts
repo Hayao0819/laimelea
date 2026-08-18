@@ -13,6 +13,7 @@ import type { AlarmDefaults, AppSettings } from "../../src/models/Settings";
 import {
   DEFAULT_ALARM_DEFAULTS,
   DEFAULT_SETTINGS,
+  DEFAULT_WIDGET_SETTINGS,
 } from "../../src/models/Settings";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
@@ -212,30 +213,41 @@ describe("resolvedSettingsAtom", () => {
     expect(resolved.alarmDefaults).toEqual(customAlarmDefaults);
   });
 
-  it("deep-merges widgetSettings is NOT done (only alarmDefaults)", () => {
+  it("fills nested defaults for legacy cycle and widget settings", () => {
     const store = createStore();
-    // Simulate stored settings with a partial widgetSettings object.
-    // Since resolvedSettingsAtom only deep-merges alarmDefaults,
-    // widgetSettings uses shallow spread: stored replaces defaults entirely.
     const partialWidget = {
       backgroundColor: "#FF0000",
       textColor: "#00FF00",
-      // Missing: secondaryTextColor, accentColor, opacity, borderRadius,
-      //          showRealTime, showNextAlarm
     };
     store.set(settingsAtom, {
       ...DEFAULT_SETTINGS,
+      cycleConfig: {
+        cycleLengthMinutes: 1500,
+      } as AppSettings["cycleConfig"],
       widgetSettings: partialWidget as AppSettings["widgetSettings"],
     });
     const resolved = store.get(resolvedSettingsAtom);
-    // The stored partial object replaces the entire widgetSettings
+
+    expect(resolved.cycleConfig).toEqual({
+      cycleLengthMinutes: 1500,
+      baseTimeMs: DEFAULT_SETTINGS.cycleConfig.baseTimeMs,
+    });
     expect(resolved.widgetSettings.backgroundColor).toBe("#FF0000");
     expect(resolved.widgetSettings.textColor).toBe("#00FF00");
-    // Missing fields are NOT filled from DEFAULT_WIDGET_SETTINGS
-    expect(resolved.widgetSettings.secondaryTextColor).toBeUndefined();
-    expect(resolved.widgetSettings.opacity).toBeUndefined();
-    expect(resolved.widgetSettings.borderRadius).toBeUndefined();
-    expect(resolved.widgetSettings.showRealTime).toBeUndefined();
-    expect(resolved.widgetSettings.showNextAlarm).toBeUndefined();
+    expect(resolved.widgetSettings.secondaryTextColor).toBe(
+      DEFAULT_WIDGET_SETTINGS.secondaryTextColor,
+    );
+    expect(resolved.widgetSettings.opacity).toBe(
+      DEFAULT_WIDGET_SETTINGS.opacity,
+    );
+    expect(resolved.widgetSettings.borderRadius).toBe(
+      DEFAULT_WIDGET_SETTINGS.borderRadius,
+    );
+    expect(resolved.widgetSettings.showRealTime).toBe(
+      DEFAULT_WIDGET_SETTINGS.showRealTime,
+    );
+    expect(resolved.widgetSettings.showNextAlarm).toBe(
+      DEFAULT_WIDGET_SETTINGS.showNextAlarm,
+    );
   });
 });

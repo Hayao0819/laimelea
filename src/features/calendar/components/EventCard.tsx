@@ -5,7 +5,7 @@ import { StyleSheet, View } from "react-native";
 import { Card, IconButton, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
-import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
@@ -76,7 +76,7 @@ function formatDurationI18n(
 export function EventCard({ event, onCreateAlarm, onPress }: EventCardProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const settings = useAtomValue(settingsAtom);
+  const settings = useAtomValue(resolvedSettingsAtom);
 
   const eventColor = event.colorId ?? theme.colors.primary;
   const isZeroDuration = event.startTimestampMs === event.endTimestampMs;

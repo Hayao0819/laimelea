@@ -49,6 +49,48 @@ describe("huaweiDriveApi", () => {
       expect(result).toBeNull();
     });
 
+    it("requests every cursor page and selects the newest file", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              files: [
+                {
+                  id: "old",
+                  fileName: "laimelea-backup.json",
+                  editedTime: "2026-02-20T10:00:00.000Z",
+                },
+              ],
+              nextCursor: "cursor-2",
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              files: [
+                {
+                  id: "new",
+                  fileName: "laimelea-backup.json",
+                  editedTime: "2026-02-21T10:00:00.000Z",
+                },
+              ],
+            }),
+        });
+
+      expect(await findBackupFile("token-123")).toMatchObject({ id: "new" });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(
+        new URL(mockFetch.mock.calls[0][0]).searchParams.get("orderBy"),
+      ).toBe("editedTime desc");
+      expect(
+        new URL(mockFetch.mock.calls[1][0]).searchParams.get("cursor"),
+      ).toBe("cursor-2");
+    });
+
     it("should throw DriveAuthExpiredError on 401", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -91,6 +133,25 @@ describe("huaweiDriveApi", () => {
       );
       expect(options.body).toContain("laimelea-backup.json");
       expect(options.body).toContain("applicationData");
+    });
+
+    it("regenerates a multipart boundary that appears in backup data", async () => {
+      jest.spyOn(Date, "now").mockReturnValue(1);
+      jest.spyOn(Math, "random").mockReturnValue(0);
+      const collidingBoundary = "laimelea_backup_1__0";
+      const data = JSON.stringify({ label: `\r\n--${collidingBoundary}` });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: "new-file-id" }),
+      });
+
+      await uploadBackup("token", data);
+
+      const [, options] = mockFetch.mock.calls[0];
+      expect(options.headers["Content-Type"]).not.toContain(collidingBoundary);
+      expect(options.body).toContain(data);
+      jest.restoreAllMocks();
     });
 
     it("should update existing file with PUT", async () => {

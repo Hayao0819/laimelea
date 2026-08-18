@@ -1,9 +1,15 @@
 import notifee, { EventType } from "@notifee/react-native";
 
 import { processAlarmDelivery } from "../../features/alarm/services/alarmDeliveryService";
+import { completeTimerFromNotification } from "../../features/timer/services/timerNotification";
 
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type === EventType.DELIVERED) {
+    const timerId = detail.notification?.data?.timerId;
+    if (typeof timerId === "string") {
+      await completeTimerFromNotification(timerId);
+      return;
+    }
     await processAlarmDelivery(detail.notification?.data);
     return;
   }

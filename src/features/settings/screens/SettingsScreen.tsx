@@ -7,17 +7,14 @@ import { Divider, List, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import { settingsAtom } from "../../../atoms/settingsAtoms";
-import type { AppSettings } from "../../../models/Settings";
-import { DEFAULT_SETTINGS } from "../../../models/Settings";
+import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 
 export function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const rawSettings = useAtomValue(settingsAtom);
-  const settings: AppSettings = { ...DEFAULT_SETTINGS, ...rawSettings };
+  const settings = useAtomValue(resolvedSettingsAtom);
 
   const cycleHours = Math.floor(settings.cycleConfig.cycleLengthMinutes / 60);
   const cycleMinutes = settings.cycleConfig.cycleLengthMinutes % 60;

@@ -141,6 +141,110 @@ describe("processAlarmDelivery", () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
   });
 
+  it("clears an active occurrence when its later stop delivery arrives", async () => {
+    const alarm = makeAlarm({
+      targetTimestampMs: 1_060_000,
+      activeOccurrenceTimestampMs: 1_000_000,
+      lastDeliveredOccurrenceTimestampMs: 1_000_000,
+    });
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      {
+        alarmId: alarm.id,
+        occurrenceTimestampMs: 1_000_000,
+        stopped: true,
+      },
+      undefined,
+      1_000_200,
+    );
+
+    expect(result).toMatchObject({
+      handled: true,
+      updatedAlarm: {
+        id: alarm.id,
+        activeOccurrenceTimestampMs: null,
+        lastDeliveredOccurrenceTimestampMs: 1_000_000,
+        targetTimestampMs: 1_060_000,
+      },
+    });
+    expect(scheduleNextAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
+  it("reschedules a stopped occurrence without keeping it active", async () => {
+    const alarm = makeAlarm();
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      {
+        alarmId: alarm.id,
+        occurrenceTimestampMs: 1_000_000,
+        stopped: true,
+      },
+      undefined,
+      1_000_200,
+    );
+
+    expect(result.updatedAlarm).toMatchObject({
+      activeOccurrenceTimestampMs: null,
+      lastDeliveredOccurrenceTimestampMs: 1_000_000,
+      targetTimestampMs: 1_060_000,
+    });
+    expect(scheduleNextAlarmOccurrence).toHaveBeenCalledTimes(1);
+  });
+
+  it("reschedules an expired occurrence without keeping it active", async () => {
+    const alarm = makeAlarm();
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      {
+        alarmId: alarm.id,
+        occurrenceTimestampMs: 1_000_000,
+        autoSilenceMs: 60_000,
+      },
+      undefined,
+      1_060_000,
+    );
+
+    expect(result.updatedAlarm).toMatchObject({
+      activeOccurrenceTimestampMs: null,
+      lastDeliveredOccurrenceTimestampMs: 1_000_000,
+      targetTimestampMs: 1_060_000,
+    });
+    expect(scheduleNextAlarmOccurrence).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears an active occurrence for a disabled alarm when it is stopped", async () => {
+    const alarm = makeAlarm({
+      enabled: false,
+      targetTimestampMs: 1_060_000,
+      activeOccurrenceTimestampMs: 1_000_000,
+      lastDeliveredOccurrenceTimestampMs: 1_000_000,
+    });
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      {
+        alarmId: alarm.id,
+        occurrenceTimestampMs: 1_000_000,
+        stopped: true,
+      },
+      undefined,
+      1_000_200,
+    );
+
+    expect(result).toMatchObject({
+      handled: true,
+      updatedAlarm: {
+        id: alarm.id,
+        enabled: false,
+        activeOccurrenceTimestampMs: null,
+      },
+    });
+    expect(scheduleNextAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
   it("serializes concurrent duplicate delivery events", async () => {
     const alarm = makeAlarm();
     storeAlarms([alarm]);
@@ -153,6 +257,61 @@ describe("processAlarmDelivery", () => {
 
     expect([first.handled, second.handled].sort()).toEqual([false, true]);
     expect(scheduleNextAlarmOccurrence).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a delivered test alarm until the firing screen dismisses it", async () => {
+    const alarm = makeAlarm({ isTest: true, repeat: null });
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      { alarmId: alarm.id, occurrenceTimestampMs: "1000000" },
+      undefined,
+      1_000_100,
+    );
+
+    expect(result).toMatchObject({
+      handled: true,
+      alarms: [
+        {
+          id: alarm.id,
+          activeOccurrenceTimestampMs: 1_000_000,
+          lastDeliveredOccurrenceTimestampMs: 1_000_000,
+        },
+      ],
+      updatedAlarm: {
+        id: alarm.id,
+        activeOccurrenceTimestampMs: 1_000_000,
+        lastDeliveredOccurrenceTimestampMs: 1_000_000,
+      },
+    });
+    expect(scheduleNextAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { stopped: true, autoSilenceMs: 0, now: 1_000_100 },
+    { stopped: false, autoSilenceMs: 60_000, now: 1_060_000 },
+  ])("removes an inactive delivered test alarm", async (delivery) => {
+    const alarm = makeAlarm({ isTest: true, repeat: null });
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      {
+        alarmId: alarm.id,
+        occurrenceTimestampMs: "1000000",
+        stopped: delivery.stopped,
+        autoSilenceMs: delivery.autoSilenceMs,
+      },
+      undefined,
+      delivery.now,
+    );
+
+    expect(result).toMatchObject({
+      handled: true,
+      alarms: [],
+      updatedAlarm: null,
+    });
+    expect(scheduleNextAlarmOccurrence).not.toHaveBeenCalled();
+    expect(mockStorage.get(STORAGE_KEYS.ALARMS)).toBe("[]");
   });
 
   it("falls back to the stored target for an older notification", async () => {

@@ -1,3 +1,5 @@
+import { createMultipartBody } from "./multipart";
+
 export class DriveAuthExpiredError extends Error {
   constructor() {
     super("Access token expired");
@@ -31,7 +33,6 @@ const DRIVE_UPLOAD_BASE =
   "https://driveapis.cloud.huawei.com.cn/upload/drive/v1";
 
 async function parseJson<T>(response: Response): Promise<T> {
-  // response.json() returns Promise<any>, single assertion point
   return response.json() as Promise<T>;
 }
 
@@ -50,19 +51,41 @@ export async function findBackupFile(
   const url = new URL(`${DRIVE_API_BASE}/files`);
   url.searchParams.set("containers", "applicationData");
   url.searchParams.set("queryParam", `fileName='${BACKUP_FILE_NAME}'`);
-  url.searchParams.set("fields", "files(id,fileName,mimeType,size,editedTime)");
+  url.searchParams.set("orderBy", "editedTime desc");
+  url.searchParams.set(
+    "fields",
+    "nextCursor,files(id,fileName,mimeType,size,editedTime)",
+  );
 
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const files: DriveFileResource[] = [];
+  let cursor: string | undefined;
+  do {
+    if (cursor) {
+      url.searchParams.set("cursor", cursor);
+    } else {
+      url.searchParams.delete("cursor");
+    }
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-  checkResponseStatus(response.status);
-  if (!response.ok) {
-    throw new Error(`Huawei Drive API error: ${response.status}`);
-  }
+    checkResponseStatus(response.status);
+    if (!response.ok) {
+      throw new Error(`Huawei Drive API error: ${response.status}`);
+    }
 
-  const data = await parseJson<DriveFileListResponse>(response);
-  return data.files.length > 0 ? data.files[0] : null;
+    const data = await parseJson<DriveFileListResponse>(response);
+    files.push(...data.files);
+    cursor = data.nextCursor;
+  } while (cursor);
+
+  return (
+    files.sort(
+      (a, b) =>
+        new Date(b.editedTime ?? 0).getTime() -
+          new Date(a.editedTime ?? 0).getTime() || a.id.localeCompare(b.id),
+    )[0] ?? null
+  );
 }
 
 export async function uploadBackup(
@@ -71,7 +94,6 @@ export async function uploadBackup(
   existingFileId?: string,
 ): Promise<string> {
   if (existingFileId) {
-    // Update existing file content
     const url = `${DRIVE_UPLOAD_BASE}/files/${existingFileId}/content?uploadType=content`;
     const response = await fetch(url, {
       method: "PUT",
@@ -91,24 +113,14 @@ export async function uploadBackup(
     return result.id;
   }
 
-  // Create new file with multipart upload
-  const boundary = "laimelea_backup_boundary";
-  const metadata = JSON.stringify({
-    fileName: BACKUP_FILE_NAME,
-    parentFolder: "applicationData",
-    mimeType: "application/json",
-  });
-
-  const body =
-    `--${boundary}\r\n` +
-    "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
-    metadata +
-    "\r\n" +
-    `--${boundary}\r\n` +
-    "Content-Type: application/json\r\n\r\n" +
-    data +
-    "\r\n" +
-    `--${boundary}--`;
+  const { boundary, body } = createMultipartBody(
+    {
+      fileName: BACKUP_FILE_NAME,
+      parentFolder: "applicationData",
+      mimeType: "application/json",
+    },
+    data,
+  );
 
   const url = `${DRIVE_UPLOAD_BASE}/files?uploadType=multipart`;
   const response = await fetch(url, {

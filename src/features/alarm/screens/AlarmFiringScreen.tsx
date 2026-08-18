@@ -1,12 +1,22 @@
-import "../strategies"; // ensure strategies are registered
+import "../strategies";
 
 import notifee from "@notifee/react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, DeviceEventEmitter, StyleSheet, View } from "react-native";
+import {
+  Alert,
+  BackHandler,
+  DeviceEventEmitter,
+  StyleSheet,
+  View,
+} from "react-native";
 import { Button, Chip, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -33,6 +43,13 @@ function isPreviewParams(
   return "isPreview" in params && params.isPreview === true;
 }
 
+function updateStoredAlarms(
+  current: Alarm[] | Promise<Alarm[]>,
+  update: (alarms: Alarm[]) => Alarm[],
+): Alarm[] | Promise<Alarm[]> {
+  return current instanceof Promise ? current.then(update) : update(current);
+}
+
 export function AlarmFiringScreen() {
   const navigation = useNavigation<Props["navigation"]>();
   const route = useRoute<Props["route"]>();
@@ -55,6 +72,17 @@ export function AlarmFiringScreen() {
   }, [isPreview, route.params, alarms]);
 
   const activeAlarmId = isPreview ? null : alarm?.id;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isPreview) return;
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => true,
+      );
+      return () => subscription.remove();
+    }, [isPreview]),
+  );
 
   useEffect(() => {
     if (!activeAlarmId) return;
@@ -89,7 +117,11 @@ export function AlarmFiringScreen() {
         Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
         return;
       }
-      setAlarms(alarms.filter((storedAlarm) => storedAlarm.id !== alarm.id));
+      setAlarms((currentAlarms) =>
+        updateStoredAlarms(currentAlarms, (storedAlarms) =>
+          storedAlarms.filter((storedAlarm) => storedAlarm.id !== alarm.id),
+        ),
+      );
       navigation.goBack();
       return;
     }
@@ -142,17 +174,15 @@ export function AlarmFiringScreen() {
       updatedAlarm.snoozeCount = 0;
     }
     updatedAlarm.lastFiredAt = now;
-    setAlarms(alarms.map((a) => (a.id === alarm.id ? updatedAlarm : a)));
+    setAlarms((currentAlarms) =>
+      updateStoredAlarms(currentAlarms, (storedAlarms) =>
+        storedAlarms.map((storedAlarm) =>
+          storedAlarm.id === alarm.id ? updatedAlarm : storedAlarm,
+        ),
+      ),
+    );
     navigation.goBack();
-  }, [
-    alarm,
-    isPreview,
-    alarms,
-    setAlarms,
-    navigation,
-    settings.cycleConfig,
-    t,
-  ]);
+  }, [alarm, isPreview, setAlarms, navigation, settings.cycleConfig, t]);
 
   const handleSnooze = useCallback(async () => {
     if (!alarm) return;
@@ -197,15 +227,27 @@ export function AlarmFiringScreen() {
         activeOccurrenceTimestampMs: null,
         updatedAt: now,
       };
-      setAlarms(alarms.map((a) => (a.id === alarm.id ? disabledAlarm : a)));
+      setAlarms((currentAlarms) =>
+        updateStoredAlarms(currentAlarms, (storedAlarms) =>
+          storedAlarms.map((storedAlarm) =>
+            storedAlarm.id === alarm.id ? disabledAlarm : storedAlarm,
+          ),
+        ),
+      );
       Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
       navigation.goBack();
       return;
     }
 
-    setAlarms(alarms.map((a) => (a.id === alarm.id ? snoozedAlarm : a)));
+    setAlarms((currentAlarms) =>
+      updateStoredAlarms(currentAlarms, (storedAlarms) =>
+        storedAlarms.map((storedAlarm) =>
+          storedAlarm.id === alarm.id ? snoozedAlarm : storedAlarm,
+        ),
+      ),
+    );
     navigation.goBack();
-  }, [alarm, isPreview, alarms, setAlarms, navigation, t]);
+  }, [alarm, isPreview, setAlarms, navigation, t]);
 
   const canSnooze = alarm ? alarm.snoozeCount < alarm.snoozeMaxCount : false;
 
@@ -249,7 +291,12 @@ export function AlarmFiringScreen() {
     if (!alarm || isPreview) return;
     if (alarm.autoSilenceMin <= 0) return;
 
-    const timeoutMs = alarm.autoSilenceMin * 60 * 1000;
+    const occurrenceTimestampMs =
+      alarm.activeOccurrenceTimestampMs ?? alarm.targetTimestampMs;
+    const timeoutMs = Math.max(
+      0,
+      occurrenceTimestampMs + alarm.autoSilenceMin * 60 * 1000 - Date.now(),
+    );
     const timer = setTimeout(async () => {
       await handleDismiss();
     }, timeoutMs);

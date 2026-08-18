@@ -1,5 +1,6 @@
 import notifee from "@notifee/react-native";
-import { NativeModules } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeModules, Platform } from "react-native";
 
 import {
   cancelAlarm,
@@ -16,23 +17,19 @@ import type { Alarm } from "../../../src/models/Alarm";
 jest.mock("@notifee/react-native", () => ({
   __esModule: true,
   default: {
-    createChannel: jest.fn().mockResolvedValue("alarm"),
-    createChannelGroup: jest.fn().mockResolvedValue(undefined),
     createTriggerNotification: jest.fn().mockResolvedValue("trigger-id"),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
     cancelNotification: jest.fn().mockResolvedValue(undefined),
-    requestPermission: jest.fn().mockResolvedValue({ authorizationStatus: 1 }),
     getNotificationSettings: jest.fn(),
-    openAlarmPermissionSettings: jest.fn(),
-    onForegroundEvent: jest.fn().mockReturnValue(() => {}),
-    onBackgroundEvent: jest.fn(),
   },
   TriggerType: { TIMESTAMP: 0 },
-  AndroidImportance: { HIGH: 4 },
   AndroidNotificationSetting: { ENABLED: 1, DISABLED: 0 },
-  AndroidCategory: { ALARM: "alarm" },
   AuthorizationStatus: { AUTHORIZED: 1 },
-  EventType: { PRESS: 1, ACTION_PRESS: 7, DISMISSED: 2 },
+}));
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: jest.fn() },
 }));
 
 jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
@@ -40,12 +37,16 @@ jest.mock("../../../src/features/alarm/services/ringtoneService", () => ({
   cancelAlarmAudio: jest.fn().mockResolvedValue(undefined),
 }));
 
+function setPlatform(os: "android" | "ios") {
+  Object.defineProperty(Platform, "OS", { configurable: true, value: os });
+}
+
 function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   return {
     id: "test-alarm-1",
     label: "Wake up",
     enabled: true,
-    targetTimestampMs: Date.now() + 3600000,
+    targetTimestampMs: Date.now() + 3_600_000,
     setInTimeSystem: "custom",
     repeat: null,
     dismissalMethod: "simple",
@@ -69,151 +70,207 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
 }
 
 describe("alarmScheduler", () => {
+  const originalOS = Platform.OS;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    (notifee.createChannel as jest.Mock).mockImplementation(
-      async ({ id }: { id: string }) => id,
-    );
+    setPlatform("ios");
     delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
     (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
       authorizationStatus: 1,
       android: { alarm: 1 },
     });
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
   });
 
-  describe("scheduleAlarm", () => {
-    it("should call createTriggerNotification with correct params", async () => {
-      const alarm = makeAlarm();
-      const triggerId = await scheduleAlarm(alarm);
+  afterAll(() => {
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: originalOS,
+    });
+  });
 
-      expect(triggerId).toBe("trigger-id");
-      expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(1);
+  describe("iOS", () => {
+    it("creates an audible timestamp trigger without native Android audio", async () => {
+      const alarm = makeAlarm();
+
+      await expect(scheduleAlarm(alarm)).resolves.toBe("trigger-id");
 
       const [notification, trigger] = (
         notifee.createTriggerNotification as jest.Mock
       ).mock.calls[0];
-
-      expect(notification.id).toBe(alarm.id);
-      expect(notification.data.alarmId).toBe(alarm.id);
-      expect(notification.data.occurrenceTimestampMs).toBe(
-        String(alarm.targetTimestampMs),
+      expect(notification).toEqual(
+        expect.objectContaining({
+          id: alarm.id,
+          title: alarm.label,
+          data: {
+            alarmId: alarm.id,
+            occurrenceTimestampMs: String(alarm.targetTimestampMs),
+          },
+          ios: expect.objectContaining({
+            sound: "default",
+            foregroundPresentationOptions: expect.objectContaining({
+              sound: true,
+            }),
+          }),
+        }),
       );
-      expect(notification.android.channelId).toMatch(/^alarm-v2-/);
-      expect(notification.android.fullScreenAction).toBeDefined();
-      expect(trigger.type).toBe(0); // TriggerType.TIMESTAMP
-      expect(trigger.timestamp).toBe(alarm.targetTimestampMs);
-      expect(trigger.alarmManager.allowWhileIdle).toBe(true);
+      expect(notification.android).toBeUndefined();
+      expect(trigger).toEqual(
+        expect.objectContaining({
+          type: 0,
+          timestamp: alarm.targetTimestampMs,
+          alarmManager: { allowWhileIdle: true },
+        }),
+      );
+      expect(scheduleAlarmAudio).not.toHaveBeenCalled();
     });
 
-    it("should use alarm label as notification title", async () => {
-      const alarm = makeAlarm({ label: "Morning" });
-      await scheduleAlarm(alarm);
+    it("does not assign a sound to a silent alarm", async () => {
+      await scheduleAlarm(makeAlarm({ soundUri: "__silent__" }));
 
       const [notification] = (notifee.createTriggerNotification as jest.Mock)
         .mock.calls[0];
-      expect(notification.title).toBe("Morning");
+      expect(notification.ios).toEqual(
+        expect.objectContaining({
+          sound: undefined,
+          foregroundPresentationOptions: expect.objectContaining({
+            sound: false,
+          }),
+        }),
+      );
     });
 
-    it("should use 'Alarm' as default title when label is empty", async () => {
-      const alarm = makeAlarm({ label: "" });
-      await scheduleAlarm(alarm);
+    it("leaves no trigger to roll back when trigger creation fails", async () => {
+      (notifee.createTriggerNotification as jest.Mock).mockRejectedValueOnce(
+        new Error("unavailable"),
+      );
 
-      const [notification] = (notifee.createTriggerNotification as jest.Mock)
-        .mock.calls[0];
-      expect(notification.title).toBe("Alarm");
+      await expect(scheduleAlarm(makeAlarm())).rejects.toThrow("unavailable");
+
+      expect(notifee.cancelTriggerNotification).not.toHaveBeenCalled();
+      expect(scheduleAlarmAudio).not.toHaveBeenCalled();
     });
 
-    it("uses native audio for a custom sound and keeps the notification channel silent", async () => {
-      const alarm = makeAlarm({ soundUri: "content://media/ringtone/5" });
-      await scheduleAlarm(alarm);
+    it("cancels only Notifee resources", async () => {
+      const alarm = makeAlarm({ notifeeTriggerId: "existing-trigger" });
 
-      expect(notifee.createChannel).toHaveBeenCalledWith(
-        expect.objectContaining({ sound: undefined }),
+      await cancelAlarm(alarm);
+
+      expect(notifee.cancelNotification).toHaveBeenCalledWith(alarm.id);
+      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        "existing-trigger",
+      );
+      expect(cancelAlarmAudio).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Android", () => {
+    beforeEach(() => setPlatform("android"));
+
+    it("uses the native exact delivery path and removes a legacy trigger", async () => {
+      const alarm = makeAlarm({
+        soundUri: "content://media/ringtone/5",
+        notifeeTriggerId: "legacy-notifee-trigger",
+      });
+
+      await expect(scheduleAlarm(alarm)).resolves.toBe(alarm.id);
+
+      expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
+        "legacy-notifee-trigger",
       );
       expect(scheduleAlarmAudio).toHaveBeenCalledWith(
         alarm.id,
         alarm.targetTimestampMs,
-        "content://media/ringtone/5",
-        30 * 1000,
-        15 * 60 * 1000,
-      );
-      const [notification] = (notifee.createTriggerNotification as jest.Mock)
-        .mock.calls[0];
-      expect(notification.android.loopSound).toBe(false);
-    });
-
-    it("uses native audio for the default sound", async () => {
-      const alarm = makeAlarm({ soundUri: null });
-      await scheduleAlarm(alarm);
-
-      expect(notifee.createChannel).toHaveBeenCalledWith(
-        expect.objectContaining({ sound: undefined }),
+        alarm.soundUri,
+        alarm.gradualVolumeDurationSec * 1000,
+        alarm.autoSilenceMin * 60 * 1000,
+        false,
+        null,
+        [],
+        0,
+        alarm.label,
+        alarm.vibrationEnabled,
       );
     });
 
-    it("creates a silent channel without enabling looped sound", async () => {
-      const alarm = makeAlarm({ soundUri: "__silent__" });
-      await scheduleAlarm(alarm);
+    it.each([
+      [
+        "one-time 24-hour alarm",
+        { setInTimeSystem: "24h", repeat: null },
+        true,
+      ],
+      [
+        "repeating 24-hour alarm",
+        {
+          setInTimeSystem: "24h",
+          repeat: { type: "interval", intervalMs: 60_000 },
+        },
+        true,
+      ],
+      [
+        "one-time custom-time alarm",
+        { setInTimeSystem: "custom", repeat: null },
+        false,
+      ],
+    ] as Array<[string, Partial<Alarm>, boolean]>)(
+      "keeps %s on the correct time basis",
+      async (_, overrides, expected) => {
+        const alarm = makeAlarm(overrides);
 
-      const [notification] = (notifee.createTriggerNotification as jest.Mock)
-        .mock.calls[0];
-      expect(notification.android.loopSound).toBe(false);
-      expect(notifee.createChannel).toHaveBeenCalledWith(
-        expect.objectContaining({ sound: undefined }),
-      );
-    });
+        await scheduleAlarm(alarm);
 
-    it("creates a vibrating channel when vibrationEnabled is true", async () => {
-      const alarm = makeAlarm({ vibrationEnabled: true });
-      await scheduleAlarm(alarm);
+        expect(scheduleAlarmAudio).toHaveBeenCalledWith(
+          alarm.id,
+          alarm.targetTimestampMs,
+          alarm.soundUri,
+          alarm.gradualVolumeDurationSec * 1000,
+          alarm.autoSilenceMin * 60 * 1000,
+          expected,
+          alarm.repeat?.type ?? null,
+          alarm.repeat?.weekdays ?? [],
+          alarm.repeat?.type === "interval"
+            ? (alarm.repeat.intervalMs ?? 0)
+            : 0,
+          alarm.label,
+          alarm.vibrationEnabled,
+        );
+      },
+    );
 
-      expect(notifee.createChannel).toHaveBeenCalledWith(
-        expect.objectContaining({
-          vibration: true,
-          vibrationPattern: [300, 500, 200, 500],
-        }),
-      );
-    });
-
-    it("creates a non-vibrating channel when vibrationEnabled is false", async () => {
-      const alarm = makeAlarm({ vibrationEnabled: false });
-      await scheduleAlarm(alarm);
-
-      expect(notifee.createChannel).toHaveBeenCalledWith(
-        expect.objectContaining({
-          vibration: false,
-          vibrationPattern: undefined,
-        }),
-      );
-    });
-
-    it("uses timeoutAfter to stop an alarm without opening AlarmFiringScreen", async () => {
-      const alarm = makeAlarm({ autoSilenceMin: 5 });
-      await scheduleAlarm(alarm);
-
-      const [notification] = (notifee.createTriggerNotification as jest.Mock)
-        .mock.calls[0];
-      expect(notification.android.timeoutAfter).toBe(5 * 60 * 1000);
-    });
-
-    it("does not set a notification timeout when auto silence is disabled", async () => {
-      const alarm = makeAlarm({ autoSilenceMin: 0 });
-      await scheduleAlarm(alarm);
-
-      const [notification] = (notifee.createTriggerNotification as jest.Mock)
-        .mock.calls[0];
-      expect(notification.android.timeoutAfter).toBeUndefined();
-    });
-
-    it("rejects scheduling when notifications are disabled", async () => {
-      (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
-        authorizationStatus: 0,
-        android: { alarm: 1 },
+    it("stores the supplied custom-cycle duration for native boot recovery", async () => {
+      const alarm = makeAlarm({
+        repeat: { type: "customCycleInterval", customCycleIntervalDays: 2 },
       });
 
-      await expect(scheduleAlarm(makeAlarm())).rejects.toMatchObject({
-        failure: "notifications-disabled",
-      });
+      await scheduleAlarm(alarm, { cycleLengthMinutes: 900, baseTimeMs: 0 });
+
+      expect(AsyncStorage.getItem).not.toHaveBeenCalled();
+      expect(scheduleAlarmAudio).toHaveBeenCalledWith(
+        alarm.id,
+        alarm.targetTimestampMs,
+        alarm.soundUri,
+        alarm.gradualVolumeDurationSec * 1000,
+        alarm.autoSilenceMin * 60 * 1000,
+        false,
+        "customCycleInterval",
+        [],
+        2 * 900 * 60 * 1000,
+        alarm.label,
+        alarm.vibrationEnabled,
+      );
+    });
+
+    it("does not create a visual fallback when native scheduling fails", async () => {
+      (scheduleAlarmAudio as jest.Mock).mockRejectedValueOnce(
+        new Error("native failure"),
+      );
+
+      await expect(scheduleAlarm(makeAlarm())).rejects.toThrow(
+        "native failure",
+      );
+
       expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
     });
 
@@ -226,130 +283,79 @@ describe("alarmScheduler", () => {
       await expect(scheduleAlarm(makeAlarm())).rejects.toMatchObject({
         failure: "exact-alarms-disabled",
       });
+      expect(scheduleAlarmAudio).not.toHaveBeenCalled();
+    });
+
+    it("schedules native audio when notifications are disabled", async () => {
+      (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
+        authorizationStatus: 0,
+        android: { alarm: 1 },
+      });
+
+      await expect(scheduleAlarm(makeAlarm())).resolves.toBe("test-alarm-1");
+
+      expect(scheduleAlarmAudio).toHaveBeenCalled();
       expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
     });
 
-    it("falls back to a heads-up notification when full-screen intent is disabled", async () => {
-      (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
-        getAlarmCapabilities: jest.fn().mockResolvedValue({
-          canScheduleExactAlarms: true,
-          canUseFullScreenIntent: false,
-        }),
-      };
+    it("cancels native delivery and its stable trigger identifier", async () => {
+      const alarm = makeAlarm({ notifeeTriggerId: null });
 
-      await scheduleAlarm(makeAlarm());
-
-      const [notification] = (notifee.createTriggerNotification as jest.Mock)
-        .mock.calls[0];
-      expect(notification.android.fullScreenAction).toBeUndefined();
-    });
-
-    it("cancels the visual trigger when native audio scheduling fails", async () => {
-      (scheduleAlarmAudio as jest.Mock).mockRejectedValueOnce(
-        new Error("native failure"),
-      );
-
-      await expect(scheduleAlarm(makeAlarm())).rejects.toThrow(
-        "native failure",
-      );
-      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
-        "trigger-id",
-      );
-    });
-  });
-
-  describe("cancelAlarm", () => {
-    it("should cancel trigger notification when triggerId exists", async () => {
-      const alarm = makeAlarm({ notifeeTriggerId: "existing-trigger" });
       await cancelAlarm(alarm);
 
-      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
-        "existing-trigger",
-      );
       expect(notifee.cancelNotification).toHaveBeenCalledWith(alarm.id);
+      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(alarm.id);
       expect(cancelAlarmAudio).toHaveBeenCalledWith(alarm.id);
     });
-
-    it("should only cancel notification when no triggerId", async () => {
-      const alarm = makeAlarm({ notifeeTriggerId: null });
-      await cancelAlarm(alarm);
-
-      expect(notifee.cancelTriggerNotification).not.toHaveBeenCalled();
-      expect(notifee.cancelNotification).toHaveBeenCalledWith(alarm.id);
-    });
-
-    it("attempts every cancellation when native audio cleanup fails", async () => {
-      const alarm = makeAlarm({ notifeeTriggerId: "existing-trigger" });
-      (cancelAlarmAudio as jest.Mock).mockRejectedValueOnce(
-        new Error("native cleanup failed"),
-      );
-
-      await expect(cancelAlarm(alarm)).rejects.toThrow("native cleanup failed");
-
-      expect(notifee.cancelNotification).toHaveBeenCalledWith(alarm.id);
-      expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
-        "existing-trigger",
-      );
-    });
   });
 
-  describe("recoverAlarmSchedule", () => {
-    it("updates the trigger identifier when recovery succeeds", async () => {
-      const alarm = makeAlarm({ notifeeTriggerId: "old-trigger" });
-
-      await expect(recoverAlarmSchedule(alarm, 1234)).resolves.toEqual(
-        expect.objectContaining({
-          enabled: true,
-          notifeeTriggerId: "trigger-id",
-        }),
-      );
+  it("rejects iOS scheduling when notifications are disabled", async () => {
+    (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
+      authorizationStatus: 0,
     });
 
-    it("disables the alarm when recovery cannot schedule it", async () => {
-      (notifee.createTriggerNotification as jest.Mock).mockRejectedValueOnce(
-        new Error("unavailable"),
-      );
-
-      await expect(recoverAlarmSchedule(makeAlarm(), 1234)).resolves.toEqual(
-        expect.objectContaining({
-          enabled: false,
-          notifeeTriggerId: null,
-          updatedAt: 1234,
-        }),
-      );
+    await expect(scheduleAlarm(makeAlarm())).rejects.toMatchObject({
+      failure: "notifications-disabled",
     });
+    expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
   });
 
-  describe("rescheduleAllAlarms", () => {
-    it("should schedule only enabled alarms", async () => {
-      const alarms = [
-        makeAlarm({ id: "a1", enabled: true }),
-        makeAlarm({ id: "a2", enabled: false }),
-        makeAlarm({ id: "a3", enabled: true }),
-      ];
+  it("recovers an iOS alarm with its Notifee trigger identifier", async () => {
+    await expect(recoverAlarmSchedule(makeAlarm(), 1234)).resolves.toEqual(
+      expect.objectContaining({
+        enabled: true,
+        notifeeTriggerId: "trigger-id",
+      }),
+    );
+  });
 
-      await rescheduleAllAlarms(alarms);
+  it("disables an iOS alarm when its trigger cannot be scheduled", async () => {
+    (notifee.createTriggerNotification as jest.Mock).mockRejectedValueOnce(
+      new Error("unavailable"),
+    );
 
-      expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(2);
-      const calls = (notifee.createTriggerNotification as jest.Mock).mock.calls;
-      expect(calls[0][0].id).toBe("a1");
-      expect(calls[1][0].id).toBe("a3");
-    });
+    await expect(recoverAlarmSchedule(makeAlarm(), 1234)).resolves.toEqual(
+      expect.objectContaining({
+        enabled: false,
+        notifeeTriggerId: null,
+        updatedAt: 1234,
+      }),
+    );
+  });
 
-    it("should not schedule anything when all alarms are disabled", async () => {
-      const alarms = [
-        makeAlarm({ id: "a1", enabled: false }),
-        makeAlarm({ id: "a2", enabled: false }),
-      ];
+  it("reschedules only enabled iOS alarms", async () => {
+    await rescheduleAllAlarms([
+      makeAlarm({ id: "a1", enabled: true }),
+      makeAlarm({ id: "a2", enabled: false }),
+      makeAlarm({ id: "a3", enabled: true }),
+    ]);
 
-      await rescheduleAllAlarms(alarms);
-
-      expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
-    });
-
-    it("should handle empty alarm list", async () => {
-      await rescheduleAllAlarms([]);
-      expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
-    });
+    expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(2);
+    expect(
+      (notifee.createTriggerNotification as jest.Mock).mock.calls[0][0].id,
+    ).toBe("a1");
+    expect(
+      (notifee.createTriggerNotification as jest.Mock).mock.calls[1][0].id,
+    ).toBe("a3");
   });
 });

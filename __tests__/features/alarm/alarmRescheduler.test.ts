@@ -1,4 +1,5 @@
 import notifee from "@notifee/react-native";
+import { Platform } from "react-native";
 
 import {
   calculateNextAlarmTime,
@@ -6,7 +7,13 @@ import {
   rescheduleAllEnabledAlarms,
   scheduleNextAlarmOccurrence,
 } from "../../../src/features/alarm/services/alarmRescheduler";
+import { scheduleAlarmAudio } from "../../../src/features/alarm/services/ringtoneService";
 import type { Alarm } from "../../../src/models/Alarm";
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: jest.fn().mockResolvedValue(null) },
+}));
 
 jest.mock("@notifee/react-native", () => ({
   __esModule: true,
@@ -435,6 +442,43 @@ describe("alarmRescheduler", () => {
 
       expect(result.targetTimestampMs).toBe(now + 50 * 60 * 1000);
       expect(result.recurrenceAnchorTimestampMs).toBeNull();
+    });
+
+    it("passes the supplied custom cycle configuration to native scheduling", async () => {
+      const originalOS = Platform.OS;
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+      const now = Date.now();
+      const cycleConfig = { baseTimeMs: 0, cycleLengthMinutes: 100 };
+      const alarm = makeAlarm({
+        targetTimestampMs: now - 60_000,
+        repeat: { type: "customCycleInterval", customCycleIntervalDays: 1 },
+      });
+
+      try {
+        await scheduleNextAlarmOccurrence(alarm, cycleConfig, now);
+      } finally {
+        Object.defineProperty(Platform, "OS", {
+          configurable: true,
+          value: originalOS,
+        });
+      }
+
+      expect(scheduleAlarmAudio).toHaveBeenCalledWith(
+        alarm.id,
+        now - 60_000 + 100 * 60 * 1000,
+        alarm.soundUri,
+        alarm.gradualVolumeDurationSec * 1000,
+        alarm.autoSilenceMin * 60 * 1000,
+        false,
+        "customCycleInterval",
+        [],
+        100 * 60 * 1000,
+        alarm.label,
+        alarm.vibrationEnabled,
+      );
     });
 
     it("disables a one-shot alarm after it fires", async () => {

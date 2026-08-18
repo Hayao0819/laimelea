@@ -31,6 +31,47 @@ function generateId(): string {
   return `sleep-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function sessionKey(session: SleepSession): string {
+  return `${session.source}:${session.id}`;
+}
+
+function mergeSessions(
+  currentSessions: SleepSession[],
+  fetchedSessions: SleepSession[],
+  manualSessionKeysAtStart: ReadonlySet<string>,
+): SleepSession[] {
+  const sessionsByKey = new Map<string, SleepSession>();
+
+  for (const session of fetchedSessions) {
+    if (
+      session.source === "manual" &&
+      manualSessionKeysAtStart.has(sessionKey(session)) &&
+      !currentSessions.some(
+        (current) => sessionKey(current) === sessionKey(session),
+      )
+    ) {
+      continue;
+    }
+    sessionsByKey.set(sessionKey(session), session);
+  }
+  for (const session of currentSessions) {
+    if (session.source !== "manual") continue;
+    const key = sessionKey(session);
+    const fetched = sessionsByKey.get(key);
+    if (fetched == null || session.updatedAt >= fetched.updatedAt) {
+      sessionsByKey.set(key, session);
+    }
+  }
+
+  return [...sessionsByKey.values()].sort(
+    (a, b) =>
+      a.startTimestampMs - b.startTimestampMs ||
+      a.endTimestampMs - b.endTimestampMs ||
+      a.source.localeCompare(b.source) ||
+      a.id.localeCompare(b.id),
+  );
+}
+
 export function useSleepSync(): SleepSyncResult {
   const [sessions, setSessions] = useAtom(sleepSessionsAtom);
   const [loading, setLoading] = useAtom(sleepLoadingAtom);
@@ -52,6 +93,11 @@ export function useSleepSync(): SleepSyncResult {
       setError(null);
 
       try {
+        const manualSessionKeysAtStart = new Set(
+          sessions
+            .filter((session) => session.source === "manual")
+            .map(sessionKey),
+        );
         const available = await services.sleep.isAvailable();
         if (!available) {
           return;
@@ -70,10 +116,15 @@ export function useSleepSync(): SleepSyncResult {
           now,
         );
 
-        const existingManual = sessions.filter((s) => s.source === "manual");
-
-        const merged = [...existingManual, ...fetched];
-        setSessions(merged);
+        let merged: SleepSession[] = [];
+        setSessions((current) => {
+          merged = mergeSessions(
+            Array.isArray(current) ? current : [],
+            fetched,
+            manualSessionKeysAtStart,
+          );
+          return merged;
+        });
         setLastSync(now);
 
         const result = estimateCycle(merged);
@@ -87,8 +138,8 @@ export function useSleepSync(): SleepSyncResult {
     },
     [
       isStale,
-      services.sleep,
       sessions,
+      services.sleep,
       setSessions,
       setLastSync,
       setEstimation,

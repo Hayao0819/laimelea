@@ -3,4 +3,5 @@
     <string name="app_name">Laimelea</string>
     <string name="alarm_audio_title">アラームが鳴っています</string>
     <string name="alarm_audio_description">アラーム通知を開いて解除またはスヌーズしてください</string>
+    <string name="alarm_audio_stop">停止</string>
 </resources>

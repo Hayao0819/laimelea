@@ -49,15 +49,10 @@ export function useCalendarSync(): CalendarSyncResult {
         }
 
         const result = await syncCalendarEvents(services.calendar);
+        const calendars = await services.calendar.getCalendarList();
         setEvents(result.events);
         setLastSync(result.syncTimestamp);
-
-        try {
-          const calendars = await services.calendar.getCalendarList();
-          setCalendarList(calendars);
-        } catch {
-          // ignore - calendar list is supplementary
-        }
+        setCalendarList(calendars);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unknown error");
       } finally {

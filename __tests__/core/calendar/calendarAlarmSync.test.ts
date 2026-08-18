@@ -96,7 +96,11 @@ describe("syncCalendarAlarms", () => {
     const result = syncCalendarAlarms([alarm], [event]);
 
     expect(result.updatedAlarms).toHaveLength(1);
-    expect(result.updatedAlarms[0]).toBe(alarm);
+    expect(result.updatedAlarms[0]).toMatchObject({
+      linkedCalendarEventId: "evt-1",
+      linkedCalendarSourceEventId: "source-evt-1",
+      targetTimestampMs: alarm.targetTimestampMs,
+    });
     expect(result.orphanedAlarmIds).toHaveLength(0);
   });
 
@@ -153,7 +157,7 @@ describe("syncCalendarAlarms", () => {
     expect(result.orphanedAlarmIds).toEqual([]);
   });
 
-  it("should match by sourceEventId in addition to event id", () => {
+  it("should migrate a legacy parent-event link to its matching occurrence", () => {
     const alarm = makeAlarm({
       linkedCalendarEventId: "source-evt-1",
       linkedEventOffsetMs: 0,
@@ -167,9 +171,118 @@ describe("syncCalendarAlarms", () => {
 
     const result = syncCalendarAlarms([alarm], [event]);
 
-    expect(result.updatedAlarms).toHaveLength(1);
-    expect(result.updatedAlarms[0].targetTimestampMs).toBe(1700010000000);
-    expect(result.orphanedAlarmIds).toHaveLength(0);
+    expect(result.updatedAlarms[0]).toMatchObject({
+      linkedCalendarEventId: "google-cal1-evt1",
+      linkedCalendarSourceEventId: "source-evt-1",
+      targetTimestampMs: 1700010000000,
+    });
+    expect(result.orphanedAlarmIds).toEqual([]);
+  });
+
+  it("should reconcile a linked recurring occurrence independently", () => {
+    const firstOccurrence = makeEvent({
+      id: "source-evt-1:1700000000000",
+      startTimestampMs: 1700000000000,
+    });
+    const secondOccurrence = makeEvent({
+      id: "source-evt-1:1700086400000",
+      startTimestampMs: 1700086400000,
+    });
+    const alarm = makeAlarm({
+      linkedCalendarEventId: secondOccurrence.id,
+      linkedEventOffsetMs: -900000,
+      targetTimestampMs: secondOccurrence.startTimestampMs - 900000,
+    });
+
+    const result = syncCalendarAlarms(
+      [alarm],
+      [firstOccurrence, secondOccurrence],
+    );
+
+    expect(result.updatedAlarms[0]).toMatchObject({
+      linkedCalendarEventId: secondOccurrence.id,
+      linkedCalendarSourceEventId: "source-evt-1",
+    });
+    expect(result.orphanedAlarmIds).toEqual([]);
+  });
+
+  it("follows a moved recurring occurrence after migration", () => {
+    const originalOccurrence = makeEvent({
+      id: "source-evt-1:1700000000000",
+      startTimestampMs: 1700000000000,
+    });
+    const legacyAlarm = makeAlarm({
+      linkedCalendarEventId: "source-evt-1",
+      linkedEventOffsetMs: -900000,
+      targetTimestampMs: 1700000000000 - 900000,
+    });
+    const migratedAlarm = syncCalendarAlarms(
+      [legacyAlarm],
+      [originalOccurrence],
+    ).updatedAlarms[0];
+    const movedOccurrence = makeEvent({
+      id: "source-evt-1:1700003600000",
+      startTimestampMs: 1700003600000,
+    });
+
+    const result = syncCalendarAlarms([migratedAlarm], [movedOccurrence]);
+
+    expect(result.updatedAlarms[0]).toMatchObject({
+      linkedCalendarEventId: movedOccurrence.id,
+      linkedCalendarSourceEventId: "source-evt-1",
+      targetTimestampMs: movedOccurrence.startTimestampMs - 900000,
+    });
+  });
+
+  it("does not move a deleted recurring occurrence to an adjacent instance", () => {
+    const occurrenceStart = 1700000000000;
+    const intervalMs = 24 * 60 * 60 * 1000;
+    const alarm = makeAlarm({
+      linkedCalendarEventId: `source-evt-1:${occurrenceStart}`,
+      linkedCalendarSourceEventId: "source-evt-1",
+      targetTimestampMs: occurrenceStart - 900000,
+    });
+    const previousOccurrence = makeEvent({
+      id: `source-evt-1:${occurrenceStart - intervalMs}`,
+      startTimestampMs: occurrenceStart - intervalMs,
+    });
+    const nextOccurrence = makeEvent({
+      id: `source-evt-1:${occurrenceStart + intervalMs}`,
+      startTimestampMs: occurrenceStart + intervalMs,
+    });
+
+    const result = syncCalendarAlarms(
+      [alarm],
+      [previousOccurrence, nextOccurrence],
+    );
+
+    expect(result.updatedAlarms).toEqual([alarm]);
+    expect(result.orphanedAlarmIds).toEqual([alarm.id]);
+  });
+
+  it("does not migrate a deleted legacy occurrence to an adjacent instance", () => {
+    const occurrenceStart = 1700000000000;
+    const intervalMs = 24 * 60 * 60 * 1000;
+    const alarm = makeAlarm({
+      linkedCalendarEventId: "source-evt-1",
+      targetTimestampMs: occurrenceStart - 900000,
+    });
+    const previousOccurrence = makeEvent({
+      id: `source-evt-1:${occurrenceStart - intervalMs}`,
+      startTimestampMs: occurrenceStart - intervalMs,
+    });
+    const nextOccurrence = makeEvent({
+      id: `source-evt-1:${occurrenceStart + intervalMs}`,
+      startTimestampMs: occurrenceStart + intervalMs,
+    });
+
+    const result = syncCalendarAlarms(
+      [alarm],
+      [previousOccurrence, nextOccurrence],
+    );
+
+    expect(result.updatedAlarms).toEqual([alarm]);
+    expect(result.orphanedAlarmIds).toEqual([alarm.id]);
   });
 
   it("should match by event id (composite Google Calendar ID)", () => {
@@ -223,6 +336,7 @@ describe("createAlarmFromEvent", () => {
     expect(alarm.notifeeTriggerId).toBeNull();
     expect(alarm.skipNextOccurrence).toBe(false);
     expect(alarm.linkedCalendarEventId).toBe("evt-new");
+    expect(alarm.linkedCalendarSourceEventId).toBe("source-evt-1");
     expect(alarm.linkedEventOffsetMs).toBe(-300000);
     expect(alarm.lastFiredAt).toBeNull();
     expect(alarm.createdAt).toBeGreaterThanOrEqual(now);

@@ -143,6 +143,64 @@ describe("DigitalClock", () => {
     expect(getByText("02:30:45 PM")).toBeTruthy();
   });
 
+  it("uses the configured IANA timezone for real time", async () => {
+    const { getByText } = await renderWithProviders(
+      <DigitalClock
+        realTimeMs={sampleRealTimeMs}
+        customTime={sampleCustomTime}
+      />,
+      {
+        primaryTimeDisplay: "24h",
+        timeFormat: "24h",
+        timezone: "Asia/Tokyo",
+      },
+    );
+
+    expect(getByText("19:30:45")).toBeTruthy();
+  });
+
+  it("uses standard time when DST handling is set to ignore", async () => {
+    const summerNewYork = new Date("2026-07-15T10:30:45Z").getTime();
+    const auto = await renderWithProviders(
+      <DigitalClock realTimeMs={summerNewYork} customTime={sampleCustomTime} />,
+      {
+        primaryTimeDisplay: "24h",
+        timeFormat: "24h",
+        timezone: "America/New_York",
+        dstHandling: "auto",
+      },
+    );
+    expect(auto.getByText("06:30:45")).toBeTruthy();
+
+    const ignored = await renderWithProviders(
+      <DigitalClock realTimeMs={summerNewYork} customTime={sampleCustomTime} />,
+      {
+        primaryTimeDisplay: "24h",
+        timeFormat: "24h",
+        timezone: "America/New_York",
+        dstHandling: "ignore",
+      },
+    );
+    expect(ignored.getByText("05:30:45")).toBeTruthy();
+  });
+
+  it("shows the secondary timezone clock when configured", async () => {
+    const { getByTestId, getByText } = await renderWithProviders(
+      <DigitalClock
+        realTimeMs={sampleRealTimeMs}
+        customTime={sampleCustomTime}
+      />,
+      {
+        timezone: "Asia/Tokyo",
+        secondaryTimezone: "Europe/London",
+        timeFormat: "24h",
+      },
+    );
+
+    expect(getByText("Europe/London 10:30:45")).toBeTruthy();
+    expect(getByTestId("secondary-timezone-clock")).toBeTruthy();
+  });
+
   it("should swap primary and secondary when toggling primaryTimeDisplay", async () => {
     const fixedDate = new Date(2026, 0, 15, 8, 0, 0);
     const fixedMs = fixedDate.getTime();

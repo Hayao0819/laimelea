@@ -1,5 +1,4 @@
 import { useNavigation } from "@react-navigation/native";
-import { format } from "date-fns";
 import { useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,15 +8,22 @@ import { Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { formatCustomTime } from "../../../core/time/formatting";
+import { formatDisplayTime } from "../../../core/time/timezone";
 import { useCurrentTime } from "../../../hooks/useCurrentTime";
 import { useFullscreen } from "../../../hooks/useFullscreen";
+
+export function getDeskClockPrimaryFontSize(width: number, height: number) {
+  return width > height
+    ? Math.min(width * 0.15, height * 0.4)
+    : Math.min(width * 0.18, height * 0.12);
+}
 
 export function DeskClockScreen() {
   const navigation = useNavigation();
   const { realTimeMs, customTime } = useCurrentTime();
-  const settings = useAtomValue(settingsAtom);
+  const settings = useAtomValue(resolvedSettingsAtom);
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -25,20 +31,14 @@ export function DeskClockScreen() {
   useFullscreen();
 
   const customFormatted = formatCustomTime(customTime);
-  const realFormatted = format(
-    new Date(realTimeMs),
-    settings.timeFormat === "12h" ? "hh:mm:ss a" : "HH:mm:ss",
-  );
+  const realFormatted = formatDisplayTime(realTimeMs, settings);
 
   const primaryText =
     settings.primaryTimeDisplay === "custom" ? customFormatted : realFormatted;
   const secondaryText =
     settings.primaryTimeDisplay === "custom" ? realFormatted : customFormatted;
 
-  const isLandscape = width > height;
-  const primaryFontSize = isLandscape
-    ? Math.min(width * 0.15, height * 0.4)
-    : Math.min(width * 0.18, height * 0.12);
+  const primaryFontSize = getDeskClockPrimaryFontSize(width, height);
   const secondaryFontSize = primaryFontSize * 0.35;
 
   const handleClose = useCallback(() => {

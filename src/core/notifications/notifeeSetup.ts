@@ -3,7 +3,7 @@ import notifee, {
   AndroidNotificationSetting,
   AuthorizationStatus,
 } from "@notifee/react-native";
-import { NativeModules } from "react-native";
+import { NativeModules, Platform } from "react-native";
 
 const ALARM_CHANNEL_ID = "alarm";
 const TIMER_CHANNEL_ID = "timer";
@@ -83,6 +83,14 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
 
 export async function getAlarmDeliveryStatus(): Promise<AlarmDeliveryStatus> {
   const settings = await notifee.getNotificationSettings();
+  if (Platform.OS !== "android") {
+    return {
+      notificationsEnabled:
+        settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED,
+      exactAlarmsEnabled: true,
+      fullScreenIntentEnabled: true,
+    };
+  }
   const capabilityModule = getRingtoneCapabilityModule();
   const nativeCapabilities = capabilityModule?.getAlarmCapabilities
     ? await capabilityModule.getAlarmCapabilities()
@@ -92,7 +100,7 @@ export async function getAlarmDeliveryStatus(): Promise<AlarmDeliveryStatus> {
     notificationsEnabled:
       settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED,
     exactAlarmsEnabled:
-      settings.android.alarm !== AndroidNotificationSetting.DISABLED &&
+      settings.android?.alarm !== AndroidNotificationSetting.DISABLED &&
       (nativeCapabilities?.canScheduleExactAlarms ?? true),
     fullScreenIntentEnabled: nativeCapabilities?.canUseFullScreenIntent ?? true,
   };

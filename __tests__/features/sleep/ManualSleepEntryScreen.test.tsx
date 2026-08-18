@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { StyleSheet } from "react-native";
@@ -6,7 +6,10 @@ import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { sleepSessionsAtom } from "../../../src/atoms/sleepAtoms";
-import { ManualSleepEntryScreen } from "../../../src/features/sleep/screens/ManualSleepEntryScreen";
+import {
+  ManualSleepEntryScreen,
+  parseLocalDateTime,
+} from "../../../src/features/sleep/screens/ManualSleepEntryScreen";
 import type { SleepSession } from "../../../src/models/SleepSession";
 
 // Replace atomWithStorage with plain atom to avoid async initialization issues
@@ -66,9 +69,9 @@ function makeSession(overrides: Partial<SleepSession> = {}): SleepSession {
     id: "existing-session",
     source: "manual",
     startTimestampMs: new Date("2026-02-25T23:00:00").getTime(),
-    endTimestampMs: new Date("2026-02-26T07:00:00").getTime(),
+    endTimestampMs: new Date("2026-02-26T06:00:00").getTime(),
     stages: [],
-    durationMs: 8 * 60 * 60 * 1000,
+    durationMs: 7 * 60 * 60 * 1000,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     ...overrides,
@@ -95,7 +98,13 @@ function renderWithProviders(
 describe("ManualSleepEntryScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 1, 26, 6, 30, 45));
     mockRouteParams.sessionId = undefined;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("should display four text inputs for date and time", async () => {
@@ -105,6 +114,18 @@ describe("ManualSleepEntryScreen", () => {
     expect(getByTestId("start-time-input")).toBeTruthy();
     expect(getByTestId("end-date-input")).toBeTruthy();
     expect(getByTestId("end-time-input")).toBeTruthy();
+  });
+
+  it("starts with a valid eight-hour range in the past", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    expect(getByTestId("start-date-input").props.value).toBe("2026-02-25");
+    expect(getByTestId("start-time-input").props.value).toBe("22:30");
+    expect(getByTestId("end-date-input").props.value).toBe("2026-02-26");
+    expect(getByTestId("end-time-input").props.value).toBe("06:30");
+
+    await fireEvent.press(getByTestId("save-button"));
+    await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
   });
 
   it("adds the bottom safe-area inset to scroll content", async () => {
@@ -125,7 +146,7 @@ describe("ManualSleepEntryScreen", () => {
     await fireEvent.changeText(getByTestId("start-date-input"), "2026-02-25");
     await fireEvent.changeText(getByTestId("start-time-input"), "23:00");
     await fireEvent.changeText(getByTestId("end-date-input"), "2026-02-26");
-    await fireEvent.changeText(getByTestId("end-time-input"), "07:00");
+    await fireEvent.changeText(getByTestId("end-time-input"), "06:00");
 
     await fireEvent.press(getByTestId("save-button"));
 
@@ -137,7 +158,7 @@ describe("ManualSleepEntryScreen", () => {
     expect(sessions).toHaveLength(1);
     expect(sessions[0].source).toBe("manual");
     expect(sessions[0].stages).toEqual([]);
-    expect(sessions[0].durationMs).toBe(8 * 60 * 60 * 1000);
+    expect(sessions[0].durationMs).toBe(7 * 60 * 60 * 1000);
   });
 
   it("should show error when end time is before start time", async () => {
@@ -154,6 +175,21 @@ describe("ManualSleepEntryScreen", () => {
       expect(getByTestId("manual-entry-snackbar")).toBeTruthy();
     });
 
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  it("rejects an end time in the future", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    await fireEvent.changeText(getByTestId("start-date-input"), "2026-02-25");
+    await fireEvent.changeText(getByTestId("start-time-input"), "22:30");
+    await fireEvent.changeText(getByTestId("end-date-input"), "2026-02-26");
+    await fireEvent.changeText(getByTestId("end-time-input"), "06:31");
+    await fireEvent.press(getByTestId("save-button"));
+
+    await waitFor(() =>
+      expect(getByTestId("manual-entry-snackbar")).toBeTruthy(),
+    );
     expect(mockGoBack).not.toHaveBeenCalled();
   });
 
@@ -193,7 +229,7 @@ describe("ManualSleepEntryScreen", () => {
       id: existingSession.id,
       startTimestampMs: new Date("2026-02-25T22:30:00").getTime(),
       endTimestampMs: existingSession.endTimestampMs,
-      durationMs: 8.5 * 60 * 60 * 1000,
+      durationMs: 7.5 * 60 * 60 * 1000,
     });
     expect(sessions[0].updatedAt).toBeGreaterThanOrEqual(
       existingSession.updatedAt,
@@ -225,6 +261,29 @@ describe("ManualSleepEntryScreen", () => {
     });
   });
 
+  it("keeps sessions added after the form was opened", async () => {
+    const store = createStore();
+    const { getByTestId } = await renderWithProviders(store);
+    const concurrentSession = makeSession({ id: "synced-session" });
+
+    await fireEvent.changeText(getByTestId("start-date-input"), "2026-02-25");
+    await fireEvent.changeText(getByTestId("start-time-input"), "22:00");
+    await fireEvent.changeText(getByTestId("end-date-input"), "2026-02-26");
+    await fireEvent.changeText(getByTestId("end-time-input"), "06:00");
+    await act(async () => {
+      store.set(sleepSessionsAtom, [concurrentSession]);
+    });
+
+    await fireEvent.press(getByTestId("save-button"));
+
+    await waitFor(() => {
+      expect(store.get(sleepSessionsAtom)).toHaveLength(2);
+    });
+    expect((store.get(sleepSessionsAtom) as SleepSession[])[0]).toEqual(
+      concurrentSession,
+    );
+  });
+
   it("should render the screen with testID", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("manual-sleep-entry-screen")).toBeTruthy();
@@ -241,5 +300,37 @@ describe("ManualSleepEntryScreen", () => {
     await fireEvent.press(getByTestId("save-button"));
 
     expect(mockGoBack).not.toHaveBeenCalled();
+  });
+});
+
+describe("parseLocalDateTime", () => {
+  it("rejects a local time skipped by the spring DST transition", () => {
+    const RealDate = global.Date;
+    global.Date = new Proxy(RealDate, {
+      construct(target, args) {
+        if (
+          args[0] === 2026 &&
+          args[1] === 2 &&
+          args[2] === 8 &&
+          args[3] === 2 &&
+          args[4] === 30
+        ) {
+          return new target(2026, 2, 8, 3, 30, 0, 0);
+        }
+        return Reflect.construct(target, args);
+      },
+    }) as DateConstructor;
+
+    try {
+      expect(parseLocalDateTime("2026-03-08", "02:30")).toBeNull();
+    } finally {
+      global.Date = RealDate;
+    }
+  });
+
+  it("accepts the first occurrence of an ambiguous fall DST time", () => {
+    expect(parseLocalDateTime("2026-11-01", "01:30")).toBe(
+      new Date(2026, 10, 1, 1, 30).getTime(),
+    );
   });
 });

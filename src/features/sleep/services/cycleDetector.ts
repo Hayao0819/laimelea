@@ -5,6 +5,7 @@ import type {
 
 const MINUTES_PER_DAY = 1440;
 const MIN_DATA_POINTS = 7;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function getConfidence(dataPoints: number): "low" | "medium" | "high" | null {
   if (dataPoints < MIN_DATA_POINTS) return null;
@@ -16,6 +17,13 @@ function getConfidence(dataPoints: number): "low" | "medium" | "high" | null {
 function toMinuteOfDay(timestampMs: number): number {
   const date = new Date(timestampMs);
   return date.getHours() * 60 + date.getMinutes();
+}
+
+function toCalendarDay(timestampMs: number): number {
+  const date = new Date(timestampMs);
+  return Math.floor(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / MS_PER_DAY,
+  );
 }
 
 /**
@@ -81,8 +89,8 @@ function linearRegression(
 /**
  * Unwrap sleep onset minutes using circular (shortest-path) differences
  * so that both forward and backward drift are correctly tracked.
- * Day indices are ordinal (0, 1, 2, ...) representing successive
- * observations.
+ * Day indices are local calendar-day offsets, so missed observations and
+ * daylight-saving transitions do not change the estimated daily drift.
  */
 function unwrapOnsetMinutes(sorted: SleepSession[]): {
   dayIndices: number[];
@@ -93,6 +101,7 @@ function unwrapOnsetMinutes(sorted: SleepSession[]): {
 
   const firstMinute = toMinuteOfDay(sorted[0].startTimestampMs);
   unwrapped.push(firstMinute);
+  const firstDay = toCalendarDay(sorted[0].startTimestampMs);
   dayIndices.push(0);
 
   let cumulativeMinutes = firstMinute;
@@ -103,7 +112,7 @@ function unwrapOnsetMinutes(sorted: SleepSession[]): {
     const delta = circularDiff(minute, prevMinute);
     cumulativeMinutes += delta;
     unwrapped.push(cumulativeMinutes);
-    dayIndices.push(i);
+    dayIndices.push(toCalendarDay(sorted[i].startTimestampMs) - firstDay);
     prevMinute = minute;
   }
 

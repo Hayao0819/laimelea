@@ -17,6 +17,7 @@ export interface Spec extends TurboModule {
   ): Promise<
     ReadonlyArray<{
       id: string;
+      sourceEventId: string;
       calendarId: string;
       calendarName: string;
       title: string;

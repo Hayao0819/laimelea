@@ -6,8 +6,8 @@ import {
   NavigationContainer,
 } from "@react-navigation/native";
 import { useAtomValue, useSetAtom } from "jotai";
-import React, { useEffect, useMemo, useRef } from "react";
-import { AppState, useColorScheme } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AppState, DeviceEventEmitter, useColorScheme } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import {
   initialWindowMetrics,
@@ -16,7 +16,9 @@ import {
 
 import { alarmsAtom } from "../atoms/alarmAtoms";
 import { platformTypeAtom } from "../atoms/platformAtoms";
-import { settingsAtom } from "../atoms/settingsAtoms";
+import { resolvedSettingsAtom, settingsAtom } from "../atoms/settingsAtoms";
+import { sleepSessionsAtom } from "../atoms/sleepAtoms";
+import { timersAtom } from "../atoms/timerAtoms";
 import i18n, { resolveLanguage } from "../core/i18n";
 import { setupForegroundHandler } from "../core/notifications/foregroundHandler";
 import {
@@ -25,7 +27,17 @@ import {
   ensureNotificationPermissions,
 } from "../core/notifications/notifeeSetup";
 import { detectPlatform } from "../core/platform/detection";
+import { processAlarmDelivery } from "../features/alarm/services/alarmDeliveryService";
 import { rescheduleAllEnabledAlarms } from "../features/alarm/services/alarmRescheduler";
+import {
+  acknowledgeNativeAlarmDeliveries,
+  consumeNativeAlarmDeliveries,
+} from "../features/alarm/services/ringtoneService";
+import { game2048StoreAtom } from "../features/game2048/atoms/game2048Atoms";
+import {
+  recoverPendingBackupRestore,
+  waitForRestoreWrites,
+} from "../features/settings/services/restoreTransaction";
 import type { RootStackParamList } from "../navigation/types";
 import { darkTheme, lightTheme } from "./theme";
 
@@ -37,11 +49,17 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   const systemColorScheme = useColorScheme();
-  const settings = useAtomValue(settingsAtom);
+  const settings = useAtomValue(resolvedSettingsAtom);
   const alarms = useAtomValue(alarmsAtom);
   const setAlarms = useSetAtom(alarmsAtom);
+  const setSettings = useSetAtom(settingsAtom);
+  const setSleepSessions = useSetAtom(sleepSessionsAtom);
+  const setGame2048Store = useSetAtom(game2048StoreAtom);
+  const setTimers = useSetAtom(timersAtom);
   const setPlatformType = useSetAtom(platformTypeAtom);
   const alarmsRef = useRef(alarms);
+  const alarmSyncQueueRef = useRef(Promise.resolve());
+  const [restoreRecoveryComplete, setRestoreRecoveryComplete] = useState(false);
   alarmsRef.current = alarms;
 
   useEffect(() => {
@@ -53,37 +71,144 @@ export function Providers({ children }: ProvidersProps) {
 
   useEffect(() => {
     let cancelled = false;
-    const reschedule = async () => {
-      const rescheduledAlarms = await rescheduleAllEnabledAlarms(
-        alarmsRef.current,
-        settings.cycleConfig,
-      );
-      if (!cancelled) {
-        setAlarms(rescheduledAlarms);
-      }
+    const recover = async () => {
+      let recovered = false;
+      try {
+        await recoverPendingBackupRestore(async (snapshot) => {
+          await waitForRestoreWrites([
+            Promise.resolve(setSettings(snapshot.settings)),
+            Promise.resolve(setAlarms(snapshot.alarms)),
+            Promise.resolve(setSleepSessions(snapshot.sleepSessions)),
+            Promise.resolve(setGame2048Store(snapshot.game2048)),
+          ]);
+        });
+        recovered = true;
+      } catch {}
+      if (!cancelled && recovered) setRestoreRecoveryComplete(true);
     };
-    reschedule();
-
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        reschedule();
-      }
-    });
-
+    recover();
     return () => {
       cancelled = true;
-      subscription.remove();
     };
-  }, [setAlarms, settings.cycleConfig]);
+  }, [setAlarms, setGame2048Store, setSettings, setSleepSessions]);
 
   useEffect(() => {
-    const unsubscribe = setupForegroundHandler((alarmId) => {
-      if (navigationRef.isReady()) {
-        navigationRef.navigate("AlarmFiring", { alarmId });
-      }
-    }, setAlarms);
+    if (!restoreRecoveryComplete) return;
+    let cancelled = false;
+    const synchronizeAlarms = () => {
+      const task = async () => {
+        const deliveries = (await consumeNativeAlarmDeliveries())
+          .slice()
+          .sort(
+            (left, right) =>
+              left.occurrenceTimestampMs - right.occurrenceTimestampMs ||
+              left.deliveryId.localeCompare(right.deliveryId),
+          );
+        for (const delivery of deliveries) {
+          const result = await processAlarmDelivery(
+            delivery,
+            (updatedAlarms) => {
+              alarmsRef.current = updatedAlarms;
+              setAlarms(updatedAlarms);
+            },
+          );
+          if (result.alarms) {
+            try {
+              await acknowledgeNativeAlarmDeliveries([delivery.deliveryId]);
+            } catch {}
+          }
+          if (!result.handled || cancelled) continue;
+          if (delivery.stopped) {
+            const route = navigationRef.getCurrentRoute();
+            const routeParams = route?.params;
+            if (
+              route?.name === "AlarmFiring" &&
+              routeParams != null &&
+              typeof routeParams === "object" &&
+              "alarmId" in routeParams &&
+              routeParams.alarmId === delivery.alarmId &&
+              navigationRef.canGoBack()
+            ) {
+              navigationRef.goBack();
+            }
+            continue;
+          }
+          if (
+            delivery.autoSilenceMs > 0 &&
+            Date.now() >=
+              delivery.occurrenceTimestampMs + delivery.autoSilenceMs
+          ) {
+            continue;
+          }
+          const alarmId = delivery.alarmId;
+          const navigate = () => {
+            if (!cancelled && navigationRef.isReady()) {
+              navigationRef.navigate("AlarmFiring", { alarmId });
+            }
+          };
+          navigate();
+          if (!navigationRef.isReady()) {
+            setTimeout(navigate, 100);
+          }
+        }
+        const rescheduledAlarms = await rescheduleAllEnabledAlarms(
+          alarmsRef.current,
+          settings.cycleConfig,
+        );
+        if (!cancelled) {
+          alarmsRef.current = rescheduledAlarms;
+          setAlarms(rescheduledAlarms);
+        }
+      };
+      const queued = alarmSyncQueueRef.current.then(task, task);
+      alarmSyncQueueRef.current = queued.then(
+        () => undefined,
+        () => undefined,
+      );
+      return queued;
+    };
+    synchronizeAlarms().catch(() => {});
+    const deliverySubscription = DeviceEventEmitter.addListener(
+      "NativeAlarmDelivery",
+      () => {
+        synchronizeAlarms().catch(() => {});
+      },
+    );
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextState) => {
+        if (nextState === "active") {
+          synchronizeAlarms().catch(() => {});
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+      deliverySubscription.remove();
+      appStateSubscription.remove();
+    };
+  }, [restoreRecoveryComplete, setAlarms, settings.cycleConfig]);
+
+  useEffect(() => {
+    const unsubscribe = setupForegroundHandler(
+      (alarmId) => {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate("AlarmFiring", { alarmId });
+        }
+      },
+      setAlarms,
+      (timerId) => {
+        setTimers((timers) =>
+          timers.map((timer) =>
+            timer.id === timerId && timer.isRunning
+              ? { ...timer, remainingMs: 0, isRunning: false, startedAt: null }
+              : timer,
+          ),
+        );
+      },
+    );
     return unsubscribe;
-  }, [setAlarms]);
+  }, [setAlarms, setTimers]);
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | null = null;

@@ -121,6 +121,48 @@ describe("createGmsBackupService", () => {
         "Access token expired",
       );
     });
+
+    it("serializes concurrent backup requests without dropping newer data", async () => {
+      const service = createGmsBackupService(
+        createMockAuthService("valid-token"),
+      );
+      let finishFirstFind: (file: null) => void;
+      let markFirstFindStarted: () => void;
+      const firstFindStarted = new Promise<void>((resolve) => {
+        markFirstFindStarted = resolve;
+      });
+      mockFindBackupFile
+        .mockImplementationOnce(() => {
+          markFirstFindStarted();
+          return new Promise((resolve) => {
+            finishFirstFind = resolve;
+          });
+        })
+        .mockResolvedValueOnce(null);
+      mockUploadBackup.mockResolvedValue("file-id");
+
+      const first = service.backup("first");
+      const second = service.backup("second");
+      await firstFindStarted;
+
+      expect(mockFindBackupFile).toHaveBeenCalledTimes(1);
+      finishFirstFind!(null);
+      await Promise.all([first, second]);
+
+      expect(mockFindBackupFile).toHaveBeenCalledTimes(2);
+      expect(mockUploadBackup).toHaveBeenNthCalledWith(
+        1,
+        "valid-token",
+        "first",
+        undefined,
+      );
+      expect(mockUploadBackup).toHaveBeenNthCalledWith(
+        2,
+        "valid-token",
+        "second",
+        undefined,
+      );
+    });
   });
 
   describe("restore", () => {

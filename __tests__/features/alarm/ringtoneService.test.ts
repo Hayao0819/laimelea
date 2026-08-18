@@ -1,7 +1,9 @@
 import { NativeModules } from "react-native";
 
 import {
+  acknowledgeNativeAlarmDeliveries,
   cancelAlarmAudio,
+  consumeNativeAlarmDeliveries,
   getAlarmRingtones,
   getDefaultAlarmUri,
   playAlarmSound,
@@ -22,6 +24,8 @@ describe("ringtoneService", () => {
     setAlarmVolumeButtonBehavior: jest.fn(),
     scheduleAlarmAudio: jest.fn(),
     cancelAlarmAudio: jest.fn(),
+    consumeAlarmDeliveries: jest.fn(),
+    acknowledgeAlarmDeliveries: jest.fn(),
     stopRingtone: jest.fn(),
     stopAlarmSound: jest.fn(),
     getDefaultAlarmUri: jest.fn(),
@@ -123,13 +127,31 @@ describe("ringtoneService", () => {
         null,
         0,
         0,
+        false,
+        null,
+        [],
+        0,
+        "",
+        true,
       );
     });
 
-    it("does not schedule native audio for a silent alarm", async () => {
+    it("schedules native delivery for a silent alarm", async () => {
       await scheduleAlarmAudio("alarm-1", 1234, "__silent__", 0, 0);
 
-      expect(mockModule.scheduleAlarmAudio).not.toHaveBeenCalled();
+      expect(mockModule.scheduleAlarmAudio).toHaveBeenCalledWith(
+        "alarm-1",
+        1234,
+        "__silent__",
+        0,
+        0,
+        false,
+        null,
+        [],
+        0,
+        "",
+        true,
+      );
     });
 
     it("cancels native alarm audio by alarm identifier", async () => {
@@ -138,6 +160,27 @@ describe("ringtoneService", () => {
       await cancelAlarmAudio("alarm-1");
 
       expect(mockModule.cancelAlarmAudio).toHaveBeenCalledWith("alarm-1");
+    });
+
+    it("keeps native deliveries until JavaScript acknowledges them", async () => {
+      const deliveries = [
+        {
+          deliveryId: "delivery.alarm-1.1234",
+          alarmId: "alarm-1",
+          occurrenceTimestampMs: 1234,
+          autoSilenceMs: 0,
+          stopped: false,
+        },
+      ];
+      mockModule.consumeAlarmDeliveries.mockResolvedValue(deliveries);
+      mockModule.acknowledgeAlarmDeliveries.mockResolvedValue(undefined);
+
+      await expect(consumeNativeAlarmDeliveries()).resolves.toEqual(deliveries);
+      await acknowledgeNativeAlarmDeliveries([deliveries[0].deliveryId]);
+
+      expect(mockModule.acknowledgeAlarmDeliveries).toHaveBeenCalledWith([
+        "delivery.alarm-1.1234",
+      ]);
     });
 
     it("getDefaultAlarmUri should return URI from native module", async () => {
@@ -173,6 +216,12 @@ describe("ringtoneService", () => {
     it("getDefaultAlarmUri should return 'default'", async () => {
       const result = await getDefaultAlarmUri();
       expect(result).toBe("default");
+    });
+
+    it("does not acknowledge deliveries without a native module", async () => {
+      await expect(
+        acknowledgeNativeAlarmDeliveries(["delivery.alarm-1.1234"]),
+      ).resolves.toBeUndefined();
     });
 
     it("alarm playback and volume updates resolve without a native module", async () => {

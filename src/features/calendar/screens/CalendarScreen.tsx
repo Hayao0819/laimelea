@@ -23,10 +23,13 @@ import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
 import {
+  calendarHasSyncedAtom,
   resolvedCalendarEventsAtom,
   visibleCalendarEventsAtom,
 } from "../../../atoms/calendarAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
+import { findLinkedCalendarEvent } from "../../../core/calendar/calendarAlarmSync";
+import { CALENDAR_SYNC_WINDOW_MS } from "../../../core/calendar/calendarSyncService";
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
 import type { Alarm } from "../../../models/Alarm";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
@@ -92,6 +95,7 @@ export function CalendarScreen() {
   alarmsRef.current = alarms;
   const setAlarms = useSetAtom(alarmsAtom);
   const { error, sync, isStale } = useCalendarSync();
+  const hasSynced = useAtomValue(calendarHasSyncedAtom);
   const allEvents = useAtomValue(resolvedCalendarEventsAtom);
   const events = useAtomValue(visibleCalendarEventsAtom);
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -123,13 +127,7 @@ export function CalendarScreen() {
   );
 
   useEffect(() => {
-    if (!Array.isArray(alarms) || allEvents.length === 0) return;
-
-    const eventsById = new Map<string, CalendarEvent>();
-    for (const event of allEvents) {
-      eventsById.set(event.id, event);
-      eventsById.set(event.sourceEventId, event);
-    }
+    if (!Array.isArray(alarms) || !hasSynced) return;
 
     const synchronize = async () => {
       const updatedAlarms = new Map<
@@ -150,7 +148,9 @@ export function CalendarScreen() {
           latestAlarm &&
           latestAlarm.targetTimestampMs === originalAlarm.targetTimestampMs &&
           latestAlarm.linkedCalendarEventId ===
-            originalAlarm.linkedCalendarEventId
+            originalAlarm.linkedCalendarEventId &&
+          latestAlarm.linkedCalendarSourceEventId ===
+            originalAlarm.linkedCalendarSourceEventId
         ) {
           return false;
         }
@@ -198,16 +198,57 @@ export function CalendarScreen() {
           !alarm ||
           alarm.targetTimestampMs !== capturedAlarm.targetTimestampMs ||
           alarm.linkedCalendarEventId !== capturedAlarm.linkedCalendarEventId ||
+          alarm.linkedCalendarSourceEventId !==
+            capturedAlarm.linkedCalendarSourceEventId ||
           alarm.linkedCalendarEventId == null
         ) {
           continue;
         }
-        const event = eventsById.get(alarm.linkedCalendarEventId);
-        if (!event) continue;
+        const event = findLinkedCalendarEvent(alarm, allEvents);
+        if (!event) {
+          const expectedEventStartMs =
+            alarm.targetTimestampMs - alarm.linkedEventOffsetMs;
+          if (
+            Math.abs(expectedEventStartMs - Date.now()) >
+            CALENDAR_SYNC_WINDOW_MS
+          ) {
+            continue;
+          }
+          if (!alarm.enabled && !alarm.notifeeTriggerId) continue;
+          const orphanKey = `${alarm.id}:${alarm.targetTimestampMs}:orphaned`;
+          if (failedReschedules.current.has(orphanKey)) continue;
+          try {
+            await cancelAlarm(alarm);
+            if (await reconcileStaleMutation(alarm, alarm)) continue;
+            updatedAlarms.set(alarm.id, {
+              previousTargetTimestampMs: alarm.targetTimestampMs,
+              alarm: {
+                ...alarm,
+                enabled: false,
+                notifeeTriggerId: null,
+                updatedAt: Date.now(),
+              },
+            });
+            failedReschedules.current.delete(orphanKey);
+            if (mounted.current) {
+              setSnackbar(t("calendar.alarmEventRemoved"));
+            }
+          } catch {
+            failed = true;
+            failedReschedules.current.add(orphanKey);
+          }
+          continue;
+        }
 
         const targetTimestampMs =
           event.startTimestampMs + alarm.linkedEventOffsetMs;
-        if (targetTimestampMs === alarm.targetTimestampMs) continue;
+        if (
+          targetTimestampMs === alarm.targetTimestampMs &&
+          alarm.linkedCalendarEventId === event.id &&
+          alarm.linkedCalendarSourceEventId === event.sourceEventId
+        ) {
+          continue;
+        }
 
         if (!alarm.enabled) {
           updatedAlarms.set(alarm.id, {
@@ -215,6 +256,8 @@ export function CalendarScreen() {
             alarm: {
               ...alarm,
               targetTimestampMs,
+              linkedCalendarEventId: event.id,
+              linkedCalendarSourceEventId: event.sourceEventId,
               updatedAt: Date.now(),
             },
           });
@@ -225,10 +268,15 @@ export function CalendarScreen() {
         if (failedReschedules.current.has(rescheduleKey)) continue;
 
         try {
-          const updatedAlarm = await rescheduleLinkedAlarm(
+          const scheduledAlarm = await rescheduleLinkedAlarm(
             alarm,
             targetTimestampMs,
           );
+          const updatedAlarm = {
+            ...scheduledAlarm,
+            linkedCalendarEventId: event.id,
+            linkedCalendarSourceEventId: event.sourceEventId,
+          };
           if (await reconcileStaleMutation(alarm, updatedAlarm)) continue;
           updatedAlarms.set(alarm.id, {
             previousTargetTimestampMs: alarm.targetTimestampMs,
@@ -282,7 +330,7 @@ export function CalendarScreen() {
       synchronize,
       synchronize,
     );
-  }, [alarms, allEvents, rescheduleAttempt, setAlarms, t]);
+  }, [alarms, allEvents, hasSynced, rescheduleAttempt, setAlarms, t]);
 
   const handleCreateAlarm = useCallback(
     async (event: CalendarEvent) => {
@@ -308,6 +356,7 @@ export function CalendarScreen() {
         notifeeTriggerId: null,
         skipNextOccurrence: false,
         linkedCalendarEventId: event.id,
+        linkedCalendarSourceEventId: event.sourceEventId,
         linkedEventOffsetMs: offsetMs,
         mathDifficulty: alarmDefaults.mathDifficulty,
         lastFiredAt: null,
@@ -413,10 +462,14 @@ export function CalendarScreen() {
           icon="chevron-left"
           onPress={goToPrevious}
           size={24}
-          accessibilityLabel={t("calendar.scrollToToday")}
+          accessibilityLabel={t("calendar.previousPeriod")}
         />
         <View style={styles.navTitleContainer}>
-          <Text variant="titleMedium" style={styles.navTitle}>
+          <Text
+            variant="titleMedium"
+            style={styles.navTitle}
+            testID="calendar-navigation-title"
+          >
             {navTitle}
           </Text>
         </View>
@@ -424,7 +477,7 @@ export function CalendarScreen() {
           icon="chevron-right"
           onPress={goToNext}
           size={24}
-          accessibilityLabel={t("calendar.scrollToToday")}
+          accessibilityLabel={t("calendar.nextPeriod")}
         />
         <IconButton
           icon="calendar-today"

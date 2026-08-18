@@ -29,7 +29,10 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-function parseDateTimeToMs(dateStr: string, timeStr: string): number | null {
+export function parseLocalDateTime(
+  dateStr: string,
+  timeStr: string,
+): number | null {
   if (!DATE_PATTERN.test(dateStr) || !TIME_PATTERN.test(timeStr)) {
     return null;
   }
@@ -55,7 +58,9 @@ function parseDateTimeToMs(dateStr: string, timeStr: string): number | null {
   if (
     d.getFullYear() !== year ||
     d.getMonth() !== month - 1 ||
-    d.getDate() !== day
+    d.getDate() !== day ||
+    d.getHours() !== hours ||
+    d.getMinutes() !== minutes
   ) {
     return null;
   }
@@ -78,26 +83,34 @@ export function ManualSleepEntryScreen() {
   );
 
   const now = useMemo(() => new Date(), []);
+  const defaultRange = useMemo(() => {
+    const end = new Date(now);
+    end.setSeconds(0, 0);
+    return {
+      start: new Date(end.getTime() - 8 * 60 * 60 * 1000),
+      end,
+    };
+  }, [now]);
 
   const [startDate, setStartDate] = useState(
     existingSession
       ? format(new Date(existingSession.startTimestampMs), "yyyy-MM-dd")
-      : format(now, "yyyy-MM-dd"),
+      : format(defaultRange.start, "yyyy-MM-dd"),
   );
   const [startTime, setStartTime] = useState(
     existingSession
       ? format(new Date(existingSession.startTimestampMs), "HH:mm")
-      : "23:00",
+      : format(defaultRange.start, "HH:mm"),
   );
   const [endDate, setEndDate] = useState(
     existingSession
       ? format(new Date(existingSession.endTimestampMs), "yyyy-MM-dd")
-      : format(now, "yyyy-MM-dd"),
+      : format(defaultRange.end, "yyyy-MM-dd"),
   );
   const [endTime, setEndTime] = useState(
     existingSession
       ? format(new Date(existingSession.endTimestampMs), "HH:mm")
-      : "07:00",
+      : format(defaultRange.end, "HH:mm"),
   );
 
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -110,8 +123,8 @@ export function ManualSleepEntryScreen() {
 
   const handleSave = useCallback(() => {
     try {
-      const startMs = parseDateTimeToMs(startDate, startTime);
-      const endMs = parseDateTimeToMs(endDate, endTime);
+      const startMs = parseLocalDateTime(startDate, startTime);
+      const endMs = parseLocalDateTime(endDate, endTime);
 
       if (startMs == null || endMs == null) {
         setSnackbar(t("sleep.validationError"));
@@ -123,7 +136,7 @@ export function ManualSleepEntryScreen() {
         return;
       }
 
-      if (startMs > Date.now()) {
+      if (startMs > Date.now() || endMs > Date.now()) {
         setSnackbar(t("sleep.validationError"));
         return;
       }
@@ -144,7 +157,12 @@ export function ManualSleepEntryScreen() {
           durationMs,
           updatedAt: timestamp,
         };
-        setSessions(sessions.map((s) => (s.id === sessionId ? updated : s)));
+        setSessions((current) => {
+          const entries = Array.isArray(current) ? current : [];
+          return entries.map((session) =>
+            session.id === sessionId ? updated : session,
+          );
+        });
       } else {
         const newSession: SleepSession = {
           id: generateId(),
@@ -156,7 +174,10 @@ export function ManualSleepEntryScreen() {
           createdAt: timestamp,
           updatedAt: timestamp,
         };
-        setSessions([...sessions, newSession]);
+        setSessions((current) => [
+          ...(Array.isArray(current) ? current : []),
+          newSession,
+        ]);
       }
 
       navigation.goBack();
@@ -170,7 +191,6 @@ export function ManualSleepEntryScreen() {
     endTime,
     existingSession,
     sessionId,
-    sessions,
     setSessions,
     navigation,
     t,

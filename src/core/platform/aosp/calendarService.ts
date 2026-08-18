@@ -26,45 +26,37 @@ export function createAospCalendarService(): PlatformCalendarService {
       const mod = getNativeCalendarModule();
       if (mod == null) return [];
 
-      try {
-        const instances = await mod.getEventInstances(startMs, endMs);
-        return instances.map(
-          (e): CalendarEvent => ({
-            id: e.id,
-            sourceEventId: e.id,
-            source: "local",
-            title: e.title,
-            description: e.description,
-            startTimestampMs: e.startMs,
-            endTimestampMs: e.endMs,
-            allDay: e.allDay,
-            colorId: e.color,
-            calendarName: e.calendarName,
-            calendarId: e.calendarId,
-          }),
-        );
-      } catch {
-        return [];
-      }
+      const instances = await mod.getEventInstances(startMs, endMs);
+      return instances.map(
+        (e): CalendarEvent => ({
+          id: e.id,
+          sourceEventId: e.sourceEventId,
+          source: "local",
+          title: e.title,
+          description: e.description,
+          startTimestampMs: e.startMs,
+          endTimestampMs: e.endMs,
+          allDay: e.allDay,
+          colorId: e.color,
+          calendarName: e.calendarName,
+          calendarId: e.calendarId,
+        }),
+      );
     },
 
     async getCalendarList() {
       const mod = getNativeCalendarModule();
       if (mod == null) return [];
 
-      try {
-        const calendars = await mod.getCalendars();
-        return calendars.map(
-          (c): CalendarInfo => ({
-            id: c.id,
-            name: c.name,
-            color: c.color,
-            isPrimary: c.isPrimary,
-          }),
-        );
-      } catch {
-        return [];
-      }
+      const calendars = await mod.getCalendars();
+      return calendars.map(
+        (c): CalendarInfo => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          isPrimary: c.isPrimary,
+        }),
+      );
     },
   };
 }

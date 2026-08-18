@@ -16,6 +16,7 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import com.facebook.react.ReactApplication
 import com.hayao0819.laimelea.MainActivity
 
 class AlarmAudioService : Service() {
@@ -25,6 +26,8 @@ class AlarmAudioService : Service() {
         const val EXTRA_SOUND_URI = "soundUri"
         const val EXTRA_GRADUAL_DURATION_MS = "gradualDurationMs"
         const val EXTRA_AUTO_SILENCE_MS = "autoSilenceMs"
+        const val EXTRA_LABEL = "label"
+        const val EXTRA_VIBRATION_ENABLED = "vibrationEnabled"
         private const val CHANNEL_ID = "alarm-audio-playback"
         private const val FOREGROUND_NOTIFICATION_ID = 9001
         private const val STEP_INTERVAL_MS = 500L
@@ -39,7 +42,7 @@ class AlarmAudioService : Service() {
         fun stopActivePlayback(alarmId: String? = null) {
             val service = activeService ?: return
             if (alarmId == null || service.activeAlarmId == alarmId) {
-                service.stopSelf()
+                service.stopCurrentStart()
             }
         }
     }
@@ -48,6 +51,9 @@ class AlarmAudioService : Service() {
     private var player: MediaPlayer? = null
     private var gradualRunnable: Runnable? = null
     private var activeAlarmId: String? = null
+    private var activeOccurrenceTimestampMs = 0L
+    private var activeAutoSilenceMs = 0L
+    private var activeStartId = 0
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val alarmId = intent?.getStringExtra(EXTRA_ALARM_ID) ?: run {
@@ -57,16 +63,30 @@ class AlarmAudioService : Service() {
         val soundUri = intent.getStringExtra(EXTRA_SOUND_URI)
         val gradualDurationMs = intent.getLongExtra(EXTRA_GRADUAL_DURATION_MS, 0L)
         val autoSilenceMs = intent.getLongExtra(EXTRA_AUTO_SILENCE_MS, 0L)
+        val occurrenceTimestampMs = intent.getLongExtra(RingtoneModule.EXTRA_TRIGGER_TIMESTAMP_MS, 0L)
 
         handler.removeCallbacksAndMessages(null)
+        if (
+            activeAlarmId != null &&
+            (activeAlarmId != alarmId || activeOccurrenceTimestampMs != occurrenceTimestampMs)
+        ) {
+            recordActiveAlarmStopped()
+        }
         stopPlayback()
         createChannel()
         startForeground(alarmId)
         activeAlarmId = alarmId
+        activeOccurrenceTimestampMs = occurrenceTimestampMs
+        activeAutoSilenceMs = autoSilenceMs
+        activeStartId = startId
         activeService = this
-        startPlayback(soundUri, gradualDurationMs)
+        startPlayback(soundUri, gradualDurationMs, startId)
         if (autoSilenceMs > 0) {
-            handler.postDelayed({ stopSelf() }, autoSilenceMs)
+            handler.postDelayed({
+                if (activeStartId != startId) return@postDelayed
+                recordActiveAlarmStopped()
+                stopSelfResult(startId)
+            }, autoSilenceMs)
         }
         return START_NOT_STICKY
     }
@@ -74,13 +94,18 @@ class AlarmAudioService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        val alarmId = activeAlarmId
         if (activeService === this) {
             activeService = null
         }
         activeAlarmId = null
+        activeOccurrenceTimestampMs = 0L
+        activeAutoSilenceMs = 0L
+        activeStartId = 0
         handler.removeCallbacksAndMessages(null)
         stopPlayback()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        alarmId?.let { RingtoneModule.cancelAlarmFiringNotification(this, it, false) }
         super.onDestroy()
     }
 
@@ -124,7 +149,7 @@ class AlarmAudioService : Service() {
         )
     }
 
-    private fun startPlayback(uri: String?, gradualDurationMs: Long) {
+    private fun startPlayback(uri: String?, gradualDurationMs: Long, startId: Int) {
         val preferredUri = when (uri) {
             null, "default" -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             else -> Uri.parse(uri)
@@ -135,7 +160,8 @@ class AlarmAudioService : Service() {
         if (defaultUri != null && defaultUri != preferredUri && startPlayer(defaultUri, gradualDurationMs)) {
             return
         }
-        stopSelf()
+        recordActiveAlarmStopped()
+        stopSelfResult(startId)
     }
 
     private fun startPlayer(uri: Uri, gradualDurationMs: Long): Boolean {
@@ -192,5 +218,24 @@ class AlarmAudioService : Service() {
             runCatching { activePlayer.release() }
         }
         player = null
+    }
+
+    private fun recordActiveAlarmStopped() {
+        val alarmId = activeAlarmId ?: return
+        RingtoneModule.recordStoppedAlarmDelivery(
+            this,
+            alarmId,
+            activeOccurrenceTimestampMs,
+            activeAutoSilenceMs,
+        )
+        RingtoneModule.cancelAlarmFiringNotification(this, alarmId, false)
+        val reactContext = (applicationContext as? ReactApplication)
+            ?.reactHost
+            ?.currentReactContext
+        RingtoneModule.emitAlarmDelivery(reactContext)
+    }
+
+    private fun stopCurrentStart() {
+        stopSelfResult(activeStartId)
     }
 }

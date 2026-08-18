@@ -5,8 +5,8 @@ import { AppState, type AppStateStatus } from "react-native";
 import { timersAtom } from "../atoms/timerAtoms";
 import {
   cancelTimerTrigger,
+  consumeCompletedTimerIds,
   scheduleTimerTrigger,
-  showTimerCompleteNotification,
 } from "../features/timer/services/timerNotification";
 import type { TimerState } from "../models/Timer";
 
@@ -48,8 +48,6 @@ export function useTimers(): UseTimersReturn {
         const remaining = Math.max(0, t.durationMs - elapsed);
         changed = true;
         if (remaining <= 0) {
-          cancelTimerTrigger(t.id);
-          showTimerCompleteNotification(t.label);
           return { ...t, remainingMs: 0, isRunning: false };
         }
         return { ...t, remainingMs: remaining };
@@ -80,12 +78,32 @@ export function useTimers(): UseTimersReturn {
   useEffect(() => {
     const handleAppState = (state: AppStateStatus) => {
       if (state === "active") {
-        tick();
+        consumeCompletedTimerIds()
+          .then((completedTimerIds) => {
+            if (completedTimerIds.length === 0) {
+              tick();
+              return;
+            }
+            const completedTimerIdSet = new Set(completedTimerIds);
+            setTimers((previousTimers) =>
+              previousTimers.map((timer) =>
+                completedTimerIdSet.has(timer.id) && timer.isRunning
+                  ? {
+                      ...timer,
+                      remainingMs: 0,
+                      isRunning: false,
+                      startedAt: null,
+                    }
+                  : timer,
+              ),
+            );
+          })
+          .catch(() => {});
       }
     };
     const subscription = AppState.addEventListener("change", handleAppState);
     return () => subscription.remove();
-  }, [tick]);
+  }, [setTimers, tick]);
 
   const addTimer = useCallback(
     (durationMs: number, label?: string) => {

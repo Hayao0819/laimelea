@@ -35,6 +35,9 @@ jest.mock("../../src/atoms/settingsAtoms", () => ({
   get settingsAtom() {
     return mockSettingsAtom;
   },
+  get resolvedSettingsAtom() {
+    return mockSettingsAtom;
+  },
 }));
 
 jest.mock("react-i18next", () => ({
@@ -66,6 +69,25 @@ jest.mock("../../src/core/notifications/foregroundHandler", () => ({
   setupForegroundHandler: jest.fn().mockReturnValue(mockForegroundUnsubscribe),
 }));
 
+const mockConsumeNativeAlarmDeliveries = jest.fn().mockResolvedValue([]);
+const mockAcknowledgeNativeAlarmDeliveries = jest
+  .fn()
+  .mockResolvedValue(undefined);
+jest.mock("../../src/features/alarm/services/ringtoneService", () => ({
+  consumeNativeAlarmDeliveries: mockConsumeNativeAlarmDeliveries,
+  acknowledgeNativeAlarmDeliveries: mockAcknowledgeNativeAlarmDeliveries,
+}));
+
+const mockProcessAlarmDelivery = jest.fn().mockResolvedValue({
+  handled: false,
+  alarms: null,
+  updatedAlarm: null,
+  rescheduleFailed: false,
+});
+jest.mock("../../src/features/alarm/services/alarmDeliveryService", () => ({
+  processAlarmDelivery: mockProcessAlarmDelivery,
+}));
+
 jest.mock("../../src/core/notifications/notifeeSetup", () => ({
   createAlarmChannel: jest.fn(),
   createTimerChannel: jest.fn(),
@@ -84,6 +106,10 @@ jest.mock("../../src/core/platform/detection", () => ({
   detectPlatform: jest.fn(() => Promise.resolve("aosp")),
 }));
 
+jest.mock("../../src/features/settings/services/restoreTransaction", () => ({
+  recoverPendingBackupRestore: jest.fn(() => Promise.resolve(false)),
+}));
+
 jest.mock("../../src/atoms/platformAtoms", () => {
   const { atom: jotaiAtom } = require("jotai");
   return { platformTypeAtom: jotaiAtom("aosp") };
@@ -91,11 +117,17 @@ jest.mock("../../src/atoms/platformAtoms", () => {
 
 const mockNavigate = jest.fn();
 const mockIsReady = jest.fn().mockReturnValue(true);
+const mockGetCurrentRoute = jest.fn();
+const mockCanGoBack = jest.fn().mockReturnValue(false);
+const mockGoBack = jest.fn();
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   createNavigationContainerRef: () => ({
     isReady: mockIsReady,
     navigate: mockNavigate,
+    getCurrentRoute: mockGetCurrentRoute,
+    canGoBack: mockCanGoBack,
+    goBack: mockGoBack,
     current: {},
   }),
   NavigationContainer: ({
@@ -111,6 +143,9 @@ jest.mock("@react-navigation/native", () => ({
 const {
   setupForegroundHandler,
 } = require("../../src/core/notifications/foregroundHandler");
+const {
+  recoverPendingBackupRestore,
+} = require("../../src/features/settings/services/restoreTransaction");
 
 // Import Providers after all mocks are set up
 const { Providers } = require("../../src/app/Providers");
@@ -123,7 +158,7 @@ jest
   .spyOn(AppState, "addEventListener")
   .mockImplementation(
     (_type: string, listener: (state: AppStateStatus) => void) => {
-      appStateCallback = listener;
+      appStateCallback ??= listener;
       return { remove: mockRemove };
     },
   );
@@ -156,16 +191,21 @@ function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
   };
 }
 
-function renderProviders(store = createStore(), initialAlarms: Alarm[] = []) {
+async function renderProviders(
+  store = createStore(),
+  initialAlarms: Alarm[] = [],
+) {
   store.set(mockSettingsAtom, DEFAULT_SETTINGS);
   store.set(mockAlarmsAtom, initialAlarms);
-  return render(
+  const result = render(
     <JotaiProvider store={store}>
       <Providers>
         <Text>child</Text>
       </Providers>
     </JotaiProvider>,
   );
+  await act(async () => {});
+  return result;
 }
 
 describe("Providers", () => {
@@ -174,14 +214,24 @@ describe("Providers", () => {
     appStateCallback = null;
     // Restore mock return values after clearAllMocks
     mockIsReady.mockReturnValue(true);
+    mockGetCurrentRoute.mockReturnValue(undefined);
+    mockCanGoBack.mockReturnValue(false);
     mockGetInitialNotification.mockResolvedValue(null);
+    mockConsumeNativeAlarmDeliveries.mockResolvedValue([]);
+    mockProcessAlarmDelivery.mockResolvedValue({
+      handled: false,
+      alarms: null,
+      updatedAlarm: null,
+      rescheduleFailed: false,
+    });
+    (recoverPendingBackupRestore as jest.Mock).mockResolvedValue(null);
     (setupForegroundHandler as jest.Mock).mockReturnValue(
       mockForegroundUnsubscribe,
     );
     // Restore spy implementation after clearAllMocks
     (AppState.addEventListener as jest.Mock).mockImplementation(
       (_type: string, listener: (state: AppStateStatus) => void) => {
-        appStateCallback = listener;
+        appStateCallback ??= listener;
         return { remove: mockRemove };
       },
     );
@@ -192,16 +242,21 @@ describe("Providers", () => {
       const alarms = [makeAlarm()];
       await renderProviders(createStore(), alarms);
 
-      expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(
-        alarms,
-        DEFAULT_SETTINGS.cycleConfig,
-      );
+      await waitFor(() => {
+        expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(
+          alarms,
+          DEFAULT_SETTINGS.cycleConfig,
+        );
+      });
     });
 
     it("calls rescheduleAllEnabledAlarms when AppState changes to active", async () => {
       const alarms = [makeAlarm()];
       await renderProviders(createStore(), alarms);
 
+      await waitFor(() => {
+        expect(rescheduleAllEnabledAlarms).toHaveBeenCalledTimes(1);
+      });
       (rescheduleAllEnabledAlarms as jest.Mock).mockClear();
 
       await act(async () => {
@@ -218,6 +273,9 @@ describe("Providers", () => {
       const alarms = [makeAlarm()];
       await renderProviders(createStore(), alarms);
 
+      await waitFor(() => {
+        expect(rescheduleAllEnabledAlarms).toHaveBeenCalledTimes(1);
+      });
       (rescheduleAllEnabledAlarms as jest.Mock).mockClear();
 
       await act(async () => {
@@ -231,15 +289,28 @@ describe("Providers", () => {
       const alarms = [makeAlarm()];
       const { unmount } = await renderProviders(createStore(), alarms);
 
-      expect(AppState.addEventListener).toHaveBeenCalledWith(
-        "change",
-        expect.any(Function),
-      );
+      await waitFor(() => {
+        expect(AppState.addEventListener).toHaveBeenCalledWith(
+          "change",
+          expect.any(Function),
+        );
+      });
       expect(mockRemove).not.toHaveBeenCalled();
 
       unmount();
 
       expect(mockRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not synchronize alarms after restore recovery fails", async () => {
+      (recoverPendingBackupRestore as jest.Mock).mockRejectedValueOnce(
+        new Error("recovery failed"),
+      );
+
+      await renderProviders(createStore(), [makeAlarm()]);
+
+      expect(rescheduleAllEnabledAlarms).not.toHaveBeenCalled();
+      expect(AppState.addEventListener).not.toHaveBeenCalled();
     });
   });
 
@@ -267,6 +338,7 @@ describe("Providers", () => {
       await renderProviders();
 
       expect(setupForegroundHandler).toHaveBeenCalledWith(
+        expect.any(Function),
         expect.any(Function),
         expect.any(Function),
       );
@@ -317,6 +389,164 @@ describe("Providers", () => {
       });
 
       expect(store.get(mockAlarmsAtom)).toEqual([deliveredAlarm]);
+    });
+  });
+
+  describe("native alarm delivery", () => {
+    it("serializes a foreground synchronization that arrives during rescheduling", async () => {
+      let finishInitialReschedule: (() => void) | undefined;
+      const initialReschedule = new Promise<Alarm[]>((resolve) => {
+        finishInitialReschedule = () => resolve([]);
+      });
+      (rescheduleAllEnabledAlarms as jest.Mock)
+        .mockImplementationOnce(() => initialReschedule)
+        .mockImplementation(() => Promise.resolve([]));
+
+      await renderProviders();
+
+      await waitFor(() => {
+        expect(rescheduleAllEnabledAlarms).toHaveBeenCalledTimes(1);
+        expect(mockConsumeNativeAlarmDeliveries).toHaveBeenCalledTimes(1);
+      });
+      await act(async () => {
+        appStateCallback?.("active");
+      });
+      expect(mockConsumeNativeAlarmDeliveries).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        finishInitialReschedule?.();
+        await initialReschedule;
+      });
+      await waitFor(() => {
+        expect(mockConsumeNativeAlarmDeliveries).toHaveBeenCalledTimes(2);
+        expect(rescheduleAllEnabledAlarms).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("processes pending deliveries in occurrence order", async () => {
+      const first = {
+        deliveryId: "delivery.alarm-1.100",
+        alarmId: "alarm-1",
+        occurrenceTimestampMs: 100,
+        autoSilenceMs: 0,
+        stopped: true,
+      };
+      const second = {
+        deliveryId: "delivery.alarm-2.200",
+        alarmId: "alarm-2",
+        occurrenceTimestampMs: 200,
+        autoSilenceMs: 0,
+        stopped: true,
+      };
+      mockConsumeNativeAlarmDeliveries.mockResolvedValueOnce([second, first]);
+      mockProcessAlarmDelivery.mockResolvedValue({
+        handled: false,
+        alarms: [],
+        updatedAlarm: null,
+        rescheduleFailed: false,
+      });
+
+      await renderProviders();
+
+      await waitFor(() => {
+        expect(
+          mockProcessAlarmDelivery.mock.calls.map(([delivery]) => delivery),
+        ).toEqual([first, second]);
+      });
+    });
+
+    it("processes and acknowledges a stopped alarm without navigating", async () => {
+      const alarm = makeAlarm();
+      const delivery = {
+        deliveryId: "delivery.test-alarm-1.1234",
+        alarmId: alarm.id,
+        occurrenceTimestampMs: 1234,
+        autoSilenceMs: 0,
+        stopped: true,
+      };
+      mockConsumeNativeAlarmDeliveries.mockResolvedValueOnce([delivery]);
+      mockProcessAlarmDelivery.mockResolvedValueOnce({
+        handled: true,
+        alarms: [alarm],
+        updatedAlarm: alarm,
+        rescheduleFailed: false,
+      });
+
+      await renderProviders(createStore(), [alarm]);
+
+      await waitFor(() => {
+        expect(mockProcessAlarmDelivery).toHaveBeenCalledWith(
+          delivery,
+          expect.any(Function),
+        );
+        expect(mockAcknowledgeNativeAlarmDeliveries).toHaveBeenCalledWith([
+          delivery.deliveryId,
+        ]);
+      });
+      expect(mockNavigate).not.toHaveBeenCalledWith("AlarmFiring", {
+        alarmId: alarm.id,
+      });
+    });
+
+    it("navigates after delivery acknowledgement fails", async () => {
+      const alarm = makeAlarm();
+      const delivery = {
+        deliveryId: "delivery.test-alarm-1.1234",
+        alarmId: alarm.id,
+        occurrenceTimestampMs: 1234,
+        autoSilenceMs: 0,
+        stopped: false,
+      };
+      mockConsumeNativeAlarmDeliveries.mockResolvedValueOnce([delivery]);
+      mockProcessAlarmDelivery.mockResolvedValueOnce({
+        handled: true,
+        alarms: [alarm],
+        updatedAlarm: alarm,
+        rescheduleFailed: false,
+      });
+      mockAcknowledgeNativeAlarmDeliveries.mockRejectedValueOnce(
+        new Error("acknowledgement failed"),
+      );
+
+      await renderProviders(createStore(), [alarm]);
+
+      await waitFor(() => {
+        expect(mockAcknowledgeNativeAlarmDeliveries).toHaveBeenCalledWith([
+          delivery.deliveryId,
+        ]);
+        expect(mockNavigate).toHaveBeenCalledWith("AlarmFiring", {
+          alarmId: alarm.id,
+        });
+      });
+    });
+
+    it("closes the matching firing screen after an external stop", async () => {
+      const alarm = makeAlarm();
+      const delivery = {
+        deliveryId: "delivery.test-alarm-1.1234",
+        alarmId: alarm.id,
+        occurrenceTimestampMs: 1234,
+        autoSilenceMs: 0,
+        stopped: true,
+      };
+      mockConsumeNativeAlarmDeliveries.mockResolvedValueOnce([delivery]);
+      mockProcessAlarmDelivery.mockResolvedValueOnce({
+        handled: true,
+        alarms: [alarm],
+        updatedAlarm: alarm,
+        rescheduleFailed: false,
+      });
+      mockGetCurrentRoute.mockReturnValue({
+        name: "AlarmFiring",
+        params: { alarmId: alarm.id },
+      });
+      mockCanGoBack.mockReturnValue(true);
+
+      await renderProviders(createStore(), [alarm]);
+
+      await waitFor(() => {
+        expect(mockGoBack).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

@@ -39,6 +39,7 @@ describe("findBackupFile", () => {
     const callUrl = mockFetch.mock.calls[0][0] as string;
     expect(callUrl).toContain("spaces=appDataFolder");
     expect(callUrl).toContain("name%3D%27laimelea-backup.json%27");
+    expect(new URL(callUrl).searchParams.get("q")).toContain("trashed=false");
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
@@ -53,6 +54,68 @@ describe("findBackupFile", () => {
     const result = await findBackupFile("token-abc");
 
     expect(result).toBeNull();
+  });
+
+  it("selects the newest backup deterministically", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        files: [
+          {
+            id: "z-old",
+            name: "laimelea-backup.json",
+            modifiedTime: "2026-02-20T10:00:00.000Z",
+          },
+          {
+            id: "a-new",
+            name: "laimelea-backup.json",
+            modifiedTime: "2026-02-21T10:00:00.000Z",
+          },
+          {
+            id: "b-new",
+            name: "laimelea-backup.json",
+            modifiedTime: "2026-02-21T10:00:00.000Z",
+          },
+        ],
+      }),
+    );
+
+    expect(await findBackupFile("token-abc")).toMatchObject({ id: "a-new" });
+  });
+
+  it("requests every page and selects the newest backup", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        jsonResponse({
+          files: [
+            {
+              id: "old",
+              name: "laimelea-backup.json",
+              modifiedTime: "2026-02-20T10:00:00.000Z",
+            },
+          ],
+          nextPageToken: "next-page",
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          files: [
+            {
+              id: "new",
+              name: "laimelea-backup.json",
+              modifiedTime: "2026-02-21T10:00:00.000Z",
+            },
+          ],
+        }),
+      );
+
+    expect(await findBackupFile("token-abc")).toMatchObject({ id: "new" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(
+      new URL(mockFetch.mock.calls[0][0]).searchParams.get("orderBy"),
+    ).toBe("modifiedTime desc");
+    expect(
+      new URL(mockFetch.mock.calls[1][0]).searchParams.get("pageToken"),
+    ).toBe("next-page");
   });
 
   it("should throw DriveAuthExpiredError on 401", async () => {
@@ -94,6 +157,21 @@ describe("uploadBackup", () => {
     expect(options.body).toContain("laimelea-backup.json");
     expect(options.body).toContain("appDataFolder");
     expect(options.body).toContain('{"alarms":[]}');
+  });
+
+  it("regenerates a multipart boundary that appears in backup data", async () => {
+    jest.spyOn(Date, "now").mockReturnValue(1);
+    jest.spyOn(Math, "random").mockReturnValue(0);
+    const collidingBoundary = "laimelea_backup_1__0";
+    const data = JSON.stringify({ label: `\r\n--${collidingBoundary}` });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: "new-file-id" }));
+
+    await uploadBackup("token-abc", data);
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(options.headers["Content-Type"]).not.toContain(collidingBoundary);
+    expect(options.body).toContain(data);
+    jest.restoreAllMocks();
   });
 
   it("should update existing file with PATCH when fileId provided", async () => {

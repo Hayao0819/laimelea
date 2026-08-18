@@ -2,7 +2,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { useEffect } from "react";
 
 import { currentTimeMsAtom } from "../atoms/clockAtoms";
-import { settingsAtom } from "../atoms/settingsAtoms";
+import { resolvedSettingsAtom } from "../atoms/settingsAtoms";
 import { realToCustom } from "../core/time/conversions";
 import type { CustomTimeValue } from "../models/CustomTime";
 
@@ -14,7 +14,7 @@ export interface CurrentTimeResult {
 
 export function useCurrentTime(): CurrentTimeResult {
   const [realTimeMs, setRealTimeMs] = useAtom(currentTimeMsAtom);
-  const settings = useAtomValue(settingsAtom);
+  const settings = useAtomValue(resolvedSettingsAtom);
 
   useEffect(() => {
     const id = setInterval(() => {

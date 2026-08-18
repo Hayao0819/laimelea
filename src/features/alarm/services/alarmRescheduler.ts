@@ -113,7 +113,7 @@ export async function scheduleNextAlarmOccurrence(
     };
   }
 
-  const triggerId = await scheduleAlarm(alarmToSchedule);
+  const triggerId = await scheduleAlarm(alarmToSchedule, cycleConfig);
   return {
     ...alarmToSchedule,
     notifeeTriggerId: triggerId,
@@ -227,7 +227,7 @@ export async function rescheduleAllEnabledAlarms(
         });
         continue;
       }
-      const triggerId = await scheduleAlarm(alarmToSchedule);
+      const triggerId = await scheduleAlarm(alarmToSchedule, cycleConfig);
       updatedAlarms.push({
         ...alarmToSchedule,
         notifeeTriggerId: triggerId,

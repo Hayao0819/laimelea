@@ -37,7 +37,8 @@ describe("createAospCalendarService", () => {
     it("should map native event instances to CalendarEvent model", async () => {
       mockGetEventInstances.mockResolvedValue([
         {
-          id: "42",
+          id: "42:1700000000000",
+          sourceEventId: "42",
           calendarId: "1",
           calendarName: "My Calendar",
           title: "Meeting",
@@ -48,7 +49,8 @@ describe("createAospCalendarService", () => {
           color: "#FF0000",
         },
         {
-          id: "43",
+          id: "43:1700010000000",
+          sourceEventId: "43",
           calendarId: "2",
           calendarName: "Work",
           title: "Lunch",
@@ -69,7 +71,7 @@ describe("createAospCalendarService", () => {
       );
       expect(events).toHaveLength(2);
       expect(events[0]).toEqual({
-        id: "42",
+        id: "42:1700000000000",
         sourceEventId: "42",
         source: "local",
         title: "Meeting",
@@ -82,7 +84,7 @@ describe("createAospCalendarService", () => {
         calendarId: "1",
       });
       expect(events[1]).toEqual({
-        id: "43",
+        id: "43:1700010000000",
         sourceEventId: "43",
         source: "local",
         title: "Lunch",
@@ -103,13 +105,14 @@ describe("createAospCalendarService", () => {
       expect(events).toEqual([]);
     });
 
-    it("should return empty array when getEventInstances throws", async () => {
+    it("should propagate getEventInstances errors", async () => {
       mockGetEventInstances.mockRejectedValue(
         new Error("ContentProvider error"),
       );
       const service = createAospCalendarService();
-      const events = await service.fetchEvents(0, 1000);
-      expect(events).toEqual([]);
+      await expect(service.fetchEvents(0, 1000)).rejects.toThrow(
+        "ContentProvider error",
+      );
     });
   });
 
@@ -136,11 +139,12 @@ describe("createAospCalendarService", () => {
       expect(list).toEqual([]);
     });
 
-    it("should return empty array on error", async () => {
+    it("should propagate getCalendars errors", async () => {
       mockGetCalendars.mockRejectedValue(new Error("Permission denied"));
       const service = createAospCalendarService();
-      const list = await service.getCalendarList();
-      expect(list).toEqual([]);
+      await expect(service.getCalendarList()).rejects.toThrow(
+        "Permission denied",
+      );
     });
   });
 });

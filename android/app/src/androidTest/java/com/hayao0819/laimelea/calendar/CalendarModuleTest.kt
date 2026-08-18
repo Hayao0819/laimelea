@@ -221,6 +221,8 @@ class CalendarModuleTest {
                 CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
                 CalendarContract.Instances.TITLE,
                 CalendarContract.Instances.DESCRIPTION,
+                CalendarContract.Instances.ORIGINAL_ID,
+                CalendarContract.Instances.ORIGINAL_INSTANCE_TIME,
                 CalendarContract.Instances.BEGIN,
                 CalendarContract.Instances.END,
                 CalendarContract.Instances.ALL_DAY,
@@ -230,7 +232,7 @@ class CalendarModuleTest {
         cursor.addRow(
             arrayOf(
                 100L, 1L, "Work", "Meeting", "Team standup",
-                1700000000000L, 1700003600000L, 0, -16776961,
+                null, null, 1700000000000L, 1700003600000L, 0, -16776961,
             ),
         )
 
@@ -242,7 +244,8 @@ class CalendarModuleTest {
         verify { promise.resolve(capture(slot)) }
         val event = slot.captured.getMap(0)!!
 
-        assertEquals("100", event.getString("id"))
+        assertEquals("100:1700000000000", event.getString("id"))
+        assertEquals("100", event.getString("sourceEventId"))
         assertEquals("1", event.getString("calendarId"))
         assertEquals("Work", event.getString("calendarName"))
         assertEquals("Meeting", event.getString("title"))
@@ -264,6 +267,8 @@ class CalendarModuleTest {
                 CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
                 CalendarContract.Instances.TITLE,
                 CalendarContract.Instances.DESCRIPTION,
+                CalendarContract.Instances.ORIGINAL_ID,
+                CalendarContract.Instances.ORIGINAL_INSTANCE_TIME,
                 CalendarContract.Instances.BEGIN,
                 CalendarContract.Instances.END,
                 CalendarContract.Instances.ALL_DAY,
@@ -273,7 +278,7 @@ class CalendarModuleTest {
         cursor.addRow(
             arrayOf(
                 200L, 1L, "Work", "Holiday", null,
-                1700000000000L, 1700086400000L, 1, null,
+                null, null, 1700000000000L, 1700086400000L, 1, null,
             ),
         )
 
@@ -288,6 +293,72 @@ class CalendarModuleTest {
         assertTrue(event.getBoolean("allDay"))
         assertEquals("", event.getString("description"))
         assertNull(event.getString("color"))
+    }
+
+    @Test
+    fun getEventInstances_recurringOccurrences_haveDistinctStableIds() {
+        grantCalendarPermission()
+
+        val cursor = MatrixCursor(
+            arrayOf(
+                CalendarContract.Instances.EVENT_ID,
+                CalendarContract.Instances.CALENDAR_ID,
+                CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
+                CalendarContract.Instances.TITLE,
+                CalendarContract.Instances.DESCRIPTION,
+                CalendarContract.Instances.ORIGINAL_ID,
+                CalendarContract.Instances.ORIGINAL_INSTANCE_TIME,
+                CalendarContract.Instances.BEGIN,
+                CalendarContract.Instances.END,
+                CalendarContract.Instances.ALL_DAY,
+                CalendarContract.Instances.DISPLAY_COLOR,
+            ),
+        )
+        cursor.addRow(arrayOf(300L, 1L, "Work", "Standup", "", null, null, 1700000000000L, 1700001800000L, 0, null))
+        cursor.addRow(arrayOf(300L, 1L, "Work", "Standup", "", null, null, 1700086400000L, 1700088200000L, 0, null))
+
+        every { contentResolver.query(any(), any(), any(), any(), any()) } returns cursor
+
+        module.getEventInstances(1700000000000.0, 1700172800000.0, promise)
+
+        val slot = slot<JavaOnlyArray>()
+        verify { promise.resolve(capture(slot)) }
+        assertEquals("300:1700000000000", slot.captured.getMap(0)!!.getString("id"))
+        assertEquals("300:1700086400000", slot.captured.getMap(1)!!.getString("id"))
+        assertEquals("300", slot.captured.getMap(0)!!.getString("sourceEventId"))
+        assertEquals("300", slot.captured.getMap(1)!!.getString("sourceEventId"))
+    }
+
+    @Test
+    fun getEventInstances_movedOccurrence_usesOriginalSeriesAndInstanceTime() {
+        grantCalendarPermission()
+
+        val cursor = MatrixCursor(
+            arrayOf(
+                CalendarContract.Instances.EVENT_ID,
+                CalendarContract.Instances.CALENDAR_ID,
+                CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
+                CalendarContract.Instances.TITLE,
+                CalendarContract.Instances.DESCRIPTION,
+                CalendarContract.Instances.ORIGINAL_ID,
+                CalendarContract.Instances.ORIGINAL_INSTANCE_TIME,
+                CalendarContract.Instances.BEGIN,
+                CalendarContract.Instances.END,
+                CalendarContract.Instances.ALL_DAY,
+                CalendarContract.Instances.DISPLAY_COLOR,
+            ),
+        )
+        cursor.addRow(arrayOf(301L, 1L, "Work", "Moved standup", "", 300L, 1700086400000L, 1700090000000L, 1700091800000L, 0, null))
+        every { contentResolver.query(any(), any(), any(), any(), any()) } returns cursor
+
+        module.getEventInstances(1700000000000.0, 1700172800000.0, promise)
+
+        val slot = slot<JavaOnlyArray>()
+        verify { promise.resolve(capture(slot)) }
+        val event = slot.captured.getMap(0)!!
+        assertEquals("300:1700086400000", event.getString("id"))
+        assertEquals("300", event.getString("sourceEventId"))
+        assertEquals(1700090000000.0, event.getDouble("startMs"), 0.0)
     }
 
     @Test

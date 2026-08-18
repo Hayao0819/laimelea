@@ -1,12 +1,12 @@
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Button, Card, Chip, Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
-import { settingsAtom } from "../../../atoms/settingsAtoms";
 import { cycleEstimationAtom } from "../../../atoms/sleepAtoms";
+import { useSettingsUpdate } from "../../settings/hooks/useSettingsUpdate";
 
 const CONFIDENCE_COLORS: Record<
   "low" | "medium" | "high",
@@ -21,18 +21,12 @@ export function CycleEstimateCard() {
   const { t } = useTranslation();
   const theme = useTheme();
   const estimation = useAtomValue(cycleEstimationAtom);
-  const [settings, setSettings] = useAtom(settingsAtom);
+  const { updateCycleConfig } = useSettingsUpdate();
 
   const handleApply = useCallback(() => {
     if (!estimation) return;
-    setSettings({
-      ...settings,
-      cycleConfig: {
-        ...settings.cycleConfig,
-        cycleLengthMinutes: estimation.periodMinutes,
-      },
-    });
-  }, [estimation, settings, setSettings]);
+    updateCycleConfig({ cycleLengthMinutes: estimation.periodMinutes });
+  }, [estimation, updateCycleConfig]);
 
   if (!estimation) {
     return (

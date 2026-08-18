@@ -13,6 +13,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import {
   calendarEventsAtom,
+  calendarLastSyncAtom,
   calendarSelectedDateAtom,
   calendarViewModeAtom,
 } from "../../../src/atoms/calendarAtoms";
@@ -209,6 +210,7 @@ async function renderWithProviders(options?: {
   selectedDate?: number;
   viewMode?: "month" | "week" | "agenda";
   initialAlarms?: Alarm[];
+  hasSynced?: boolean;
 }) {
   const {
     events = [],
@@ -218,6 +220,7 @@ async function renderWithProviders(options?: {
     selectedDate = TODAY,
     viewMode = "agenda",
     initialAlarms = [],
+    hasSynced = true,
   } = options ?? {};
 
   mockUseCalendarSync.mockReturnValue({
@@ -235,6 +238,7 @@ async function renderWithProviders(options?: {
   store.set(settingsAtom, DEFAULT_SETTINGS);
   store.set(alarmsAtom, initialAlarms);
   store.set(calendarEventsAtom, events);
+  store.set(calendarLastSyncAtom, hasSynced ? Date.now() : null);
   store.set(calendarSelectedDateAtom, selectedDate);
   store.set(calendarViewModeAtom, viewMode);
 
@@ -778,6 +782,98 @@ describe("CalendarScreen", () => {
         }),
       ]);
       expect(getByText("calendar.alarmTimePassed")).toBeTruthy();
+    });
+
+    it("disables a linked alarm after a synced calendar becomes empty", async () => {
+      const linkedAlarm = makeAlarm({
+        id: "deleted-event-alarm",
+        linkedCalendarEventId: "deleted-event",
+        notifeeTriggerId: "deleted-event-trigger",
+      });
+
+      const { getByText, store } = await renderWithProviders({
+        events: [],
+        initialAlarms: [linkedAlarm],
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(linkedAlarm);
+      });
+      expect(store.get(alarmsAtom)).toEqual([
+        expect.objectContaining({
+          id: "deleted-event-alarm",
+          enabled: false,
+          notifeeTriggerId: null,
+        }),
+      ]);
+      expect(getByText("calendar.alarmEventRemoved")).toBeTruthy();
+    });
+
+    it("disables only the alarm whose event was removed", async () => {
+      const remainingEvent = makeEvent({
+        id: "remaining-event",
+        startTimestampMs: Date.now() + 60 * 60 * 1000,
+      });
+      const removedAlarm = makeAlarm({
+        id: "removed-alarm",
+        linkedCalendarEventId: "removed-event",
+        notifeeTriggerId: "removed-trigger",
+      });
+      const remainingAlarm = makeAlarm({
+        id: "remaining-alarm",
+        linkedCalendarEventId: remainingEvent.id,
+        linkedCalendarSourceEventId: remainingEvent.sourceEventId,
+        targetTimestampMs: remainingEvent.startTimestampMs,
+        notifeeTriggerId: "remaining-trigger",
+      });
+
+      const { store } = await renderWithProviders({
+        events: [remainingEvent],
+        initialAlarms: [removedAlarm, remainingAlarm],
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(removedAlarm);
+      });
+      expect(cancelAlarm).not.toHaveBeenCalledWith(remainingAlarm);
+      expect(store.get(alarmsAtom)).toEqual([
+        expect.objectContaining({ id: "removed-alarm", enabled: false }),
+        remainingAlarm,
+      ]);
+    });
+
+    it("keeps linked alarms before the first successful calendar sync", async () => {
+      const linkedAlarm = makeAlarm({
+        id: "not-loaded-alarm",
+        linkedCalendarEventId: "not-loaded-event",
+        notifeeTriggerId: "not-loaded-trigger",
+      });
+
+      const { store } = await renderWithProviders({
+        events: [],
+        initialAlarms: [linkedAlarm],
+        hasSynced: false,
+      });
+
+      expect(cancelAlarm).not.toHaveBeenCalled();
+      expect(store.get(alarmsAtom)).toEqual([linkedAlarm]);
+    });
+
+    it("keeps linked alarms outside the fetched calendar window", async () => {
+      const linkedAlarm = makeAlarm({
+        id: "outside-window-alarm",
+        linkedCalendarEventId: "outside-window-event",
+        targetTimestampMs: Date.now() + 30 * MS_PER_DAY,
+        notifeeTriggerId: "outside-window-trigger",
+      });
+
+      const { store } = await renderWithProviders({
+        events: [],
+        initialAlarms: [linkedAlarm],
+      });
+
+      expect(cancelAlarm).not.toHaveBeenCalled();
+      expect(store.get(alarmsAtom)).toEqual([linkedAlarm]);
     });
 
     it("restores a newer edit when calendar synchronization becomes stale", async () => {

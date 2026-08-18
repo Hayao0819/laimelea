@@ -11,7 +11,7 @@ import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 
 export function CycleConfigScreen() {
   const { t } = useTranslation();
-  const { settings, update } = useSettingsUpdate();
+  const { settings, updateCycleConfig } = useSettingsUpdate();
   const insets = useSafeAreaInsets();
 
   const cycleHours = Math.floor(settings.cycleConfig.cycleLengthMinutes / 60);
@@ -20,40 +20,25 @@ export function CycleConfigScreen() {
   const handleCycleHoursChange = useCallback(
     (text: string) => {
       const h = parseInt(text, 10) || 0;
-      update({
-        cycleConfig: {
-          ...settings.cycleConfig,
-          cycleLengthMinutes: h * 60 + cycleMinutes,
-        },
-      });
+      updateCycleConfig({ cycleLengthMinutes: h * 60 + cycleMinutes });
       requestClockWidgetUpdate();
     },
-    [settings.cycleConfig, cycleMinutes, update],
+    [cycleMinutes, updateCycleConfig],
   );
 
   const handleCycleMinutesChange = useCallback(
     (text: string) => {
       const m = parseInt(text, 10) || 0;
-      update({
-        cycleConfig: {
-          ...settings.cycleConfig,
-          cycleLengthMinutes: cycleHours * 60 + m,
-        },
-      });
+      updateCycleConfig({ cycleLengthMinutes: cycleHours * 60 + m });
       requestClockWidgetUpdate();
     },
-    [settings.cycleConfig, cycleHours, update],
+    [cycleHours, updateCycleConfig],
   );
 
   const handleUseCurrentTime = useCallback(() => {
-    update({
-      cycleConfig: {
-        ...settings.cycleConfig,
-        baseTimeMs: Date.now(),
-      },
-    });
+    updateCycleConfig({ baseTimeMs: Date.now() });
     requestClockWidgetUpdate();
-  }, [settings.cycleConfig, update]);
+  }, [updateCycleConfig]);
 
   return (
     <ScrollView

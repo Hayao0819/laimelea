@@ -85,6 +85,8 @@ class CalendarModule(reactContext: ReactApplicationContext) :
                 CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
                 CalendarContract.Instances.TITLE,
                 CalendarContract.Instances.DESCRIPTION,
+                CalendarContract.Instances.ORIGINAL_ID,
+                CalendarContract.Instances.ORIGINAL_INSTANCE_TIME,
                 CalendarContract.Instances.BEGIN,
                 CalendarContract.Instances.END,
                 CalendarContract.Instances.ALL_DAY,
@@ -110,6 +112,8 @@ class CalendarModule(reactContext: ReactApplicationContext) :
                 val calNameIdx = it.getColumnIndex(CalendarContract.Instances.CALENDAR_DISPLAY_NAME)
                 val titleIdx = it.getColumnIndex(CalendarContract.Instances.TITLE)
                 val descIdx = it.getColumnIndex(CalendarContract.Instances.DESCRIPTION)
+                val originalIdIdx = it.getColumnIndex(CalendarContract.Instances.ORIGINAL_ID)
+                val originalInstanceTimeIdx = it.getColumnIndex(CalendarContract.Instances.ORIGINAL_INSTANCE_TIME)
                 val beginIdx = it.getColumnIndex(CalendarContract.Instances.BEGIN)
                 val endIdx = it.getColumnIndex(CalendarContract.Instances.END)
                 val allDayIdx = it.getColumnIndex(CalendarContract.Instances.ALL_DAY)
@@ -117,12 +121,28 @@ class CalendarModule(reactContext: ReactApplicationContext) :
 
                 while (it.moveToNext()) {
                     val map: WritableMap = Arguments.createMap()
-                    map.putString("id", it.getLong(eventIdIdx).toString())
+                    val sourceEventId = if (originalIdIdx >= 0 && !it.isNull(originalIdIdx)) {
+                        it.getLong(originalIdIdx).toString()
+                    } else {
+                        it.getLong(eventIdIdx).toString()
+                    }
+                    val startMsValue = it.getLong(beginIdx)
+                    val occurrenceAnchorMs = if (
+                        originalInstanceTimeIdx >= 0 &&
+                            !it.isNull(originalInstanceTimeIdx) &&
+                            it.getLong(originalInstanceTimeIdx) > 0
+                    ) {
+                        it.getLong(originalInstanceTimeIdx)
+                    } else {
+                        startMsValue
+                    }
+                    map.putString("id", "$sourceEventId:$occurrenceAnchorMs")
+                    map.putString("sourceEventId", sourceEventId)
                     map.putString("calendarId", it.getLong(calIdIdx).toString())
                     map.putString("calendarName", it.getString(calNameIdx) ?: "")
                     map.putString("title", it.getString(titleIdx) ?: "")
                     map.putString("description", it.getString(descIdx) ?: "")
-                    map.putDouble("startMs", it.getLong(beginIdx).toDouble())
+                    map.putDouble("startMs", startMsValue.toDouble())
                     map.putDouble("endMs", it.getLong(endIdx).toDouble())
                     map.putBoolean("allDay", it.getInt(allDayIdx) == 1)
                     map.putString("color", formatColor(it, colorIdx))

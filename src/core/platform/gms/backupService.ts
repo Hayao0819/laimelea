@@ -9,6 +9,17 @@ import type { PlatformAuthService, PlatformBackupService } from "../types";
 export function createGmsBackupService(
   authService: PlatformAuthService,
 ): PlatformBackupService {
+  let queuedOperation = Promise.resolve();
+
+  const serialize = <T>(operation: () => Promise<T>): Promise<T> => {
+    const task = queuedOperation.then(operation);
+    queuedOperation = task.then(
+      () => undefined,
+      () => undefined,
+    );
+    return task;
+  };
+
   return {
     async isAvailable() {
       const token = await authService.getAccessToken();
@@ -16,27 +27,22 @@ export function createGmsBackupService(
     },
 
     async backup(data: string) {
-      const token = await authService.getAccessToken();
-      if (token == null) {
-        throw new Error("Not signed in");
-      }
-
-      const existing = await findBackupFile(token);
-      await uploadBackup(token, data, existing?.id);
+      return serialize(async () => {
+        const token = await authService.getAccessToken();
+        if (token == null) throw new Error("Not signed in");
+        const existing = await findBackupFile(token);
+        await uploadBackup(token, data, existing?.id);
+      });
     },
 
     async restore() {
-      const token = await authService.getAccessToken();
-      if (token == null) {
-        return null;
-      }
-
-      const file = await findBackupFile(token);
-      if (file == null) {
-        return null;
-      }
-
-      return downloadBackup(token, file.id);
+      return serialize(async () => {
+        const token = await authService.getAccessToken();
+        if (token == null) return null;
+        const file = await findBackupFile(token);
+        if (file == null) return null;
+        return downloadBackup(token, file.id);
+      });
     },
 
     async getLastBackupTime() {

@@ -1,6 +1,7 @@
 import notifee from "@notifee/react-native";
 
 import { processAlarmDelivery } from "../../../src/features/alarm/services/alarmDeliveryService";
+import { completeTimerFromNotification } from "../../../src/features/timer/services/timerNotification";
 
 let registeredHandler: (event: {
   type: number;
@@ -24,13 +25,17 @@ jest.mock("../../../src/features/alarm/services/alarmDeliveryService", () => ({
   processAlarmDelivery: jest.fn().mockResolvedValue({ handled: true }),
 }));
 
-// Import triggers the module-level onBackgroundEvent registration
+jest.mock("../../../src/features/timer/services/timerNotification", () => ({
+  completeTimerFromNotification: jest.fn().mockResolvedValue(undefined),
+}));
+
 require("../../../src/core/notifications/backgroundHandler");
 
 describe("backgroundHandler", () => {
   beforeEach(() => {
     (notifee.cancelNotification as jest.Mock).mockClear();
     (processAlarmDelivery as jest.Mock).mockClear();
+    (completeTimerFromNotification as jest.Mock).mockClear();
   });
 
   it("should register a background event handler", () => {
@@ -60,6 +65,21 @@ describe("backgroundHandler", () => {
 
     expect(processAlarmDelivery).toHaveBeenCalledWith(data);
     expect(notifee.cancelNotification).not.toHaveBeenCalled();
+  });
+
+  it("persists a delivered timer without processing an alarm", async () => {
+    await registeredHandler({
+      type: 3,
+      detail: {
+        notification: {
+          id: "timer-1",
+          data: { timerId: "timer-1" },
+        },
+      },
+    });
+
+    expect(completeTimerFromNotification).toHaveBeenCalledWith("timer-1");
+    expect(processAlarmDelivery).not.toHaveBeenCalled();
   });
 
   it("propagates delivery persistence failures", async () => {

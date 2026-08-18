@@ -2,7 +2,7 @@ import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { NativeModules } from "react-native";
+import { NativeModules, Platform } from "react-native";
 import { PaperProvider } from "react-native-paper";
 
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
@@ -83,12 +83,25 @@ async function renderScreen(settingsOverride?: Partial<AppSettings>) {
 }
 
 describe("AlarmDefaultsScreen", () => {
+  const originalOS = Platform.OS;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "android",
+    });
     delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
     (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
       authorizationStatus: 1,
       android: { alarm: 1 },
+    });
+  });
+
+  afterAll(() => {
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: originalOS,
     });
   });
 
@@ -185,7 +198,6 @@ describe("AlarmDefaultsScreen", () => {
 
   it("should not show math difficulty when dismissalMethod is not math", async () => {
     const { queryByTestId } = await renderScreen();
-    // Default dismissalMethod is "simple"
     expect(queryByTestId("math-difficulty-segment")).toBeNull();
   });
 
@@ -207,7 +219,6 @@ describe("AlarmDefaultsScreen", () => {
 
     expect(getByTestId("math-difficulty-segment")).toBeTruthy();
 
-    // Press "Medium" button
     await fireEvent.press(getByText("settings.mathDifficultyMedium"));
 
     await waitFor(() => {
@@ -218,7 +229,6 @@ describe("AlarmDefaultsScreen", () => {
 
   it("should cycle snooze duration on press", async () => {
     const { getByTestId, store } = await renderScreen();
-    // Default is 5; cycle options: [1, 3, 5, 10, 15]
     await fireEvent.press(getByTestId("snooze-duration-item"));
 
     await waitFor(() => {
@@ -229,7 +239,6 @@ describe("AlarmDefaultsScreen", () => {
 
   it("should cycle snooze max on press", async () => {
     const { getByTestId, store } = await renderScreen();
-    // Default is 3; cycle options: [1, 2, 3, 5, 10]
     await fireEvent.press(getByTestId("snooze-max-item"));
 
     await waitFor(() => {

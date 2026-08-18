@@ -277,7 +277,7 @@ describe("useCalendarSync", () => {
     expect(store.get(calendarListAtom)).toEqual(calendars);
   });
 
-  it("should ignore getCalendarList error and still succeed sync", async () => {
+  it("should preserve cached data when calendar list retrieval fails", async () => {
     const mockCalendar = createMockCalendar();
     mockCalendar.getCalendarList.mockRejectedValue(
       new Error("Calendar list failed"),
@@ -290,18 +290,40 @@ describe("useCalendarSync", () => {
       syncTimestamp: 9999999,
     });
 
-    const { result, store } = await renderCalendarSyncHook();
+    const store = createStoreWithDefaults();
+    const cachedEvent = { ...sampleEvent, id: "cached-event" };
+    store.set(calendarEventsAtom, [cachedEvent]);
+    store.set(calendarLastSyncAtom, 1234567);
+    const { result } = await renderCalendarSyncHook(store);
 
     await act(async () => {
       await result.current.sync(true);
     });
 
-    // Sync itself should succeed despite getCalendarList failing
-    expect(store.get(calendarEventsAtom)).toEqual([sampleEvent]);
-    expect(store.get(calendarLastSyncAtom)).toBe(9999999);
-    expect(result.current.error).toBeNull();
-    // Calendar list should remain at default (empty)
+    expect(store.get(calendarEventsAtom)).toEqual([cachedEvent]);
+    expect(store.get(calendarLastSyncAtom)).toBe(1234567);
+    expect(result.current.error).toBe("Calendar list failed");
     expect(store.get(calendarListAtom)).toEqual([]);
+  });
+
+  it("should preserve cached data and retry metadata when event retrieval fails", async () => {
+    mockSyncCalendarEvents.mockRejectedValue(
+      new Error("ContentProvider error"),
+    );
+
+    const store = createStoreWithDefaults();
+    const cachedEvent = { ...sampleEvent, id: "cached-event" };
+    store.set(calendarEventsAtom, [cachedEvent]);
+    store.set(calendarLastSyncAtom, 1234567);
+    const { result } = await renderCalendarSyncHook(store);
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(store.get(calendarEventsAtom)).toEqual([cachedEvent]);
+    expect(store.get(calendarLastSyncAtom)).toBe(1234567);
+    expect(result.current.error).toBe("ContentProvider error");
   });
 
   it("should not pass visibleCalendarIds to syncCalendarEvents", async () => {

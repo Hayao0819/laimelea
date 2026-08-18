@@ -1,8 +1,16 @@
-import { NativeModules } from "react-native";
+import { NativeModules, PermissionsAndroid, Platform } from "react-native";
 
 export interface RingtoneInfo {
   title: string;
   uri: string;
+}
+
+export interface NativeAlarmDelivery {
+  deliveryId: string;
+  alarmId: string;
+  occurrenceTimestampMs: number;
+  autoSilenceMs: number;
+  stopped: boolean;
 }
 
 interface RingtoneModuleSpec {
@@ -21,8 +29,16 @@ interface RingtoneModuleSpec {
     soundUri: string | null,
     gradualDurationMs: number,
     autoSilenceMs: number,
+    rescheduleAtLocalTime: boolean,
+    repeatType: string | null,
+    repeatWeekdays: number[],
+    repeatIntervalMs: number,
+    label: string,
+    vibrationEnabled: boolean,
   ): Promise<void>;
   cancelAlarmAudio(alarmId: string): Promise<void>;
+  consumeAlarmDeliveries(): Promise<NativeAlarmDelivery[]>;
+  acknowledgeAlarmDeliveries(deliveryIds: string[]): Promise<void>;
   getDefaultAlarmUri(): Promise<string>;
 }
 
@@ -31,11 +47,29 @@ function getModule(): RingtoneModuleSpec | undefined {
 }
 
 export async function getAlarmRingtones(): Promise<RingtoneInfo[]> {
+  if (!(await canReadExternalAudio())) {
+    return [];
+  }
   const mod = getModule();
   if (!mod) {
     return [];
   }
   return mod.getAlarmRingtones();
+}
+
+async function canReadExternalAudio(): Promise<boolean> {
+  if (Platform.OS !== "android" || Number(Platform.Version) < 33) {
+    return true;
+  }
+  const permission = PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO;
+  const granted = await PermissionsAndroid.check(permission);
+  if (granted) {
+    return true;
+  }
+  return (
+    (await PermissionsAndroid.request(permission)) ===
+    PermissionsAndroid.RESULTS.GRANTED
+  );
 }
 
 export async function playRingtone(uri: string): Promise<void> {
@@ -100,10 +134,13 @@ export async function scheduleAlarmAudio(
   soundUri: string | null,
   gradualDurationMs: number,
   autoSilenceMs: number,
+  rescheduleAtLocalTime = false,
+  repeatType: string | null = null,
+  repeatWeekdays: number[] = [],
+  repeatIntervalMs = 0,
+  label = "",
+  vibrationEnabled = true,
 ): Promise<void> {
-  if (soundUri === "__silent__") {
-    return;
-  }
   const mod = getModule();
   if (!mod) {
     throw new Error("Alarm audio module is unavailable");
@@ -114,6 +151,12 @@ export async function scheduleAlarmAudio(
     soundUri,
     Math.max(0, gradualDurationMs),
     Math.max(0, autoSilenceMs),
+    rescheduleAtLocalTime,
+    repeatType,
+    repeatWeekdays,
+    Math.max(0, repeatIntervalMs),
+    label,
+    vibrationEnabled,
   );
 }
 
@@ -125,6 +168,26 @@ export async function cancelAlarmAudio(alarmId: string): Promise<void> {
   return mod.cancelAlarmAudio(alarmId);
 }
 
+export async function consumeNativeAlarmDeliveries(): Promise<
+  NativeAlarmDelivery[]
+> {
+  const mod = getModule();
+  if (!mod) {
+    return [];
+  }
+  return mod.consumeAlarmDeliveries();
+}
+
+export async function acknowledgeNativeAlarmDeliveries(
+  deliveryIds: string[],
+): Promise<void> {
+  const mod = getModule();
+  if (!mod || deliveryIds.length === 0) {
+    return;
+  }
+  return mod.acknowledgeAlarmDeliveries(deliveryIds);
+}
+
 export async function getDefaultAlarmUri(): Promise<string> {
   const mod = getModule();
   if (!mod) {
@@ -133,7 +196,6 @@ export async function getDefaultAlarmUri(): Promise<string> {
   return mod.getDefaultAlarmUri();
 }
 
-/** Object-style API for component usage */
 export const RingtoneService = {
   getAlarmRingtones,
   playPreview: playRingtone,
@@ -144,5 +206,7 @@ export const RingtoneService = {
   stopAlarmSound,
   scheduleAlarmAudio,
   cancelAlarmAudio,
+  consumeNativeAlarmDeliveries,
+  acknowledgeNativeAlarmDeliveries,
   getDefaultAlarmUri,
 };

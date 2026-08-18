@@ -1,12 +1,15 @@
-import { format } from "date-fns";
 import { useAtomValue } from "jotai";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 
-import { settingsAtom } from "../../../atoms/settingsAtoms";
+import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { formatCustomTime } from "../../../core/time/formatting";
+import {
+  formatDisplayTime,
+  formatTimeInZone,
+} from "../../../core/time/timezone";
 import type { CustomTimeValue } from "../../../models/CustomTime";
 
 interface Props {
@@ -15,14 +18,18 @@ interface Props {
 }
 
 export function DigitalClock({ realTimeMs, customTime }: Props) {
-  const settings = useAtomValue(settingsAtom);
+  const settings = useAtomValue(resolvedSettingsAtom);
   const { t } = useTranslation();
 
   const customFormatted = formatCustomTime(customTime);
-  const realFormatted = format(
-    new Date(realTimeMs),
-    settings.timeFormat === "12h" ? "hh:mm:ss a" : "HH:mm:ss",
-  );
+  const realFormatted = formatDisplayTime(realTimeMs, settings);
+  const secondaryTimezoneFormatted = settings.secondaryTimezone
+    ? formatTimeInZone(
+        realTimeMs,
+        settings.secondaryTimezone,
+        settings.timeFormat,
+      )
+    : null;
 
   const primaryText =
     settings.primaryTimeDisplay === "custom" ? customFormatted : realFormatted;
@@ -49,6 +56,15 @@ export function DigitalClock({ realTimeMs, customTime }: Props) {
       >
         {secondaryText}
       </Text>
+      {secondaryTimezoneFormatted ? (
+        <Text
+          variant="titleMedium"
+          style={styles.secondary}
+          testID="secondary-timezone-clock"
+        >
+          {`${settings.secondaryTimezone} ${secondaryTimezoneFormatted}`}
+        </Text>
+      ) : null}
     </View>
   );
 }

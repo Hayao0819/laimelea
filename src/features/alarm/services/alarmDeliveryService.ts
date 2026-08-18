@@ -8,6 +8,8 @@ import { scheduleNextAlarmOccurrence } from "./alarmRescheduler";
 export interface AlarmDeliveryData {
   alarmId?: unknown;
   occurrenceTimestampMs?: unknown;
+  autoSilenceMs?: unknown;
+  stopped?: unknown;
 }
 
 export interface AlarmDeliveryResult {
@@ -53,6 +55,26 @@ function parseStoredSettings(rawSettings: string | null): AppSettings {
 function parseOccurrenceTimestamp(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function clearStoppedAlarm(
+  alarms: Alarm[],
+  alarmIndex: number,
+): { alarms: Alarm[]; updatedAlarm: Alarm | null } {
+  const alarm = alarms[alarmIndex];
+  if (alarm.isTest) {
+    return {
+      alarms: alarms.filter((_, index) => index !== alarmIndex),
+      updatedAlarm: null,
+    };
+  }
+  const updatedAlarm = { ...alarm, activeOccurrenceTimestampMs: null };
+  return {
+    alarms: alarms.map((storedAlarm, index) =>
+      index === alarmIndex ? updatedAlarm : storedAlarm,
+    ),
+    updatedAlarm,
+  };
 }
 
 async function processAlarmDeliveryInternal(
@@ -103,7 +125,26 @@ async function processAlarmDeliveryInternal(
   }
 
   const alarm = alarms[alarmIndex];
+  const suppliedOccurrenceTimestampMs = parseOccurrenceTimestamp(
+    data.occurrenceTimestampMs,
+  );
   if (!alarm.enabled) {
+    if (
+      data.stopped === true &&
+      suppliedOccurrenceTimestampMs != null &&
+      alarm.activeOccurrenceTimestampMs === suppliedOccurrenceTimestampMs
+    ) {
+      const stoppedAlarm = clearStoppedAlarm(alarms, alarmIndex);
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.ALARMS,
+        JSON.stringify(stoppedAlarm.alarms),
+      );
+      return {
+        handled: true,
+        ...stoppedAlarm,
+        rescheduleFailed: false,
+      };
+    }
     return {
       handled: false,
       alarms,
@@ -111,15 +152,27 @@ async function processAlarmDeliveryInternal(
       rescheduleFailed: false,
     };
   }
-  const suppliedOccurrenceTimestampMs = parseOccurrenceTimestamp(
-    data.occurrenceTimestampMs,
-  );
   const occurrenceTimestampMs =
     suppliedOccurrenceTimestampMs ??
     alarm.activeOccurrenceTimestampMs ??
     alarm.targetTimestampMs;
 
   if (alarm.lastDeliveredOccurrenceTimestampMs === occurrenceTimestampMs) {
+    if (
+      data.stopped === true &&
+      alarm.activeOccurrenceTimestampMs === occurrenceTimestampMs
+    ) {
+      const stoppedAlarm = clearStoppedAlarm(alarms, alarmIndex);
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.ALARMS,
+        JSON.stringify(stoppedAlarm.alarms),
+      );
+      return {
+        handled: true,
+        ...stoppedAlarm,
+        rescheduleFailed: false,
+      };
+    }
     return {
       handled: false,
       alarms,
@@ -145,6 +198,32 @@ async function processAlarmDeliveryInternal(
     ...alarm,
     targetTimestampMs: occurrenceTimestampMs,
   };
+  if (deliveredAlarm.isTest) {
+    const autoSilenceMs = parseOccurrenceTimestamp(data.autoSilenceMs) ?? 0;
+    const shouldDiscard =
+      data.stopped === true ||
+      (autoSilenceMs > 0 && now >= occurrenceTimestampMs + autoSilenceMs);
+    const updatedTestAlarm: Alarm = {
+      ...deliveredAlarm,
+      activeOccurrenceTimestampMs: occurrenceTimestampMs,
+      lastDeliveredOccurrenceTimestampMs: occurrenceTimestampMs,
+    };
+    const updatedAlarms = shouldDiscard
+      ? alarms.filter((_, index) => index !== alarmIndex)
+      : alarms.map((storedAlarm, index) =>
+          index === alarmIndex ? updatedTestAlarm : storedAlarm,
+        );
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.ALARMS,
+      JSON.stringify(updatedAlarms),
+    );
+    return {
+      handled: true,
+      alarms: updatedAlarms,
+      updatedAlarm: shouldDiscard ? null : updatedTestAlarm,
+      rescheduleFailed: false,
+    };
+  }
   let nextAlarm: Alarm;
   let rescheduleFailed = false;
   try {
@@ -162,9 +241,13 @@ async function processAlarmDeliveryInternal(
       updatedAt: now,
     };
   }
+  const autoSilenceMs = parseOccurrenceTimestamp(data.autoSilenceMs) ?? 0;
+  const deliveryExpired =
+    autoSilenceMs > 0 && now >= occurrenceTimestampMs + autoSilenceMs;
   const updatedAlarm: Alarm = {
     ...nextAlarm,
-    activeOccurrenceTimestampMs: occurrenceTimestampMs,
+    activeOccurrenceTimestampMs:
+      data.stopped === true || deliveryExpired ? null : occurrenceTimestampMs,
     lastDeliveredOccurrenceTimestampMs: occurrenceTimestampMs,
   };
   const updatedAlarms = alarms.map((storedAlarm, index) =>

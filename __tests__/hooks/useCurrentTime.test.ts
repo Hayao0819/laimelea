@@ -4,16 +4,16 @@ import React from "react";
 
 import { currentTimeMsAtom } from "../../src/atoms/clockAtoms";
 import { useCurrentTime } from "../../src/hooks/useCurrentTime";
-// Replace settingsAtom (atomWithStorage) with a plain atom to avoid async
-// storage init that causes act() warnings during renderHook.
 jest.mock("../../src/atoms/settingsAtoms", () => {
   const { atom } = jest.requireActual<typeof import("jotai")>("jotai");
   const { DEFAULT_SETTINGS: defaults } = jest.requireActual<
     typeof import("../../src/models/Settings")
   >("../../src/models/Settings");
+  const settings = atom(defaults);
   return {
     __esModule: true,
-    settingsAtom: atom(defaults),
+    settingsAtom: settings,
+    resolvedSettingsAtom: settings,
   };
 });
 
@@ -66,17 +66,14 @@ describe("useCurrentTime", () => {
       wrapper: Wrapper,
     });
 
-    // Flush Suspense resolution so useEffect runs
     await act(async () => {});
 
     (Date.now as jest.Mock).mockReturnValue(1001000);
 
-    // Advance timer to fire setInterval callback
     act(() => {
       jest.advanceTimersByTime(1000);
     });
 
-    // Verify the atom was updated in the store
     expect(store.get(currentTimeMsAtom)).toBe(1001000);
   });
 
@@ -87,7 +84,6 @@ describe("useCurrentTime", () => {
       wrapper: Wrapper,
     });
 
-    // Flush Suspense resolution so useEffect runs and sets up interval
     await act(async () => {});
 
     unmount();

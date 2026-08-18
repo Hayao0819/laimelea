@@ -7,20 +7,67 @@ export interface AlarmSyncResult {
   orphanedAlarmIds: string[];
 }
 
-/**
- * カレンダー予定に連動するアラームを同期する。
- * 予定の開始時刻 + offset から targetTimestampMs を再計算する。
- */
+const MAX_UNAMBIGUOUS_SINGLE_OCCURRENCE_MOVE_MS = 12 * 60 * 60 * 1000;
+
+function findClosestOccurrence(
+  alarm: Alarm,
+  matchingOccurrences: CalendarEvent[],
+): CalendarEvent | undefined {
+  const expectedStartMs = alarm.targetTimestampMs - alarm.linkedEventOffsetMs;
+  const sorted = [...matchingOccurrences].sort(
+    (left, right) => left.startTimestampMs - right.startTimestampMs,
+  );
+  const closest = sorted.reduce((candidate, event) =>
+    Math.abs(event.startTimestampMs - expectedStartMs) <
+    Math.abs(candidate.startTimestampMs - expectedStartMs)
+      ? event
+      : candidate,
+  );
+
+  const distance = Math.abs(closest.startTimestampMs - expectedStartMs);
+  if (distance === 0) return closest;
+  if (sorted.length === 1) {
+    return distance <= MAX_UNAMBIGUOUS_SINGLE_OCCURRENCE_MOVE_MS
+      ? closest
+      : undefined;
+  }
+
+  const minimumSpacing = sorted
+    .slice(1)
+    .reduce(
+      (spacing, event, index) =>
+        Math.min(
+          spacing,
+          event.startTimestampMs - sorted[index].startTimestampMs,
+        ),
+      Number.POSITIVE_INFINITY,
+    );
+  return distance < minimumSpacing / 2 ? closest : undefined;
+}
+
+export function findLinkedCalendarEvent(
+  alarm: Alarm,
+  events: CalendarEvent[],
+): CalendarEvent | undefined {
+  const linkedEvent = events.find(
+    (event) => event.id === alarm.linkedCalendarEventId,
+  );
+  if (linkedEvent != null) return linkedEvent;
+
+  const sourceEventId =
+    alarm.linkedCalendarSourceEventId ?? alarm.linkedCalendarEventId;
+  const matchingOccurrences = events.filter(
+    (event) => event.sourceEventId === sourceEventId,
+  );
+  if (matchingOccurrences.length === 0) return undefined;
+
+  return findClosestOccurrence(alarm, matchingOccurrences);
+}
+
 export function syncCalendarAlarms(
   alarms: Alarm[],
   events: CalendarEvent[],
 ): AlarmSyncResult {
-  const eventMap = new Map<string, CalendarEvent>();
-  for (const event of events) {
-    eventMap.set(event.sourceEventId, event);
-    eventMap.set(event.id, event);
-  }
-
   const updatedAlarms: Alarm[] = [];
   const orphanedAlarmIds: string[] = [];
 
@@ -30,7 +77,7 @@ export function syncCalendarAlarms(
       continue;
     }
 
-    const event = eventMap.get(alarm.linkedCalendarEventId);
+    const event = findLinkedCalendarEvent(alarm, events);
     if (event == null) {
       orphanedAlarmIds.push(alarm.id);
       updatedAlarms.push(alarm);
@@ -38,10 +85,16 @@ export function syncCalendarAlarms(
     }
 
     const newTargetMs = event.startTimestampMs + alarm.linkedEventOffsetMs;
-    if (newTargetMs !== alarm.targetTimestampMs) {
+    if (
+      newTargetMs !== alarm.targetTimestampMs ||
+      alarm.linkedCalendarEventId !== event.id ||
+      alarm.linkedCalendarSourceEventId !== event.sourceEventId
+    ) {
       updatedAlarms.push({
         ...alarm,
         targetTimestampMs: newTargetMs,
+        linkedCalendarEventId: event.id,
+        linkedCalendarSourceEventId: event.sourceEventId,
         updatedAt: Date.now(),
       });
     } else {
@@ -61,9 +114,6 @@ export interface AlarmCreationDefaults {
   mathDifficulty: MathDifficulty;
 }
 
-/**
- * カレンダー予定からアラームを作成する。
- */
 export function createAlarmFromEvent(
   event: CalendarEvent,
   offsetMs: number,
@@ -90,6 +140,7 @@ export function createAlarmFromEvent(
     notifeeTriggerId: null,
     skipNextOccurrence: false,
     linkedCalendarEventId: event.id,
+    linkedCalendarSourceEventId: event.sourceEventId,
     linkedEventOffsetMs: offsetMs,
     mathDifficulty: defaults.mathDifficulty,
     lastFiredAt: null,

@@ -5,8 +5,12 @@ import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { currentTimeMsAtom } from "../../../src/atoms/clockAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
-import { DeskClockScreen } from "../../../src/features/clock/screens/DeskClockScreen";
+import {
+  DeskClockScreen,
+  getDeskClockPrimaryFontSize,
+} from "../../../src/features/clock/screens/DeskClockScreen";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
 
 const mockGoBack = jest.fn();
@@ -47,8 +51,11 @@ jest.mock("../../../src/hooks/useFullscreen", () => ({
   useFullscreen: jest.fn(),
 }));
 
-async function renderWithProviders(store = createStore()) {
-  store.set(settingsAtom, DEFAULT_SETTINGS);
+async function renderWithProviders(
+  store = createStore(),
+  settings = DEFAULT_SETTINGS,
+) {
+  store.set(settingsAtom, settings);
   const utils = await render(
     <JotaiProvider store={store}>
       <SafeAreaProvider initialMetrics={safeAreaMetrics}>
@@ -79,12 +86,7 @@ afterEach(() => {
 
 describe("DeskClockScreen", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
     mockGoBack.mockClear();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   it("should render desk clock screen", async () => {
@@ -95,6 +97,24 @@ describe("DeskClockScreen", () => {
   it("should display time with timer role", async () => {
     const { getByRole } = await renderWithProviders();
     expect(getByRole("timer")).toBeTruthy();
+  });
+
+  it("uses landscape sizing when the window is wider than it is tall", () => {
+    expect(getDeskClockPrimaryFontSize(844, 390)).toBe(126.6);
+  });
+
+  it("uses the configured timezone for real time", async () => {
+    const store = createStore();
+    store.set(currentTimeMsAtom, 0);
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      primaryTimeDisplay: "24h" as const,
+      timezone: "Asia/Tokyo",
+    };
+
+    const { getByRole } = await renderWithProviders(store, settings);
+
+    expect(getByRole("timer").props.accessibilityLabel).toBe("09:00:00");
   });
 
   it("should navigate back when close button is pressed", async () => {

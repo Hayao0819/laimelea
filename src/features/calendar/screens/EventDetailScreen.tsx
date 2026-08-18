@@ -83,6 +83,7 @@ export function EventDetailScreen() {
         notifeeTriggerId: null,
         skipNextOccurrence: false,
         linkedCalendarEventId: ev.id,
+        linkedCalendarSourceEventId: ev.sourceEventId,
         linkedEventOffsetMs: offsetMs,
         mathDifficulty: alarmDefaults.mathDifficulty,
         lastFiredAt: null,

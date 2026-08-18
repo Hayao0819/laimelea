@@ -1,14 +1,15 @@
 import notifee, {
-  AndroidCategory,
   type TimestampTrigger,
   TriggerType,
 } from "@notifee/react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
-import {
-  createAlarmDeliveryChannel,
-  getAlarmDeliveryStatus,
-} from "../../../core/notifications/notifeeSetup";
+import { getAlarmDeliveryStatus } from "../../../core/notifications/notifeeSetup";
+import { STORAGE_KEYS } from "../../../core/storage/keys";
+import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../../core/time/constants";
 import type { Alarm } from "../../../models/Alarm";
+import type { CycleConfig } from "../../../models/CustomTime";
 import { cancelAlarmAudio, scheduleAlarmAudio } from "./ringtoneService";
 
 export type AlarmSchedulingFailure =
@@ -25,67 +26,120 @@ export class AlarmSchedulingError extends Error {
   }
 }
 
-export async function scheduleAlarm(alarm: Alarm): Promise<string> {
+async function getNativeRepeatIntervalMs(
+  alarm: Alarm,
+  cycleConfig?: CycleConfig,
+): Promise<number> {
+  if (alarm.repeat?.type === "interval") {
+    return Math.max(0, alarm.repeat.intervalMs ?? 0);
+  }
+  if (alarm.repeat?.type !== "customCycleInterval") {
+    return 0;
+  }
+  if (cycleConfig) {
+    return Math.max(
+      0,
+      (alarm.repeat.customCycleIntervalDays ?? 0) *
+        cycleConfig.cycleLengthMinutes *
+        60 *
+        1000,
+    );
+  }
+  try {
+    const rawSettings = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
+    const storedSettings = rawSettings
+      ? (JSON.parse(rawSettings) as {
+          cycleConfig?: { cycleLengthMinutes?: number };
+        })
+      : undefined;
+    const cycleLengthMinutes =
+      storedSettings?.cycleConfig?.cycleLengthMinutes ??
+      DEFAULT_CYCLE_LENGTH_MINUTES;
+    return Math.max(
+      0,
+      (alarm.repeat.customCycleIntervalDays ?? 0) *
+        cycleLengthMinutes *
+        60 *
+        1000,
+    );
+  } catch {
+    return (
+      (alarm.repeat.customCycleIntervalDays ?? 0) *
+      DEFAULT_CYCLE_LENGTH_MINUTES *
+      60 *
+      1000
+    );
+  }
+}
+
+export async function scheduleAlarm(
+  alarm: Alarm,
+  cycleConfig?: CycleConfig,
+): Promise<string> {
   const deliveryStatus = await getAlarmDeliveryStatus();
-  if (!deliveryStatus.notificationsEnabled) {
+  const useNativeAndroidDelivery = Platform.OS === "android";
+  if (!useNativeAndroidDelivery && !deliveryStatus.notificationsEnabled) {
     throw new AlarmSchedulingError("notifications-disabled");
   }
   if (!deliveryStatus.exactAlarmsEnabled) {
     throw new AlarmSchedulingError("exact-alarms-disabled");
   }
 
-  const trigger: TimestampTrigger = {
-    type: TriggerType.TIMESTAMP,
-    timestamp: alarm.targetTimestampMs,
-    alarmManager: { allowWhileIdle: true },
-  };
-
-  const channelId = await createAlarmDeliveryChannel(alarm.vibrationEnabled);
   const timeoutAfter =
     alarm.autoSilenceMin > 0 ? alarm.autoSilenceMin * 60 * 1000 : undefined;
-
-  const triggerId = await notifee.createTriggerNotification(
-    {
-      id: alarm.id,
-      title: alarm.label || "Alarm",
-      body: new Date(alarm.targetTimestampMs).toLocaleTimeString(),
-      data: {
-        alarmId: alarm.id,
-        occurrenceTimestampMs: String(alarm.targetTimestampMs),
+  let triggerId = alarm.id;
+  if (!useNativeAndroidDelivery) {
+    const trigger: TimestampTrigger = {
+      type: TriggerType.TIMESTAMP,
+      timestamp: alarm.targetTimestampMs,
+      alarmManager: { allowWhileIdle: true },
+    };
+    const sound = alarm.soundUri === "__silent__" ? undefined : "default";
+    triggerId = await notifee.createTriggerNotification(
+      {
+        id: alarm.id,
+        title: alarm.label || "Alarm",
+        body: new Date(alarm.targetTimestampMs).toLocaleTimeString(),
+        data: {
+          alarmId: alarm.id,
+          occurrenceTimestampMs: String(alarm.targetTimestampMs),
+        },
+        ios: {
+          sound,
+          foregroundPresentationOptions: {
+            badge: true,
+            banner: true,
+            list: true,
+            sound: sound !== undefined,
+          },
+        },
       },
-      android: {
-        channelId,
-        category: AndroidCategory.ALARM,
-        fullScreenAction: deliveryStatus.fullScreenIntentEnabled
-          ? {
-              id: "alarm-fullscreen",
-              launchActivity: "default",
-            }
-          : undefined,
-        pressAction: { id: "default" },
-        loopSound: false,
-        timeoutAfter,
-        autoCancel: false,
-        ongoing: true,
-      },
-    },
-    trigger,
-  );
+      trigger,
+    );
+  } else {
+    await notifee.cancelTriggerNotification(alarm.notifeeTriggerId ?? alarm.id);
+  }
 
   try {
-    if (alarm.soundUri === "__silent__") {
-      await cancelAlarmAudio(alarm.id);
-    } else {
+    if (useNativeAndroidDelivery) {
       await scheduleAlarmAudio(
         alarm.id,
         alarm.targetTimestampMs,
         alarm.soundUri,
         alarm.gradualVolumeDurationSec * 1000,
         timeoutAfter ?? 0,
+        alarm.setInTimeSystem === "24h",
+        alarm.repeat?.type ?? null,
+        alarm.repeat?.weekdays ?? [],
+        await getNativeRepeatIntervalMs(alarm, cycleConfig),
+        alarm.label,
+        alarm.vibrationEnabled,
       );
     }
   } catch (error) {
-    await notifee.cancelTriggerNotification(triggerId);
+    if (!useNativeAndroidDelivery) {
+      await notifee.cancelTriggerNotification(triggerId);
+    }
     throw error;
   }
 
@@ -93,12 +147,14 @@ export async function scheduleAlarm(alarm: Alarm): Promise<string> {
 }
 
 export async function cancelAlarm(alarm: Alarm): Promise<void> {
-  const operations: Promise<unknown>[] = [
-    cancelAlarmAudio(alarm.id),
-    notifee.cancelNotification(alarm.id),
-  ];
-  if (alarm.notifeeTriggerId) {
-    operations.push(notifee.cancelTriggerNotification(alarm.notifeeTriggerId));
+  const operations: Promise<unknown>[] = [notifee.cancelNotification(alarm.id)];
+  if (Platform.OS === "android") {
+    operations.push(cancelAlarmAudio(alarm.id));
+  }
+  const triggerId =
+    alarm.notifeeTriggerId ?? (Platform.OS === "android" ? alarm.id : null);
+  if (triggerId) {
+    operations.push(notifee.cancelTriggerNotification(triggerId));
   }
   const results = await Promise.allSettled(operations);
   const failure = results.find(

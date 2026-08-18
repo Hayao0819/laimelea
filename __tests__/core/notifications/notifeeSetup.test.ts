@@ -1,5 +1,5 @@
 import notifee from "@notifee/react-native";
-import { NativeModules } from "react-native";
+import { NativeModules, Platform } from "react-native";
 
 import {
   ALARM_CHANNEL_ID,
@@ -35,6 +35,10 @@ describe("notifeeSetup", () => {
     (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
       authorizationStatus: 1,
       android: { alarm: 1 },
+    });
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "android",
     });
   });
 
@@ -172,6 +176,22 @@ describe("notifeeSetup", () => {
   });
 
   describe("getAlarmDeliveryStatus", () => {
+    it("does not require Android settings on iOS", async () => {
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "ios",
+      });
+      (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
+        authorizationStatus: 1,
+      });
+
+      await expect(getAlarmDeliveryStatus()).resolves.toEqual({
+        notificationsEnabled: true,
+        exactAlarmsEnabled: true,
+        fullScreenIntentEnabled: true,
+      });
+    });
+
     it("reports all available delivery capabilities", async () => {
       (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
         getAlarmCapabilities: jest.fn().mockResolvedValue({

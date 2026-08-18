@@ -155,6 +155,33 @@ describe("useSettingsUpdate", () => {
     );
   });
 
+  it("merges cycle configuration updates with the latest stored settings", async () => {
+    const { Wrapper, store } = createWrapper();
+    const { result } = renderHook(() => useSettingsUpdate(), {
+      wrapper: Wrapper,
+    });
+    await act(async () => {});
+
+    const updateCycleConfig = result.current.updateCycleConfig;
+    await act(async () => {
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        cycleConfig: {
+          ...DEFAULT_SETTINGS.cycleConfig,
+          baseTimeMs: 123,
+        },
+      });
+    });
+
+    await act(async () => {
+      updateCycleConfig({ cycleLengthMinutes: 1500 });
+    });
+
+    expect(store.get(settingsAtom)).toMatchObject({
+      cycleConfig: { baseTimeMs: 123, cycleLengthMinutes: 1500 },
+    });
+  });
+
   it("should call requestClockWidgetUpdate when updating widget settings", async () => {
     const { Wrapper } = createWrapper();
     const { result } = renderHook(() => useSettingsUpdate(), {

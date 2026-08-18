@@ -2,6 +2,7 @@ import notifee from "@notifee/react-native";
 
 import { setupForegroundHandler } from "../../../src/core/notifications/foregroundHandler";
 import { processAlarmDelivery } from "../../../src/features/alarm/services/alarmDeliveryService";
+import { completeTimerFromNotification } from "../../../src/features/timer/services/timerNotification";
 
 let registeredCallback: (event: {
   type: number;
@@ -23,6 +24,10 @@ jest.mock("@notifee/react-native", () => ({
 
 jest.mock("../../../src/features/alarm/services/alarmDeliveryService", () => ({
   processAlarmDelivery: jest.fn().mockResolvedValue({ handled: true }),
+}));
+
+jest.mock("../../../src/features/timer/services/timerNotification", () => ({
+  completeTimerFromNotification: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe("setupForegroundHandler", () => {
@@ -73,6 +78,20 @@ describe("setupForegroundHandler", () => {
 
     expect(processAlarmDelivery).toHaveBeenCalledWith(data, onAlarmsUpdated);
     expect(onAlarmFired).toHaveBeenCalledWith("alarm-123");
+  });
+
+  it("completes a delivered timer without opening the alarm screen", async () => {
+    const onTimerCompleted = jest.fn();
+    setupForegroundHandler(onAlarmFired, undefined, onTimerCompleted);
+
+    await registeredCallback({
+      type: 3,
+      detail: { notification: { data: { timerId: "timer-123" } } },
+    });
+
+    expect(completeTimerFromNotification).toHaveBeenCalledWith("timer-123");
+    expect(onTimerCompleted).toHaveBeenCalledWith("timer-123");
+    expect(onAlarmFired).not.toHaveBeenCalled();
   });
 
   it("does not open an alarm when delivery was ignored", async () => {

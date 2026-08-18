@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { useAtomValue, useSetAtom } from "jotai";
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, List, Snackbar } from "react-native-paper";
@@ -16,6 +16,12 @@ import {
 } from "../../game2048/atoms/game2048Atoms";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { useSnackbar } from "../hooks/useSnackbar";
+import { parseBackupData } from "../services/backupData";
+import {
+  restoreBackupTransaction,
+  type RestoreSnapshot,
+  waitForRestoreWrites,
+} from "../services/restoreTransaction";
 
 export function BackupScreen() {
   const { t } = useTranslation();
@@ -28,6 +34,11 @@ export function BackupScreen() {
   const game2048Store = useAtomValue(resolvedStoreAtom);
   const setGame2048Store = useSetAtom(game2048StoreAtom);
   const platformServices = useAtomValue(platformServicesAtom);
+  const [remoteBackupTimestamp, setRemoteBackupTimestamp] = useState<
+    number | null
+  >(null);
+  const operationInFlight = useRef(false);
+  const [operation, setOperation] = useState<"backup" | "restore" | null>(null);
   const {
     visible: snackbarVisible,
     message: snackbarMessage,
@@ -35,7 +46,27 @@ export function BackupScreen() {
     dismiss: dismissSnackbar,
   } = useSnackbar();
 
+  useEffect(() => {
+    let active = true;
+    const loadBackupTimestamp = async () => {
+      try {
+        if (!(await platformServices.backup.isAvailable())) return;
+        const timestamp = await platformServices.backup.getLastBackupTime();
+        if (active) setRemoteBackupTimestamp(timestamp);
+      } catch {
+        if (active) setRemoteBackupTimestamp(null);
+      }
+    };
+    loadBackupTimestamp();
+    return () => {
+      active = false;
+    };
+  }, [platformServices.backup]);
+
   const handleBackup = useCallback(async () => {
+    if (operationInFlight.current) return;
+    operationInFlight.current = true;
+    setOperation("backup");
     try {
       const data = JSON.stringify({
         version: 1,
@@ -48,9 +79,13 @@ export function BackupScreen() {
       await platformServices.backup.backup(data);
       const now = Date.now();
       update({ lastBackupTimestamp: now });
+      setRemoteBackupTimestamp(now);
       showSnackbar(t("settings.backupSuccess"));
     } catch {
       showSnackbar(t("settings.backupFailed"));
+    } finally {
+      operationInFlight.current = false;
+      setOperation(null);
     }
   }, [
     settings,
@@ -64,27 +99,57 @@ export function BackupScreen() {
   ]);
 
   const handleRestore = useCallback(async () => {
+    if (operationInFlight.current) return;
+    operationInFlight.current = true;
+    setOperation("restore");
     try {
       const raw = await platformServices.backup.restore();
       if (raw == null) {
         showSnackbar(t("settings.noBackupFound"));
         return;
       }
-      const data = JSON.parse(raw);
-      if (data.version !== 1) {
+      const data = parseBackupData(raw);
+      if (data == null) {
         showSnackbar(t("settings.backupVersionError"));
         return;
       }
-      if (data.settings) setSettings(data.settings);
-      if (data.alarms) setAlarms(data.alarms);
-      if (data.sleepSessions) setSleepSessions(data.sleepSessions);
-      if (data.game2048) setGame2048Store(data.game2048);
+      const currentSnapshot: RestoreSnapshot = {
+        settings,
+        alarms,
+        sleepSessions,
+        game2048: game2048Store,
+      };
+      const restoredSnapshot: RestoreSnapshot = {
+        settings: data.settings,
+        alarms: data.alarms,
+        sleepSessions: data.sleepSessions,
+        game2048: data.game2048,
+      };
+      await restoreBackupTransaction(
+        currentSnapshot,
+        restoredSnapshot,
+        async (snapshot) => {
+          await waitForRestoreWrites([
+            Promise.resolve(setSettings(snapshot.settings)),
+            Promise.resolve(setAlarms(snapshot.alarms)),
+            Promise.resolve(setSleepSessions(snapshot.sleepSessions)),
+            Promise.resolve(setGame2048Store(snapshot.game2048)),
+          ]);
+        },
+      );
       showSnackbar(t("settings.restoreSuccess"));
     } catch {
       showSnackbar(t("settings.restoreFailed"));
+    } finally {
+      operationInFlight.current = false;
+      setOperation(null);
     }
   }, [
     platformServices.backup,
+    alarms,
+    settings,
+    sleepSessions,
+    game2048Store,
     setSettings,
     setAlarms,
     setSleepSessions,
@@ -113,6 +178,7 @@ export function BackupScreen() {
             <Button
               mode="contained"
               onPress={handleBackup}
+              disabled={operation !== null}
               style={styles.backupButton}
               testID="backup-now-button"
             >
@@ -121,6 +187,7 @@ export function BackupScreen() {
             <Button
               mode="outlined"
               onPress={handleRestore}
+              disabled={operation !== null}
               style={styles.backupButton}
               testID="restore-button"
             >
@@ -130,9 +197,18 @@ export function BackupScreen() {
           <List.Item
             title={t("settings.lastBackup")}
             description={
-              settings.lastBackupTimestamp
+              Math.max(
+                settings.lastBackupTimestamp ?? Number.NEGATIVE_INFINITY,
+                remoteBackupTimestamp ?? Number.NEGATIVE_INFINITY,
+              ) > Number.NEGATIVE_INFINITY
                 ? format(
-                    new Date(settings.lastBackupTimestamp),
+                    new Date(
+                      Math.max(
+                        settings.lastBackupTimestamp ??
+                          Number.NEGATIVE_INFINITY,
+                        remoteBackupTimestamp ?? Number.NEGATIVE_INFINITY,
+                      ),
+                    ),
                     "yyyy-MM-dd HH:mm",
                   )
                 : t("settings.neverBacked")

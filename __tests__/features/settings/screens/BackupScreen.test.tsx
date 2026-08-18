@@ -14,7 +14,10 @@ import type { PlatformServices } from "../../../../src/core/platform/types";
 import { game2048StoreAtom } from "../../../../src/features/game2048/atoms/game2048Atoms";
 import { createDefaultStore } from "../../../../src/features/game2048/logic/gameEngine";
 import { BackupScreen } from "../../../../src/features/settings/screens/BackupScreen";
-import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
+import {
+  type AppSettings,
+  DEFAULT_SETTINGS,
+} from "../../../../src/models/Settings";
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
@@ -57,6 +60,15 @@ jest.mock("react-i18next", () => ({
 
 jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
   requestClockWidgetUpdate: jest.fn(),
+}));
+
+jest.mock("../../../../src/features/alarm/services/alarmScheduler", () => ({
+  cancelAlarm: jest.fn().mockResolvedValue(undefined),
+  scheduleAlarm: jest.fn().mockResolvedValue("restored-trigger"),
+}));
+
+jest.mock("../../../../src/features/alarm/services/alarmRescheduler", () => ({
+  getAlarmToSchedule: jest.fn((alarm) => alarm),
 }));
 
 jest.mock("@react-native-google-signin/google-signin", () => ({
@@ -113,12 +125,18 @@ function createMockServices(): PlatformServices {
 
 let mockServices: PlatformServices;
 
-async function renderWithProviders() {
+async function renderWithProviders(
+  settingsOverride: Partial<AppSettings> = {},
+  remoteBackupTimestamp: number | null = null,
+) {
   mockServices = createMockServices();
+  (mockServices.backup.getLastBackupTime as jest.Mock).mockResolvedValue(
+    remoteBackupTimestamp,
+  );
   mockCreatePlatformServices.mockReturnValue(mockServices);
 
   const store = createStore();
-  store.set(settingsAtom, DEFAULT_SETTINGS);
+  store.set(settingsAtom, { ...DEFAULT_SETTINGS, ...settingsOverride });
   store.set(alarmsAtom, []);
   store.set(sleepSessionsAtom, []);
   store.set(game2048StoreAtom, createDefaultStore());
@@ -153,6 +171,19 @@ describe("BackupScreen", () => {
   it("should display last backup info", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("last-backup-item")).toBeTruthy();
+    expect(mockServices.backup.isAvailable).toHaveBeenCalled();
+    expect(mockServices.backup.getLastBackupTime).toHaveBeenCalled();
+  });
+
+  it("displays the newer remote backup timestamp", async () => {
+    const remote = new Date("2026-02-20T10:00:00Z").getTime();
+    const local = new Date("2026-02-19T10:00:00Z").getTime();
+    const { getByText } = await renderWithProviders(
+      { lastBackupTimestamp: local },
+      remote,
+    );
+
+    expect(getByText("2026-02-20 19:00")).toBeTruthy();
   });
 
   it("should call platformServices.backup.backup on backup button press", async () => {
@@ -164,6 +195,35 @@ describe("BackupScreen", () => {
 
     expect(mockServices.backup.backup).toHaveBeenCalledTimes(1);
     expect(mockServices.backup.backup).toHaveBeenCalledWith(expect.any(String));
+  });
+
+  it("ignores a second backup tap while the first backup is pending", async () => {
+    const { getByTestId } = await renderWithProviders();
+    let resolveBackup: () => void;
+    (mockServices.backup.backup as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveBackup = resolve;
+        }),
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId("backup-now-button"));
+      fireEvent.press(getByTestId("backup-now-button"));
+      fireEvent.press(getByTestId("restore-button"));
+    });
+
+    expect(mockServices.backup.backup).toHaveBeenCalledTimes(1);
+    expect(mockServices.backup.restore).not.toHaveBeenCalled();
+    expect(getByTestId("backup-now-button").props.accessibilityState).toEqual({
+      disabled: true,
+    });
+    expect(getByTestId("restore-button").props.accessibilityState).toEqual({
+      disabled: true,
+    });
+    await act(async () => {
+      resolveBackup!();
+    });
   });
 
   it("should call platformServices.backup.restore on restore button press", async () => {
@@ -216,8 +276,8 @@ describe("BackupScreen", () => {
       version: 1,
       timestamp: Date.now(),
       settings: restoredSettings,
-      alarms: [{ id: "restored-alarm" }],
-      sleepSessions: [{ id: "restored-session" }],
+      alarms: [],
+      sleepSessions: [],
       game2048: restoredGame2048,
     });
 
@@ -232,11 +292,22 @@ describe("BackupScreen", () => {
     const settings = store.get(resolvedSettingsAtom);
     expect(settings.language).toBe("ja");
 
-    const alarms = store.get(alarmsAtom);
-    expect(alarms).toHaveLength(1);
+    expect(store.get(alarmsAtom)).toEqual([]);
+    expect(store.get(sleepSessionsAtom)).toEqual([]);
+  });
 
-    const sleep = store.get(sleepSessionsAtom);
-    expect(sleep).toHaveLength(1);
+  it("rejects malformed restore data before writing atoms", async () => {
+    const { getByTestId, store } = await renderWithProviders();
+    (mockServices.backup.restore as jest.Mock).mockResolvedValue(
+      JSON.stringify({ version: 1, timestamp: Date.now(), settings: {} }),
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId("restore-button"));
+    });
+
+    expect(store.get(resolvedSettingsAtom)).toEqual(DEFAULT_SETTINGS);
+    expect(store.get(alarmsAtom)).toEqual([]);
   });
 
   it("should not update lastBackupTimestamp when backup fails", async () => {

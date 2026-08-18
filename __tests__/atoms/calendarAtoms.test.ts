@@ -5,6 +5,7 @@ import {
   CALENDAR_CACHE_TTL_MS,
   calendarCacheStaleAtom,
   calendarEventsAtom,
+  calendarHasSyncedAtom,
   calendarLastSyncAtom,
   calendarListAtom,
   calendarLoadingAtom,
@@ -298,6 +299,20 @@ describe("calendarAtoms", () => {
         visibleCalendarIds: [],
       });
       expect(store.get(visibleCalendarEventsAtom)).toHaveLength(2);
+    });
+  });
+
+  describe("calendarHasSyncedAtom", () => {
+    it("stays false while cached events load after the sync timestamp", () => {
+      const store = createStore();
+
+      store.set(calendarLastSyncAtom, Date.now());
+
+      expect(store.get(calendarHasSyncedAtom)).toBe(false);
+
+      store.set(calendarEventsAtom, []);
+
+      expect(store.get(calendarHasSyncedAtom)).toBe(true);
     });
   });
 });
