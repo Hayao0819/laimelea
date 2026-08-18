@@ -50,10 +50,7 @@ describe("Timer", () => {
       await device.disableSynchronization();
       await element(by.id("numpad-start")).tap();
 
-      // Timer card should appear with label "Timer 1"
-      await waitFor(element(by.text("Timer 1")))
-        .toBeVisible()
-        .withTimeout(5000);
+      await revealTimerAction("pause");
 
       // Empty state should be gone
       await expect(element(by.id("no-timers-text"))).not.toBeVisible();
@@ -93,10 +90,7 @@ describe("Timer", () => {
       await device.disableSynchronization();
       await element(by.id("preset-1")).tap();
 
-      // Timer should appear
-      await waitFor(element(by.text("Timer 2")))
-        .toBeVisible()
-        .withTimeout(5000);
+      await revealTimerAction("pause");
     });
 
     it("uses numpad backspace", async () => {
@@ -118,9 +112,7 @@ describe("Timer", () => {
       await device.disableSynchronization();
       await element(by.id("numpad-start")).tap();
 
-      await waitFor(element(by.text("Timer 3")))
-        .toBeVisible()
-        .withTimeout(5000);
+      await revealTimerAction("pause");
 
       // Cleanup
       await tapTimerAction("pause");

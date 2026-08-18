@@ -55,10 +55,15 @@ describe("Sleep Log Screen", () => {
     });
 
     it("enters sleep data and saves", async () => {
-      await element(by.id("start-date-input")).replaceText("2026-02-25");
+      await element(by.id("start-date-input")).replaceText("2000-02-25");
       await element(by.id("start-time-input")).replaceText("23:00");
-      await element(by.id("end-date-input")).replaceText("2026-02-26");
+      await element(by.id("end-date-input")).replaceText("2000-02-26");
       await element(by.id("end-time-input")).replaceText("07:00");
+
+      await expect(element(by.id("start-date-input"))).toHaveText("2000-02-25");
+      await expect(element(by.id("start-time-input"))).toHaveText("23:00");
+      await expect(element(by.id("end-date-input"))).toHaveText("2000-02-26");
+      await expect(element(by.id("end-time-input"))).toHaveText("07:00");
 
       // Save triggers navigation back; useFocusEffect re-runs sync(),
       // which hangs on HC. Disable sync around the save + navigation.
@@ -69,7 +74,7 @@ describe("Sleep Log Screen", () => {
     });
 
     it("returns to sleep log with new entry", async () => {
-      await expect(element(by.text("2026-02-25"))).toBeVisible();
+      await expect(element(by.text("2000-02-25"))).toBeVisible();
       await expect(element(by.text("8h 0m"))).toBeVisible();
     });
   });
@@ -87,7 +92,7 @@ describe("Sleep Log Screen", () => {
 
   describe("Delete Sleep Entry", () => {
     it("opens delete dialog via long press", async () => {
-      await element(by.text("2026-02-25")).longPress();
+      await element(by.text("2000-02-25")).longPress();
       await waitVisible("delete-dialog");
     });
 
@@ -97,11 +102,11 @@ describe("Sleep Log Screen", () => {
         .not.toBeVisible()
         .withTimeout(5000);
       // Entry should still exist
-      await expect(element(by.text("2026-02-25"))).toBeVisible();
+      await expect(element(by.text("2000-02-25"))).toBeVisible();
     });
 
     it("deletes entry via long press and confirm", async () => {
-      await element(by.text("2026-02-25")).longPress();
+      await element(by.text("2000-02-25")).longPress();
       await waitVisible("delete-dialog");
       await element(by.id("confirm-delete-button")).tap();
       await waitFor(element(by.id("delete-dialog")))

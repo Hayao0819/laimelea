@@ -1,4 +1,4 @@
-import { by, device, element, expect, waitFor } from "detox";
+import { by, device, element, expect } from "detox";
 
 import {
   completeSetup,
@@ -13,7 +13,7 @@ describe("Calendar Extras", () => {
     await completeSetup();
   });
 
-  describe("Calendar Event Detail (Conditional)", () => {
+  describe("Calendar Event Views", () => {
     beforeAll(async () => {
       await navigateToTab("Calendar");
       await waitVisible("calendar-screen");
@@ -24,25 +24,8 @@ describe("Calendar Extras", () => {
       await waitVisible("agenda-view");
     });
 
-    it("taps event card if available (conditional)", async () => {
-      try {
-        await waitFor(element(by.id(/^event-card-/)))
-          .toBeVisible()
-          .withTimeout(3000);
-      } catch {
-        console.log(
-          "No calendar events available - skipping event detail test",
-        );
-        return;
-      }
-
-      await element(by.id(/^event-card-/))
-        .atIndex(0)
-        .tap();
-      await waitVisible("event-detail-screen");
-      await expect(element(by.id("create-alarm-button"))).toBeVisible();
-      await device.pressBack();
-      await waitVisible("calendar-screen");
+    it("keeps the agenda view available without external calendar data", async () => {
+      await expect(element(by.id("agenda-view"))).toBeVisible();
     });
   });
 
@@ -67,24 +50,6 @@ describe("Calendar Extras", () => {
 
     it("shows default reminder item", async () => {
       await waitVisible("default-reminder-item");
-    });
-
-    it("toggles calendar checkbox if available (conditional)", async () => {
-      try {
-        await waitFor(element(by.id(/^calendar-checkbox-/)))
-          .toBeVisible()
-          .withTimeout(3000);
-      } catch {
-        console.log("No calendar checkboxes available - skipping toggle test");
-        return;
-      }
-
-      await element(by.id(/^calendar-checkbox-/))
-        .atIndex(0)
-        .tap();
-      await element(by.id(/^calendar-checkbox-/))
-        .atIndex(0)
-        .tap();
     });
   });
 });

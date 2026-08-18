@@ -319,6 +319,7 @@ describe("Alarm Edit - New Features", () => {
       await element(by.id("label-input")).replaceText(PREVIEW_ALARM_LABEL);
 
       // Tap "Show Preview" button
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await element(by.id("preview-button")).tap();
 
       // Verify AlarmFiring preview screen appears
@@ -354,6 +355,7 @@ describe("Alarm Edit - New Features", () => {
       await element(by.id("label-input")).replaceText(DISMISSAL_PREVIEW_LABEL);
 
       // Default dismissal method is "simple" — verify and preview
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await element(by.id("preview-button")).tap();
       await waitVisible("alarm-firing-screen");
 
@@ -379,6 +381,7 @@ describe("Alarm Edit - New Features", () => {
         .withTimeout(5000);
 
       // Preview with shake dismissal
+      await element(by.id("alarm-edit-scroll")).scrollTo("bottom");
       await element(by.id("preview-button")).tap();
       await waitVisible("alarm-firing-screen");
 
