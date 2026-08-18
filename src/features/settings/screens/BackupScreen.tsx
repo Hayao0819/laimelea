@@ -37,6 +37,17 @@ export function BackupScreen() {
   const [remoteBackupTimestamp, setRemoteBackupTimestamp] = useState<
     number | null
   >(null);
+  const isLocalSnapshot = platformServices.type === "aosp";
+  const [authAvailable, setAuthAvailable] = useState<boolean | null>(
+    isLocalSnapshot ? false : null,
+  );
+  const [backupAvailable, setBackupAvailable] = useState<boolean | null>(
+    isLocalSnapshot ? true : null,
+  );
+  const [backupStatusPlatform, setBackupStatusPlatform] = useState(
+    platformServices.type,
+  );
+  const [signingIn, setSigningIn] = useState(false);
   const operationInFlight = useRef(false);
   const [operation, setOperation] = useState<"backup" | "restore" | null>(null);
   const {
@@ -48,23 +59,105 @@ export function BackupScreen() {
 
   useEffect(() => {
     let active = true;
-    const loadBackupTimestamp = async () => {
+    const loadBackupStatus = async () => {
+      setBackupStatusPlatform(platformServices.type);
+      if (isLocalSnapshot) {
+        setAuthAvailable(false);
+        setBackupAvailable(true);
+        try {
+          const timestamp = await platformServices.backup.getLastBackupTime();
+          if (active) setRemoteBackupTimestamp(timestamp);
+        } catch {
+          if (active) setRemoteBackupTimestamp(null);
+        }
+        return;
+      }
+      setAuthAvailable(null);
+      setBackupAvailable(null);
+      let supportsAuth: boolean;
       try {
-        if (!(await platformServices.backup.isAvailable())) return;
+        supportsAuth = await platformServices.auth.isAvailable();
+        if (!active) return;
+        setAuthAvailable(supportsAuth);
+      } catch {
+        if (active) {
+          setAuthAvailable(false);
+          setBackupAvailable(false);
+          setRemoteBackupTimestamp(null);
+        }
+        return;
+      }
+      if (!supportsAuth) {
+        setBackupAvailable(false);
+        setRemoteBackupTimestamp(null);
+        return;
+      }
+      try {
+        const available = await platformServices.backup.isAvailable();
+        if (!active) return;
+        setBackupAvailable(available);
+        if (!available) {
+          setRemoteBackupTimestamp(null);
+          return;
+        }
         const timestamp = await platformServices.backup.getLastBackupTime();
         if (active) setRemoteBackupTimestamp(timestamp);
       } catch {
-        if (active) setRemoteBackupTimestamp(null);
+        if (active) {
+          setBackupAvailable(false);
+          setRemoteBackupTimestamp(null);
+        }
       }
     };
-    loadBackupTimestamp();
+    loadBackupStatus().catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [platformServices.backup]);
+  }, [
+    isLocalSnapshot,
+    platformServices.auth,
+    platformServices.backup,
+    platformServices.type,
+  ]);
+
+  const cloudBackupReady =
+    backupStatusPlatform === platformServices.type && backupAvailable === true;
+
+  const handleSignIn = useCallback(async () => {
+    if (signingIn || operationInFlight.current) return;
+    setSigningIn(true);
+    try {
+      await platformServices.auth.signIn();
+      const available = await platformServices.backup.isAvailable();
+      setAuthAvailable(true);
+      setBackupStatusPlatform(platformServices.type);
+      setBackupAvailable(available);
+      if (!available) {
+        showSnackbar(t("settings.backupRequiresSignIn"));
+        return;
+      }
+      const timestamp = await platformServices.backup.getLastBackupTime();
+      setRemoteBackupTimestamp(timestamp);
+    } catch {
+      showSnackbar(t("settings.backupSignInFailed"));
+    } finally {
+      setSigningIn(false);
+    }
+  }, [
+    platformServices.auth,
+    platformServices.backup,
+    platformServices.type,
+    showSnackbar,
+    signingIn,
+    t,
+  ]);
 
   const handleBackup = useCallback(async () => {
     if (operationInFlight.current) return;
+    if (!isLocalSnapshot && !cloudBackupReady) {
+      showSnackbar(t("settings.backupRequiresSignIn"));
+      return;
+    }
     operationInFlight.current = true;
     setOperation("backup");
     try {
@@ -92,6 +185,8 @@ export function BackupScreen() {
     alarms,
     sleepSessions,
     game2048Store,
+    cloudBackupReady,
+    isLocalSnapshot,
     platformServices.backup,
     update,
     showSnackbar,
@@ -100,6 +195,10 @@ export function BackupScreen() {
 
   const handleRestore = useCallback(async () => {
     if (operationInFlight.current) return;
+    if (!isLocalSnapshot && !cloudBackupReady) {
+      showSnackbar(t("settings.backupRequiresSignIn"));
+      return;
+    }
     operationInFlight.current = true;
     setOperation("restore");
     try {
@@ -150,6 +249,8 @@ export function BackupScreen() {
     settings,
     sleepSessions,
     game2048Store,
+    cloudBackupReady,
+    isLocalSnapshot,
     setSettings,
     setAlarms,
     setSleepSessions,
@@ -174,24 +275,61 @@ export function BackupScreen() {
       >
         <List.Section>
           <List.Subheader>{t("settings.backup")}</List.Subheader>
+          <List.Item
+            title={
+              isLocalSnapshot
+                ? t("settings.localSnapshot")
+                : t("settings.cloudBackup")
+            }
+            description={
+              isLocalSnapshot
+                ? t("settings.localSnapshotDescription")
+                : authAvailable === false
+                  ? t("settings.backupUnavailable")
+                  : cloudBackupReady
+                    ? t("settings.backupReady")
+                    : t("settings.backupRequiresSignIn")
+            }
+            testID="backup-status-item"
+          />
+          {!isLocalSnapshot && authAvailable === true && !cloudBackupReady && (
+            <Button
+              mode="outlined"
+              onPress={handleSignIn}
+              loading={signingIn}
+              disabled={signingIn || operation !== null}
+              style={styles.signInButton}
+              testID="backup-sign-in-button"
+            >
+              {t("settings.backupSignIn")}
+            </Button>
+          )}
           <View style={styles.backupButtons}>
             <Button
               mode="contained"
               onPress={handleBackup}
-              disabled={operation !== null}
+              disabled={
+                operation !== null || (!isLocalSnapshot && !cloudBackupReady)
+              }
               style={styles.backupButton}
               testID="backup-now-button"
             >
-              {t("settings.backupNow")}
+              {isLocalSnapshot
+                ? t("settings.saveLocalSnapshot")
+                : t("settings.backupNow")}
             </Button>
             <Button
               mode="outlined"
               onPress={handleRestore}
-              disabled={operation !== null}
+              disabled={
+                operation !== null || (!isLocalSnapshot && !cloudBackupReady)
+              }
               style={styles.backupButton}
               testID="restore-button"
             >
-              {t("settings.restore")}
+              {isLocalSnapshot
+                ? t("settings.restoreLocalSnapshot")
+                : t("settings.restore")}
             </Button>
           </View>
           <List.Item
@@ -242,5 +380,10 @@ const styles = StyleSheet.create({
   },
   backupButton: {
     flex: 1,
+  },
+  signInButton: {
+    alignSelf: "flex-start",
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
   },
 });

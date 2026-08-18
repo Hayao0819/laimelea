@@ -128,8 +128,30 @@ let mockServices: PlatformServices;
 async function renderWithProviders(
   settingsOverride: Partial<AppSettings> = {},
   remoteBackupTimestamp: number | null = null,
+  type: PlatformServices["type"] = "aosp",
+  backupAvailability: boolean | Error = true,
+  authAvailability: boolean | Error = true,
 ) {
   mockServices = createMockServices();
+  mockServices.type = type;
+  if (authAvailability instanceof Error) {
+    (mockServices.auth.isAvailable as jest.Mock).mockRejectedValue(
+      authAvailability,
+    );
+  } else {
+    (mockServices.auth.isAvailable as jest.Mock).mockResolvedValue(
+      authAvailability,
+    );
+  }
+  if (backupAvailability instanceof Error) {
+    (mockServices.backup.isAvailable as jest.Mock).mockRejectedValue(
+      backupAvailability,
+    );
+  } else {
+    (mockServices.backup.isAvailable as jest.Mock).mockResolvedValue(
+      backupAvailability,
+    );
+  }
   (mockServices.backup.getLastBackupTime as jest.Mock).mockResolvedValue(
     remoteBackupTimestamp,
   );
@@ -141,14 +163,17 @@ async function renderWithProviders(
   store.set(sleepSessionsAtom, []);
   store.set(game2048StoreAtom, createDefaultStore());
 
-  const utils = await render(
+  const utils = render(
     <JotaiProvider store={store}>
       <PaperProvider>
         <BackupScreen />
       </PaperProvider>
     </JotaiProvider>,
   );
-  await act(async () => {});
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
   return { ...utils, store };
 }
 
@@ -171,8 +196,105 @@ describe("BackupScreen", () => {
   it("should display last backup info", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("last-backup-item")).toBeTruthy();
-    expect(mockServices.backup.isAvailable).toHaveBeenCalled();
     expect(mockServices.backup.getLastBackupTime).toHaveBeenCalled();
+  });
+
+  it("labels AOSP backups as on-device snapshots", async () => {
+    const { getByText } = await renderWithProviders();
+
+    expect(getByText("settings.localSnapshot")).toBeTruthy();
+    expect(getByText("settings.localSnapshotDescription")).toBeTruthy();
+  });
+
+  it("requires sign-in before enabling cloud backup actions", async () => {
+    const { getByTestId, getByText } = await renderWithProviders(
+      {},
+      null,
+      "gms",
+      false,
+    );
+
+    await act(async () => {});
+
+    expect(getByText("settings.backupRequiresSignIn")).toBeTruthy();
+    expect(getByTestId("backup-sign-in-button")).toBeTruthy();
+    expect(getByTestId("backup-now-button").props.accessibilityState).toEqual({
+      disabled: true,
+    });
+    expect(getByTestId("restore-button").props.accessibilityState).toEqual({
+      disabled: true,
+    });
+  });
+
+  it("enables cloud backup after settings sign-in succeeds", async () => {
+    const { getByTestId, getByText } = await renderWithProviders(
+      {},
+      null,
+      "gms",
+      false,
+    );
+    (mockServices.auth.signIn as jest.Mock).mockResolvedValue({
+      email: "test@example.com",
+      accessToken: "token",
+    });
+    (mockServices.backup.isAvailable as jest.Mock).mockResolvedValue(true);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("backup-sign-in-button"));
+    });
+
+    expect(mockServices.auth.signIn).toHaveBeenCalledTimes(1);
+    expect(getByText("settings.backupReady")).toBeTruthy();
+    expect(getByTestId("backup-now-button").props.accessibilityState).toEqual({
+      disabled: false,
+    });
+  });
+
+  it("keeps sign-in available when the backup status check fails", async () => {
+    const { getByTestId } = await renderWithProviders(
+      {},
+      null,
+      "gms",
+      new Error("token refresh failed"),
+    );
+
+    expect(getByTestId("backup-sign-in-button")).toBeTruthy();
+  });
+
+  it("does not query cloud backup when platform auth is unavailable", async () => {
+    const { getByText, queryByTestId } = await renderWithProviders(
+      {},
+      null,
+      "hms",
+      true,
+      false,
+    );
+
+    expect(getByText("settings.backupUnavailable")).toBeTruthy();
+    expect(queryByTestId("backup-sign-in-button")).toBeNull();
+    expect(mockServices.backup.isAvailable).not.toHaveBeenCalled();
+  });
+
+  it("allows another sign-in attempt after sign-in fails", async () => {
+    const { getByTestId, getByText } = await renderWithProviders(
+      {},
+      null,
+      "gms",
+      false,
+    );
+    (mockServices.auth.signIn as jest.Mock).mockRejectedValue(
+      new Error("sign-in failed"),
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId("backup-sign-in-button"));
+    });
+
+    expect(getByText("settings.backupSignInFailed")).toBeTruthy();
+    expect(getByTestId("backup-sign-in-button")).toBeTruthy();
+    expect(
+      getByTestId("backup-sign-in-button").props.accessibilityState?.disabled,
+    ).toBe(false);
   });
 
   it("displays the newer remote backup timestamp", async () => {
@@ -328,13 +450,10 @@ describe("BackupScreen", () => {
   it("should not update settings when restore returns null", async () => {
     const { getByTestId, store } = await renderWithProviders();
 
-    // restore returns null by default from createMockServices
-
     await act(async () => {
       fireEvent.press(getByTestId("restore-button"));
     });
 
-    // Settings should remain unchanged
     const settings = store.get(resolvedSettingsAtom);
     expect(settings.lastBackupTimestamp).toBeNull();
     expect(settings.language).toBe("auto");

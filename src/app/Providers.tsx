@@ -21,8 +21,6 @@ import { useAppInitialization } from "./useAppInitialization";
 import { useNotificationRuntime } from "./useNotificationRuntime";
 import { useRestoreRecovery } from "./useRestoreRecovery";
 
-export { navigationRef } from "./navigation";
-
 interface ProvidersProps {
   children: React.ReactNode;
 }

@@ -208,7 +208,9 @@
     "addTimer": "タイマー追加",
     "noTimers": "タイマーなし",
     "delete": "削除",
-    "presetMin": "{{min}}分"
+    "presetMin": "{{min}}分",
+    "notificationFailed": "タイマー通知を更新できませんでした",
+    "notificationLimitReached": "この端末では同時に実行できるタイマーは50件までです"
   },
   "settings": {
     "title": "設定",
@@ -264,6 +266,16 @@
     "visibleCalendars": "表示カレンダー",
     "noCalendars": "利用可能なカレンダーがありません",
     "backup": "バックアップ",
+    "cloudBackup": "クラウドバックアップ",
+    "backupReady": "クラウドバックアップを利用できます",
+    "backupRequiresSignIn": "バックアップまたは復元にはサインインが必要です",
+    "backupUnavailable": "この端末ではクラウドバックアップを利用できません",
+    "backupSignIn": "クラウドバックアップにサインイン",
+    "backupSignInFailed": "クラウドバックアップへのサインインに失敗しました",
+    "localSnapshot": "端末内スナップショット",
+    "localSnapshotDescription": "この端末だけに保存され、アプリデータを削除すると消えます。クラウドバックアップではありません。",
+    "saveLocalSnapshot": "端末に保存",
+    "restoreLocalSnapshot": "端末内スナップショットを復元",
     "backupNow": "バックアップ",
     "restore": "復元",
     "lastBackup": "最終バックアップ",
@@ -321,7 +333,7 @@
     "batteryOptimizationChecking": "確認中...",
     "batteryOptimizationDisabled": "最適化から除外済み",
     "batteryOptimizationEnabled": "除外されていません — アラームが正確に動作しない可能性があります",
-    "batteryOptimizationRequest": "除外する"
+    "batteryOptimizationRequest": "設定を開く"
   },
   "game2048": {
     "title": "2048",
@@ -361,9 +373,9 @@
     "useNow": "現在時刻を使用",
     "baseTimeDescription": "カスタムDay 0の00:00:00に対応する実時刻",
     "preview": "現在のカスタム時間",
-    "googleAccount": "Googleアカウント連携",
-    "googleAccountDescription": "バックアップに使います。後から設定画面でも追加できます。",
-    "signInWithGoogle": "Googleでサインイン",
+    "backupAccount": "クラウドバックアップ",
+    "backupAccountDescription": "アカウントにバックアップを保存できます。後から設定画面でも設定できます。",
+    "signIn": "サインイン",
     "offlineNote": "Googleログインはオンライン時に利用できます"
   },
   "common": {

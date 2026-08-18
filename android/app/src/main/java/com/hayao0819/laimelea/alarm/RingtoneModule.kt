@@ -35,6 +35,9 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
         const val ALARM_DELIVERY_EVENT = "NativeAlarmDelivery"
         private const val SCHEDULED_AUDIO_PREFS = "scheduledAlarmAudio"
         private const val SCHEDULED_AUDIO_PREFIX = "scheduled."
+        private const val PRIVATE_SCHEDULED_AUDIO_PREFS = "privateScheduledAlarmAudio"
+        private const val PRIVATE_SCHEDULED_AUDIO_PREFIX = "private."
+        private const val PRIVATE_SCHEDULED_AUDIO_CLEANUP_PREFIX = "privateCleanup."
         private const val PENDING_DELIVERY_PREFS = "pendingAlarmDeliveries"
         private const val PENDING_DELIVERY_PREFIX = "delivery."
         private const val ALARM_NOTIFICATION_CHANNEL_PREFIX = "alarm-firing-"
@@ -72,33 +75,24 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
         fun markAlarmAudioDispatched(context: Context, alarmId: String, timestampMs: Long) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             synchronized(scheduledAudioLock) {
+                cleanupForgottenPrivateScheduledAudio(context)
                 val preferences = scheduledAudioPreferences(context)
                 val key = scheduledAudioKey(alarmId, timestampMs)
                 val scheduled = preferences.getString(key, null)?.let(::decodeScheduledAudio)
                 val editor = preferences.edit().remove(key)
                 val nextTimestampMs = scheduled?.let(::nextTimestampAfterDelivery)
-                val next = if (scheduled != null && nextTimestampMs != null) {
+                if (scheduled != null && nextTimestampMs != null) {
                     val next = scheduled.copy(timestampMs = nextTimestampMs)
+                    val registered = registerAlarmClock(alarmManager, context, next)
+                    val storedNext = next.withRegistrationResult(registered)
                     editor.putString(
-                        scheduledAudioKey(next.alarmId, next.timestampMs),
-                        encodeScheduledAudio(next),
+                        scheduledAudioKey(storedNext.alarmId, storedNext.timestampMs),
+                        encodeScheduledAudio(storedNext),
                     )
-                    next
                 } else {
-                    null
+                    scheduled?.let { forgetPrivateScheduledAudio(context, it.alarmId) }
                 }
                 editor.commit()
-                next?.let { nextScheduled ->
-                    attemptAlarmClockRegistration {
-                        alarmManager.setAlarmClock(
-                            AlarmManager.AlarmClockInfo(
-                                nextScheduled.timestampMs,
-                                alarmClockShowIntent(context),
-                            ),
-                            alarmAudioPendingIntent(context, nextScheduled),
-                        )
-                    }
-                }
             }
         }
 
@@ -317,21 +311,20 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             alarmManager: AlarmManager,
             context: Context,
             scheduled: ScheduledAudio,
-        ) {
-            attemptAlarmClockRegistration {
-                alarmManager.setAlarmClock(
-                    AlarmManager.AlarmClockInfo(
-                        scheduled.timestampMs,
-                        alarmClockShowIntent(context),
-                    ),
-                    alarmAudioPendingIntent(context, scheduled),
-                )
-            }
+        ): Boolean = attemptAlarmClockRegistration {
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(
+                    scheduled.timestampMs,
+                    alarmClockShowIntent(context),
+                ),
+                alarmAudioPendingIntent(context, scheduled),
+            )
         }
 
         fun rescheduleAlarmAudio(context: Context, adjustWallClockAlarms: Boolean = false) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             synchronized(scheduledAudioLock) {
+                cleanupForgottenPrivateScheduledAudio(context)
                 val preferences = scheduledAudioPreferences(context)
                 val entries = preferences.all
                     .filterKeys { it.startsWith(SCHEDULED_AUDIO_PREFIX) }
@@ -341,7 +334,6 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 val editor = preferences.edit()
                 entries.forEach { (key, stored) ->
                     runCatching {
-                        editor.putString(key, encodeScheduledAudio(stored))
                         val timestampMs = when {
                             adjustWallClockAlarms && stored.rescheduleAtLocalTime -> adjustedTimestamp(stored)
                             stored.timestampMs <= System.currentTimeMillis() -> nextTimestampAfterMissedAlarm(stored)
@@ -349,22 +341,24 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                         }
                         val scheduled = timestampMs?.let { timestamp -> stored.copy(timestampMs = timestamp) }
                         if (scheduled != stored) {
-                            attemptAlarmClockRegistration {
-                                val oldPendingIntent = alarmAudioPendingIntent(context, stored)
-                                alarmManager.cancel(oldPendingIntent)
-                                oldPendingIntent.cancel()
-                            }
+                            val oldPendingIntent = alarmAudioPendingIntent(context, stored)
+                            alarmManager.cancel(oldPendingIntent)
+                            oldPendingIntent.cancel()
                             editor.remove(key)
-                            scheduled?.let { updated ->
-                                editor.putString(
-                                    scheduledAudioKey(updated.alarmId, updated.timestampMs),
-                                    encodeScheduledAudio(updated),
-                                )
-                            }
                         }
-                        if (scheduled != null && scheduled.timestampMs > System.currentTimeMillis()) {
-                            registerAlarmClock(alarmManager, context, scheduled)
+                        if (scheduled == null) {
+                            forgetPrivateScheduledAudio(context, stored.alarmId)
                         }
+                        scheduled?.takeIf { it.timestampMs > System.currentTimeMillis() }?.let { pending ->
+                            val registered = registerAlarmClock(alarmManager, context, pending)
+                            val persisted = pending.withRegistrationResult(registered)
+                            editor.putString(
+                                scheduledAudioKey(persisted.alarmId, persisted.timestampMs),
+                                encodeScheduledAudio(persisted),
+                            )
+                        }
+                    }.onFailure {
+                        editor.putString(key, encodeScheduledAudio(stored.withRegistrationResult(false)))
                     }
                 }
                 editor.commit()
@@ -388,7 +382,6 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 preferences.edit().remove(alarmId).apply()
             }
         }
-
 
         internal fun alarmAudioPendingIntent(
             context: Context,
@@ -424,15 +417,16 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             context: Context,
             scheduled: ScheduledAudio,
         ): PendingIntent {
+            val restored = restorePrivateScheduledAudio(context, scheduled)
             val intent = Intent(context, AlarmAudioReceiver::class.java).apply {
-                action = "${context.packageName}.ALARM_AUDIO.${scheduled.alarmId}.${scheduled.timestampMs}"
-                putExtra(AlarmAudioService.EXTRA_ALARM_ID, scheduled.alarmId)
-                putExtra(EXTRA_TRIGGER_TIMESTAMP_MS, scheduled.timestampMs)
-                putExtra(AlarmAudioService.EXTRA_SOUND_URI, scheduled.soundUri)
-                putExtra(AlarmAudioService.EXTRA_GRADUAL_DURATION_MS, scheduled.gradualDurationMs)
-                putExtra(AlarmAudioService.EXTRA_AUTO_SILENCE_MS, scheduled.autoSilenceMs)
-                putExtra(AlarmAudioService.EXTRA_LABEL, scheduled.label)
-                putExtra(AlarmAudioService.EXTRA_VIBRATION_ENABLED, scheduled.vibrationEnabled)
+                action = "${context.packageName}.ALARM_AUDIO.${restored.alarmId}.${restored.timestampMs}"
+                putExtra(AlarmAudioService.EXTRA_ALARM_ID, restored.alarmId)
+                putExtra(EXTRA_TRIGGER_TIMESTAMP_MS, restored.timestampMs)
+                putExtra(AlarmAudioService.EXTRA_SOUND_URI, restored.soundUri)
+                putExtra(AlarmAudioService.EXTRA_GRADUAL_DURATION_MS, restored.gradualDurationMs)
+                putExtra(AlarmAudioService.EXTRA_AUTO_SILENCE_MS, restored.autoSilenceMs)
+                putExtra(AlarmAudioService.EXTRA_LABEL, restored.label)
+                putExtra(AlarmAudioService.EXTRA_VIBRATION_ENABLED, restored.vibrationEnabled)
             }
             return PendingIntent.getBroadcast(
                 context,
@@ -455,6 +449,98 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             .createDeviceProtectedStorageContext()
             .getSharedPreferences(SCHEDULED_AUDIO_PREFS, Context.MODE_PRIVATE)
 
+        private fun privateScheduledAudioPreferences(context: Context) = context
+            .getSharedPreferences(PRIVATE_SCHEDULED_AUDIO_PREFS, Context.MODE_PRIVATE)
+
+        private fun privateScheduledAudioKey(alarmId: String): String =
+            "$PRIVATE_SCHEDULED_AUDIO_PREFIX$alarmId"
+
+        private fun privateScheduledAudioCleanupKey(alarmId: String): String =
+            "$PRIVATE_SCHEDULED_AUDIO_CLEANUP_PREFIX$alarmId"
+
+        private fun isUserUnlocked(context: Context): Boolean =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
+                context.getSystemService(UserManager::class.java)?.isUserUnlocked != false
+
+        private fun encodePrivateScheduledAudio(scheduled: ScheduledAudio): String = listOf(
+            android.util.Base64.encodeToString(
+                scheduled.soundUri.orEmpty().toByteArray(Charsets.UTF_8),
+                android.util.Base64.NO_WRAP,
+            ),
+            android.util.Base64.encodeToString(
+                scheduled.label.orEmpty().toByteArray(Charsets.UTF_8),
+                android.util.Base64.NO_WRAP,
+            ),
+        ).joinToString("|")
+
+        private fun decodePrivateScheduledAudio(value: String): Pair<String?, String?>? {
+            val fields = value.split("|", limit = 2)
+            if (fields.size != 2) return null
+            return runCatching {
+                val soundUri = String(
+                    android.util.Base64.decode(fields[0], android.util.Base64.NO_WRAP),
+                    Charsets.UTF_8,
+                ).takeIf { it.isNotEmpty() }
+                val label = String(
+                    android.util.Base64.decode(fields[1], android.util.Base64.NO_WRAP),
+                    Charsets.UTF_8,
+                ).takeIf { it.isNotEmpty() }
+                soundUri to label
+            }.getOrNull()
+        }
+
+        internal fun rememberPrivateScheduledAudio(context: Context, scheduled: ScheduledAudio) {
+            if (!isUserUnlocked(context)) return
+            privateScheduledAudioPreferences(context).edit()
+                .putString(privateScheduledAudioKey(scheduled.alarmId), encodePrivateScheduledAudio(scheduled))
+                .apply()
+        }
+
+        internal fun forgetPrivateScheduledAudio(
+            context: Context,
+            alarmId: String,
+            userUnlocked: Boolean = isUserUnlocked(context),
+        ) {
+            if (!userUnlocked) {
+                scheduledAudioPreferences(context).edit()
+                    .putBoolean(privateScheduledAudioCleanupKey(alarmId), true)
+                    .apply()
+                return
+            }
+            privateScheduledAudioPreferences(context).edit()
+                .remove(privateScheduledAudioKey(alarmId))
+                .apply()
+            scheduledAudioPreferences(context).edit()
+                .remove(privateScheduledAudioCleanupKey(alarmId))
+                .apply()
+        }
+
+        private fun cleanupForgottenPrivateScheduledAudio(context: Context) {
+            if (!isUserUnlocked(context)) return
+            scheduledAudioPreferences(context).all.keys
+                .filter { it.startsWith(PRIVATE_SCHEDULED_AUDIO_CLEANUP_PREFIX) }
+                .map { it.removePrefix(PRIVATE_SCHEDULED_AUDIO_CLEANUP_PREFIX) }
+                .forEach {
+                    forgetPrivateScheduledAudio(context, it, userUnlocked = true)
+                }
+        }
+
+        internal fun restorePrivateScheduledAudio(
+            context: Context,
+            scheduled: ScheduledAudio,
+            userUnlocked: Boolean = isUserUnlocked(context),
+        ): ScheduledAudio {
+            val fallbackSoundUri = scheduled.soundUriForMode()
+            if (!userUnlocked) return scheduled.copy(soundUri = fallbackSoundUri, label = null)
+            val privateAudio = privateScheduledAudioPreferences(context)
+                .getString(privateScheduledAudioKey(scheduled.alarmId), null)
+                ?.let(::decodePrivateScheduledAudio)
+            return scheduled.copy(
+                soundUri = privateAudio?.first ?: fallbackSoundUri,
+                label = privateAudio?.second,
+            )
+        }
+
         private fun scheduledAudioKey(alarmId: String, timestampMs: Long): String =
             "$SCHEDULED_AUDIO_PREFIX$alarmId.$timestampMs"
 
@@ -475,11 +561,13 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             "",
             "",
             scheduled.vibrationEnabled.toString(),
+            scheduled.soundMode,
+            scheduled.registrationPending.toString(),
         ).joinToString("|")
 
         internal fun decodeScheduledAudio(value: String): ScheduledAudio? {
-            val fields = value.split("|", limit = 16)
-            if (fields.size !in 14..16) return null
+            val fields = value.split("|", limit = 18)
+            if (fields.size !in 14..18) return null
             val timestampMs = fields[1].toLongOrNull() ?: return null
             val gradualDurationMs = fields[2].toLongOrNull() ?: return null
             val autoSilenceMs = fields[3].toLongOrNull() ?: return null
@@ -495,6 +583,9 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 .orEmpty()
             val repeatIntervalMs = fields[12].toLongOrNull() ?: return null
             val vibrationEnabled = fields.getOrNull(15)?.toBooleanStrictOrNull() ?: true
+            val soundMode = fields.getOrNull(16)?.takeIf { it in setOf("silent", "default", "custom") }
+                ?: "default"
+            val registrationPending = fields.getOrNull(17)?.toBooleanStrictOrNull() ?: false
             return ScheduledAudio(
                 fields[0],
                 timestampMs,
@@ -512,6 +603,8 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 repeatIntervalMs,
                 null,
                 vibrationEnabled,
+                soundMode,
+                registrationPending,
             )
         }
 
@@ -614,7 +707,21 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             val repeatIntervalMs: Long,
             val label: String?,
             val vibrationEnabled: Boolean,
+            val soundMode: String = when (soundUri) {
+                "__silent__" -> "silent"
+                null, "default" -> "default"
+                else -> "custom"
+            },
+            val registrationPending: Boolean = false,
         ) {
+            fun soundUriForMode(): String? = when (soundMode) {
+                "silent" -> "__silent__"
+                else -> null
+            }
+
+            fun withRegistrationResult(registered: Boolean): ScheduledAudio =
+                copy(registrationPending = !registered)
+
             companion object {
                 fun fromTimestamp(
                     alarmId: String,
@@ -798,9 +905,9 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 label,
                 vibrationEnabled,
             )
-            val pendingIntent = alarmAudioPendingIntent(reactApplicationContext, scheduled)
-            rememberScheduledAudio(scheduled)
             try {
+                rememberScheduledAudio(scheduled)
+                val pendingIntent = alarmAudioPendingIntent(reactApplicationContext, scheduled)
                 alarmManager.setAlarmClock(
                     AlarmManager.AlarmClockInfo(timestamp, alarmClockShowIntent(reactApplicationContext)),
                     pendingIntent,
@@ -1006,11 +1113,13 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 editor.remove(key)
             }
             editor.apply()
+            forgetPrivateScheduledAudio(reactApplicationContext, alarmId)
         }
     }
 
     private fun rememberScheduledAudio(scheduled: ScheduledAudio) {
         synchronized(scheduledAudioLock) {
+            rememberPrivateScheduledAudio(reactApplicationContext, scheduled)
             check(scheduledAudioPreferences(reactApplicationContext).edit()
                 .putString(scheduledAudioKey(scheduled.alarmId, scheduled.timestampMs), encodeScheduledAudio(scheduled))
                 .commit())
@@ -1023,6 +1132,7 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 .edit()
                 .remove(scheduledAudioKey(alarmId, timestampMs))
                 .apply()
+            forgetPrivateScheduledAudio(reactApplicationContext, alarmId)
         }
     }
 

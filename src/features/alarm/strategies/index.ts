@@ -7,5 +7,4 @@ registerStrategy(simpleStrategy);
 registerStrategy(shakeStrategy);
 registerStrategy(mathStrategy);
 
-export { getAllStrategies, getStrategy, registerStrategy } from "./registry";
-export type { DismissalComponentProps, DismissalStrategy } from "./types";
+export { getAllStrategies, getStrategy } from "./registry";

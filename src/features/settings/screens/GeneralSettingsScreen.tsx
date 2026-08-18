@@ -19,8 +19,7 @@ export function GeneralSettingsScreen() {
   const { t } = useTranslation();
   const { settings, update } = useSettingsUpdate();
   const insets = useSafeAreaInsets();
-  const { ignored: batteryOptIgnored, requestExclusion } =
-    useBatteryOptimization();
+  const { ignored: batteryOptIgnored, openSettings } = useBatteryOptimization();
 
   const renderBatteryIcon = useCallback(
     (props: { color: string }) => (
@@ -37,7 +36,7 @@ export function GeneralSettingsScreen() {
       return (
         <Button
           mode="outlined"
-          onPress={requestExclusion}
+          onPress={openSettings}
           testID="battery-optimization-request-button"
         >
           {t("settings.batteryOptimizationRequest")}
@@ -45,7 +44,7 @@ export function GeneralSettingsScreen() {
       );
     }
     return null;
-  }, [batteryOptIgnored, requestExclusion, t]);
+  }, [batteryOptIgnored, openSettings, t]);
 
   return (
     <ScrollView

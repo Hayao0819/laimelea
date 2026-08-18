@@ -94,7 +94,7 @@ class AlarmBootReceiverTest {
     }
 
     @Test
-    fun deviceProtectedScheduleDoesNotStoreTheCustomSoundOrLabel() {
+    fun deviceProtectedScheduleKeepsTheSoundModeWithoutPrivateAudioOrLabel() {
         val soundUri = "content://media/audio/private"
         val label = "Private reminder"
         val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
@@ -118,6 +118,106 @@ class AlarmBootReceiverTest {
         assertFalse(encoded.contains(label))
         assertNull(decoded?.soundUri)
         assertNull(decoded?.label)
+        assertEquals("custom", decoded?.soundMode)
+    }
+
+    @Test
+    fun silentScheduleSurvivesDeviceProtectedStorageWithoutPrivateAudio() {
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            "silent-alarm",
+            1_000_000L,
+            "__silent__",
+            0L,
+            0L,
+            false,
+            null,
+            emptyList(),
+            0L,
+            "Private reminder",
+            true,
+        )
+
+        val decoded = RingtoneModule.decodeScheduledAudio(RingtoneModule.encodeScheduledAudio(scheduled))
+
+        assertEquals("silent", decoded?.soundMode)
+        assertEquals("__silent__", decoded?.soundUriForMode())
+        assertNull(decoded?.label)
+        assertEquals(
+            "__silent__",
+            RingtoneModule.restorePrivateScheduledAudio(
+                ApplicationProvider.getApplicationContext(),
+                decoded!!,
+                userUnlocked = false,
+            ).soundUri,
+        )
+    }
+
+    @Test
+    fun credentialProtectedAudioRestoresCustomSoundAndLabel() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            "private-alarm-${System.currentTimeMillis()}",
+            1_000_000L,
+            "content://media/audio/private",
+            0L,
+            0L,
+            false,
+            null,
+            emptyList(),
+            0L,
+            "Private reminder",
+            true,
+        )
+        val deviceProtected = RingtoneModule.decodeScheduledAudio(
+            RingtoneModule.encodeScheduledAudio(scheduled),
+        )!!
+
+        try {
+            RingtoneModule.rememberPrivateScheduledAudio(context, scheduled)
+
+            val restored = RingtoneModule.restorePrivateScheduledAudio(context, deviceProtected)
+
+            assertEquals(scheduled.soundUri, restored.soundUri)
+            assertEquals(scheduled.label, restored.label)
+        } finally {
+            RingtoneModule.forgetPrivateScheduledAudio(context, scheduled.alarmId)
+        }
+    }
+
+    @Test
+    fun lockedCleanupRemovesPrivateAudioAfterUnlock() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val alarmId = "cleanup-alarm-${System.currentTimeMillis()}"
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            alarmId,
+            1_000_000L,
+            "content://media/audio/private",
+            0L,
+            0L,
+            false,
+            null,
+            emptyList(),
+            0L,
+            "Private reminder",
+            true,
+        )
+        val deviceProtected = RingtoneModule.decodeScheduledAudio(
+            RingtoneModule.encodeScheduledAudio(scheduled),
+        )!!
+        RingtoneModule.rememberPrivateScheduledAudio(context, scheduled)
+
+        try {
+            RingtoneModule.forgetPrivateScheduledAudio(context, alarmId, userUnlocked = false)
+            assertEquals(
+                scheduled.soundUri,
+                RingtoneModule.restorePrivateScheduledAudio(context, deviceProtected).soundUri,
+            )
+
+            RingtoneModule.rescheduleAlarmAudio(context)
+            assertNull(RingtoneModule.restorePrivateScheduledAudio(context, deviceProtected).soundUri)
+        } finally {
+            RingtoneModule.forgetPrivateScheduledAudio(context, alarmId, userUnlocked = true)
+        }
     }
 
     @Test
@@ -277,6 +377,85 @@ class AlarmBootReceiverTest {
     }
 
     @Test
+    fun deliveryKeepsSilentModeForTheNextIntervalOccurrence() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val timestamp = System.currentTimeMillis() - 1L
+        val alarmId = "silent-interval-${System.currentTimeMillis()}"
+        val preferences = context.createDeviceProtectedStorageContext()
+            .getSharedPreferences("scheduledAlarmAudio", Context.MODE_PRIVATE)
+        val key = "scheduled.$alarmId.$timestamp"
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            alarmId,
+            timestamp,
+            "__silent__",
+            0L,
+            0L,
+            false,
+            "interval",
+            emptyList(),
+            60_000L,
+            null,
+            true,
+        )
+        preferences.edit().putString(key, RingtoneModule.encodeScheduledAudio(scheduled)).commit()
+
+        try {
+            RingtoneModule.markAlarmAudioDispatched(context, alarmId, timestamp)
+
+            val next = preferences.all.values
+                .filterIsInstance<String>()
+                .mapNotNull(RingtoneModule::decodeScheduledAudio)
+                .single { it.alarmId == alarmId }
+            assertEquals("silent", next.soundMode)
+            assertEquals("__silent__", next.soundUriForMode())
+        } finally {
+            cancelScheduledAlarms(context, alarmId)
+        }
+    }
+
+    @Test
+    fun deliveryRestoresPrivateAudioForTheNextIntervalOccurrence() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val timestamp = System.currentTimeMillis() - 1L
+        val alarmId = "custom-interval-${System.currentTimeMillis()}"
+        val preferences = context.createDeviceProtectedStorageContext()
+            .getSharedPreferences("scheduledAlarmAudio", Context.MODE_PRIVATE)
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            alarmId,
+            timestamp,
+            "content://media/audio/custom",
+            0L,
+            0L,
+            false,
+            "interval",
+            emptyList(),
+            60_000L,
+            "Private reminder",
+            true,
+        )
+        preferences.edit()
+            .putString("scheduled.$alarmId.$timestamp", RingtoneModule.encodeScheduledAudio(scheduled))
+            .commit()
+        RingtoneModule.rememberPrivateScheduledAudio(context, scheduled)
+
+        try {
+            RingtoneModule.markAlarmAudioDispatched(context, alarmId, timestamp)
+
+            val next = preferences.all.values
+                .filterIsInstance<String>()
+                .mapNotNull(RingtoneModule::decodeScheduledAudio)
+                .single { it.alarmId == alarmId }
+            val restored = RingtoneModule.restorePrivateScheduledAudio(context, next)
+            assertEquals("custom", restored.soundMode)
+            assertEquals("content://media/audio/custom", restored.soundUri)
+            assertEquals("Private reminder", restored.label)
+        } finally {
+            cancelScheduledAlarms(context, alarmId)
+            RingtoneModule.forgetPrivateScheduledAudio(context, alarmId)
+        }
+    }
+
+    @Test
     fun deliveryKeepsTheNextWeekdayAndCustomCycleOccurrences() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val preferences = context.createDeviceProtectedStorageContext()
@@ -324,6 +503,63 @@ class AlarmBootReceiverTest {
     @Test
     fun alarmRegistrationFailureIsContained() {
         assertTrue(!RingtoneModule.attemptAlarmClockRegistration { error("alarm manager unavailable") })
+    }
+
+    @Test
+    fun failedAlarmRegistrationRemainsMarkedForRetry() {
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            "retry-alarm",
+            1_000_000L,
+            null,
+            0L,
+            0L,
+            false,
+            "interval",
+            emptyList(),
+            60_000L,
+            null,
+            true,
+        )
+
+        val pending = scheduled.withRegistrationResult(false)
+        val decoded = RingtoneModule.decodeScheduledAudio(RingtoneModule.encodeScheduledAudio(pending))
+
+        assertTrue(decoded?.registrationPending == true)
+        assertFalse(decoded?.withRegistrationResult(true)?.registrationPending == true)
+    }
+
+    @Test
+    fun rescheduleRetriesARegistrationMarkedPending() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val alarmId = "retry-reschedule-${System.currentTimeMillis()}"
+        val timestamp = System.currentTimeMillis() + 120_000L
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            alarmId,
+            timestamp,
+            null,
+            0L,
+            0L,
+            false,
+            null,
+            emptyList(),
+            0L,
+            null,
+            true,
+        ).withRegistrationResult(false)
+        val preferences = context.createDeviceProtectedStorageContext()
+            .getSharedPreferences("scheduledAlarmAudio", Context.MODE_PRIVATE)
+        val key = "scheduled.$alarmId.$timestamp"
+        preferences.edit().putString(key, RingtoneModule.encodeScheduledAudio(scheduled)).commit()
+
+        try {
+            RingtoneModule.rescheduleAlarmAudio(context)
+
+            val retried = preferences.getString(key, null)?.let(RingtoneModule::decodeScheduledAudio)
+            assertNotNull(retried)
+            assertFalse(retried!!.registrationPending)
+        } finally {
+            cancelScheduledAlarms(context, alarmId)
+        }
     }
 
     private fun cancelScheduledAlarms(context: Context, alarmId: String) {

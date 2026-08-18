@@ -17,11 +17,11 @@ let nextTimerNumber = 1;
 
 export interface UseTimersReturn {
   timers: TimerState[];
-  addTimer: (durationMs: number, label?: string) => void;
-  deleteTimer: (id: string) => void;
-  pauseTimer: (id: string) => void;
-  resumeTimer: (id: string) => void;
-  resetTimer: (id: string) => void;
+  addTimer: (durationMs: number, label?: string) => Promise<void>;
+  deleteTimer: (id: string) => Promise<void>;
+  pauseTimer: (id: string) => Promise<void>;
+  resumeTimer: (id: string) => Promise<void>;
+  resetTimer: (id: string) => Promise<void>;
 }
 
 function generateId(): string {
@@ -75,7 +75,6 @@ export function useTimers(): UseTimersReturn {
     return clearTick;
   }, [clearTick]);
 
-  // Sync display on AppState active resume
   useEffect(() => {
     const handleAppState = (state: AppStateStatus) => {
       if (state === "active") {
@@ -97,7 +96,7 @@ export function useTimers(): UseTimersReturn {
   }, [setTimers, tick]);
 
   const addTimer = useCallback(
-    (durationMs: number, label?: string) => {
+    async (durationMs: number, label?: string) => {
       const num = nextTimerNumber++;
       const now = Date.now();
       const timer: TimerState = {
@@ -109,71 +108,81 @@ export function useTimers(): UseTimersReturn {
         startedAt: now,
         pausedElapsedMs: 0,
       };
-      setTimers((prev) => [...prev, timer]);
-      scheduleTimerTrigger({
+      await scheduleTimerTrigger({
         id: timer.id,
         label: timer.label,
         durationMs: timer.durationMs,
         startedAt: now,
         pausedElapsedMs: 0,
       });
+      setTimers((prev) => [...prev, timer]);
     },
     [setTimers],
   );
 
   const deleteTimer = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      await cancelTimerTrigger(id);
       setTimers((prev) => prev.filter((t) => t.id !== id));
-      cancelTimerTrigger(id);
     },
     [setTimers],
   );
 
   const pauseTimer = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const pausedAt = Date.now();
+      await cancelTimerTrigger(id);
       setTimers((prev) =>
         prev.map((t) => {
           if (t.id !== id || !t.isRunning || t.startedAt === null) return t;
+          const pausedElapsedMs = t.pausedElapsedMs + (pausedAt - t.startedAt);
           return {
             ...t,
             isRunning: false,
-            pausedElapsedMs: t.pausedElapsedMs + (Date.now() - t.startedAt),
+            remainingMs: Math.max(0, t.durationMs - pausedElapsedMs),
+            pausedElapsedMs,
             startedAt: null,
           };
         }),
       );
-      cancelTimerTrigger(id);
     },
     [setTimers],
   );
 
   const resumeTimer = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const now = Date.now();
-      let resumed: TimerState | null = null;
-      setTimers((prev) =>
-        prev.map((t) => {
-          if (t.id !== id || t.isRunning || t.remainingMs <= 0) return t;
-          resumed = { ...t, isRunning: true, startedAt: now };
-          return resumed;
-        }),
+      const timer = timers.find(
+        (candidate) =>
+          candidate.id === id &&
+          !candidate.isRunning &&
+          candidate.remainingMs > 0,
       );
-      if (resumed) {
-        const r = resumed as TimerState;
-        scheduleTimerTrigger({
-          id: r.id,
-          label: r.label,
-          durationMs: r.durationMs,
-          startedAt: now,
-          pausedElapsedMs: r.pausedElapsedMs,
-        });
-      }
+      if (!timer) return;
+
+      await scheduleTimerTrigger({
+        id: timer.id,
+        label: timer.label,
+        durationMs: timer.durationMs,
+        startedAt: now,
+        pausedElapsedMs: timer.pausedElapsedMs,
+      });
+      setTimers((prev) =>
+        prev.map((candidate) =>
+          candidate.id === id &&
+          !candidate.isRunning &&
+          candidate.remainingMs > 0
+            ? { ...candidate, isRunning: true, startedAt: now }
+            : candidate,
+        ),
+      );
     },
-    [setTimers],
+    [setTimers, timers],
   );
 
   const resetTimer = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      await cancelTimerTrigger(id);
       setTimers((prev) =>
         prev.map((t) => {
           if (t.id !== id) return t;
@@ -186,7 +195,6 @@ export function useTimers(): UseTimersReturn {
           };
         }),
       );
-      cancelTimerTrigger(id);
     },
     [setTimers],
   );

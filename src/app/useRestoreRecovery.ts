@@ -19,8 +19,10 @@ export function useRestoreRecovery(): boolean {
 
   useEffect(() => {
     let cancelled = false;
-    const recover = async () => {
-      let recovered = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+    const recover = async (): Promise<void> => {
+      attempts += 1;
       try {
         await recoverPendingBackupRestore(async (snapshot) => {
           await waitForRestoreWrites([
@@ -30,13 +32,21 @@ export function useRestoreRecovery(): boolean {
             Promise.resolve(setGame2048Store(snapshot.game2048)),
           ]);
         });
-        recovered = true;
-      } catch {}
-      if (!cancelled && recovered) setComplete(true);
+        if (!cancelled) setComplete(true);
+      } catch {
+        if (!cancelled && attempts < 3) {
+          retryTimer = setTimeout(() => {
+            recover().catch(() => undefined);
+          }, attempts * 1_000);
+        } else if (!cancelled) {
+          setComplete(true);
+        }
+      }
     };
-    recover();
+    recover().catch(() => undefined);
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [setAlarms, setGame2048Store, setSettings, setSleepSessions]);
 

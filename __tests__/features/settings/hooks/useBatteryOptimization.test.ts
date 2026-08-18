@@ -7,7 +7,7 @@ const mockRequest = jest.fn<Promise<boolean>, []>();
 jest.mock("../../../../src/core/platform/batteryOptimization", () => ({
   isIgnoringBatteryOptimizations: (...args: unknown[]) =>
     mockIsIgnoring(...(args as [])),
-  requestIgnoreBatteryOptimizations: (...args: unknown[]) =>
+  openBatteryOptimizationSettings: (...args: unknown[]) =>
     mockRequest(...(args as [])),
 }));
 
@@ -57,7 +57,7 @@ describe("useBatteryOptimization", () => {
     });
   });
 
-  it("requestExclusion calls the platform API and rechecks", async () => {
+  it("opens the battery optimization settings", async () => {
     mockIsIgnoring.mockResolvedValue(false);
     mockRequest.mockResolvedValue(true);
 
@@ -67,18 +67,13 @@ describe("useBatteryOptimization", () => {
       expect(result.current.ignored).toBe(false);
     });
 
-    // After requesting, mock returns true
-    mockIsIgnoring.mockResolvedValue(true);
-
     await act(async () => {
-      await result.current.requestExclusion();
+      await result.current.openSettings();
     });
 
     expect(mockRequest).toHaveBeenCalledTimes(1);
 
-    await waitFor(() => {
-      expect(result.current.ignored).toBe(true);
-    });
+    expect(result.current.ignored).toBe(false);
   });
 
   it("registers an AppState listener on mount", async () => {

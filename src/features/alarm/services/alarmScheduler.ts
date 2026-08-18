@@ -10,11 +10,11 @@ import type { Alarm } from "../../../models/Alarm";
 import type { CycleConfig } from "../../../models/CustomTime";
 import { cancelAlarmAudio, scheduleAlarmAudio } from "./ringtoneService";
 
-export type AlarmSchedulingFailure =
+type AlarmSchedulingFailure =
   | "notifications-disabled"
   | "exact-alarms-disabled";
 
-export class AlarmSchedulingError extends Error {
+class AlarmSchedulingError extends Error {
   readonly failure: AlarmSchedulingFailure;
 
   constructor(failure: AlarmSchedulingFailure) {

@@ -9,11 +9,15 @@ import type { TimerState } from "../../../models/Timer";
 import { NumpadInput } from "./NumpadInput";
 import { TimerCard } from "./TimerCard";
 
+function isTimerTriggerLimitError(error: unknown): boolean {
+  return error instanceof Error && error.name === "TimerTriggerLimitError";
+}
+
 export function CountdownTimer() {
   const { t } = useTranslation();
   const { timers, addTimer, deleteTimer, pauseTimer, resumeTimer, resetTimer } =
     useTimers();
-  const [showComplete, setShowComplete] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const prevTimersRef = useRef<TimerState[]>([]);
 
   useEffect(() => {
@@ -26,30 +30,75 @@ export function CountdownTimer() {
         !timer.isRunning &&
         timer.remainingMs <= 0
       ) {
-        setShowComplete(true);
+        setSnackbarMessage(t("timer.complete"));
       }
     }
     prevTimersRef.current = timers;
-  }, [timers]);
+  }, [t, timers]);
+
+  const showTimerError = useCallback(
+    (error: unknown) => {
+      setSnackbarMessage(
+        t(
+          isTimerTriggerLimitError(error)
+            ? "timer.notificationLimitReached"
+            : "timer.notificationFailed",
+        ),
+      );
+    },
+    [t],
+  );
 
   const handleStart = useCallback(
-    (durationMs: number) => {
-      addTimer(durationMs);
+    async (durationMs: number) => {
+      try {
+        await addTimer(durationMs);
+      } catch (error) {
+        showTimerError(error);
+      }
     },
-    [addTimer],
+    [addTimer, showTimerError],
+  );
+
+  const handlePause = useCallback(
+    (id: string) => {
+      pauseTimer(id).catch(showTimerError);
+    },
+    [pauseTimer, showTimerError],
+  );
+
+  const handleResume = useCallback(
+    (id: string) => {
+      resumeTimer(id).catch(showTimerError);
+    },
+    [resumeTimer, showTimerError],
+  );
+
+  const handleReset = useCallback(
+    (id: string) => {
+      resetTimer(id).catch(showTimerError);
+    },
+    [resetTimer, showTimerError],
+  );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      deleteTimer(id).catch(showTimerError);
+    },
+    [deleteTimer, showTimerError],
   );
 
   const renderItem = useCallback(
     ({ item }: { item: TimerState }) => (
       <TimerCard
         timer={item}
-        onPause={pauseTimer}
-        onResume={resumeTimer}
-        onReset={resetTimer}
-        onDelete={deleteTimer}
+        onPause={handlePause}
+        onResume={handleResume}
+        onReset={handleReset}
+        onDelete={handleDelete}
       />
     ),
-    [pauseTimer, resumeTimer, resetTimer, deleteTimer],
+    [handlePause, handleResume, handleReset, handleDelete],
   );
 
   const keyExtractor = useCallback((item: TimerState) => item.id, []);
@@ -74,11 +123,11 @@ export function CountdownTimer() {
       )}
       <NumpadInput onStart={handleStart} />
       <Snackbar
-        visible={showComplete}
-        onDismiss={() => setShowComplete(false)}
+        visible={snackbarMessage !== null}
+        onDismiss={() => setSnackbarMessage(null)}
         duration={3000}
       >
-        {t("timer.complete")}
+        {snackbarMessage}
       </Snackbar>
     </View>
   );

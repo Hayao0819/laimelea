@@ -208,7 +208,9 @@
     "addTimer": "Add Timer",
     "noTimers": "No timers",
     "delete": "Delete",
-    "presetMin": "{{min}} min"
+    "presetMin": "{{min}} min",
+    "notificationFailed": "Could not update the timer notification",
+    "notificationLimitReached": "You can run up to 50 scheduled timers on this device"
   },
   "settings": {
     "title": "Settings",
@@ -264,6 +266,16 @@
     "visibleCalendars": "Visible Calendars",
     "noCalendars": "No calendars available",
     "backup": "Backup",
+    "cloudBackup": "Cloud backup",
+    "backupReady": "Cloud backup is ready",
+    "backupRequiresSignIn": "Sign in to back up or restore your data",
+    "backupUnavailable": "Cloud backup is unavailable on this device",
+    "backupSignIn": "Sign in for cloud backup",
+    "backupSignInFailed": "Could not sign in for cloud backup",
+    "localSnapshot": "On-device snapshot",
+    "localSnapshotDescription": "Stored only on this device and removed with app data. It is not a cloud backup.",
+    "saveLocalSnapshot": "Save on this device",
+    "restoreLocalSnapshot": "Restore device snapshot",
     "backupNow": "Backup Now",
     "restore": "Restore",
     "lastBackup": "Last Backup",
@@ -321,7 +333,7 @@
     "batteryOptimizationChecking": "Checking...",
     "batteryOptimizationDisabled": "Excluded from optimization",
     "batteryOptimizationEnabled": "Not excluded — alarms may not fire reliably",
-    "batteryOptimizationRequest": "Exclude"
+    "batteryOptimizationRequest": "Open settings"
   },
   "game2048": {
     "title": "2048",
@@ -361,9 +373,9 @@
     "useNow": "Use Current Time",
     "baseTimeDescription": "Real-world time corresponding to Custom Day 0, 00:00:00",
     "preview": "Current custom time",
-    "googleAccount": "Google Account",
-    "googleAccountDescription": "Sign in for backup. You can also set this up later in Settings.",
-    "signInWithGoogle": "Sign in with Google",
+    "backupAccount": "Cloud backup",
+    "backupAccountDescription": "Sign in to store backups in your account. You can also set this up later in Settings.",
+    "signIn": "Sign in",
     "offlineNote": "Sign in with Google is available when online"
   },
   "common": {

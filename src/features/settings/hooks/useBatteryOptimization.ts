@@ -3,7 +3,7 @@ import { AppState } from "react-native";
 
 import {
   isIgnoringBatteryOptimizations,
-  requestIgnoreBatteryOptimizations,
+  openBatteryOptimizationSettings,
 } from "../../../core/platform/batteryOptimization";
 
 export type BatteryOptimizationStatus = boolean | null;
@@ -29,10 +29,9 @@ export function useBatteryOptimization() {
     return () => subscription.remove();
   }, [checkStatus]);
 
-  const requestExclusion = useCallback(async () => {
-    await requestIgnoreBatteryOptimizations();
-    await checkStatus();
-  }, [checkStatus]);
+  const openSettings = useCallback(async () => {
+    await openBatteryOptimizationSettings();
+  }, []);
 
-  return { ignored, requestExclusion };
+  return { ignored, openSettings };
 }

@@ -48,7 +48,7 @@ jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
   requestClockWidgetUpdate: jest.fn(),
 }));
 
-const mockRequestExclusion = jest.fn();
+const mockOpenSettings = jest.fn();
 let mockIgnored: boolean | null = false;
 
 jest.mock(
@@ -56,7 +56,7 @@ jest.mock(
   () => ({
     useBatteryOptimization: () => ({
       ignored: mockIgnored,
-      requestExclusion: mockRequestExclusion,
+      openSettings: mockOpenSettings,
     }),
   }),
 );
@@ -80,7 +80,7 @@ async function renderScreen(overrides: Partial<AppSettings> = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockIgnored = false;
-  mockRequestExclusion.mockResolvedValue(undefined);
+  mockOpenSettings.mockResolvedValue(undefined);
 });
 
 describe("GeneralSettingsScreen", () => {
@@ -180,7 +180,7 @@ describe("GeneralSettingsScreen - battery optimization", () => {
     expect(getByTestId("battery-optimization-request-button")).toBeTruthy();
   });
 
-  it("calls requestExclusion on button press", async () => {
+  it("opens battery optimization settings on button press", async () => {
     mockIgnored = false;
 
     const { getByTestId } = await renderScreen();
@@ -191,6 +191,6 @@ describe("GeneralSettingsScreen - battery optimization", () => {
       fireEvent.press(button);
     });
 
-    expect(mockRequestExclusion).toHaveBeenCalledTimes(1);
+    expect(mockOpenSettings).toHaveBeenCalledTimes(1);
   });
 });

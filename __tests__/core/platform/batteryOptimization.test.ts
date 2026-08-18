@@ -2,7 +2,7 @@ import { NativeModules } from "react-native";
 
 import {
   isIgnoringBatteryOptimizations,
-  requestIgnoreBatteryOptimizations,
+  openBatteryOptimizationSettings,
 } from "../../../src/core/platform/batteryOptimization";
 
 describe("batteryOptimization", () => {
@@ -13,7 +13,7 @@ describe("batteryOptimization", () => {
     jest.clearAllMocks();
     NativeModules.BatteryOptimizationModule = {
       isIgnoringBatteryOptimizations: mockIsIgnoring,
-      requestIgnoreBatteryOptimizations: mockRequest,
+      openBatteryOptimizationSettings: mockRequest,
     };
   });
 
@@ -44,24 +44,24 @@ describe("batteryOptimization", () => {
     });
   });
 
-  describe("requestIgnoreBatteryOptimizations", () => {
+  describe("openBatteryOptimizationSettings", () => {
     it("returns true when native module resolves true", async () => {
       mockRequest.mockResolvedValue(true);
-      const result = await requestIgnoreBatteryOptimizations();
+      const result = await openBatteryOptimizationSettings();
       expect(result).toBe(true);
       expect(mockRequest).toHaveBeenCalledTimes(1);
     });
 
     it("returns false when native module throws", async () => {
       mockRequest.mockRejectedValue(new Error("native error"));
-      const result = await requestIgnoreBatteryOptimizations();
+      const result = await openBatteryOptimizationSettings();
       expect(result).toBe(false);
     });
 
-    it("returns true when native module is undefined", async () => {
+    it("returns false when native module is undefined", async () => {
       NativeModules.BatteryOptimizationModule = undefined;
-      const result = await requestIgnoreBatteryOptimizations();
-      expect(result).toBe(true);
+      const result = await openBatteryOptimizationSettings();
+      expect(result).toBe(false);
     });
   });
 });

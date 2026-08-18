@@ -10,9 +10,9 @@ const resources = {
   en: { translation: en },
 };
 
-export const SUPPORTED_LANGUAGES = Object.keys(resources);
+const SUPPORTED_LANGUAGES = Object.keys(resources);
 
-export function detectSystemLanguage(): string {
+function detectSystemLanguage(): string {
   const locales = RNLocalize.getLocales();
   const bestMatch = locales.find((locale) =>
     SUPPORTED_LANGUAGES.includes(locale.languageCode),

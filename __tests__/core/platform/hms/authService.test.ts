@@ -1,8 +1,15 @@
-import { HMS_AUTH_CONFIG } from "../../../../src/core/platform/hms/authConfig";
+import {
+  HMS_AUTH_CONFIG,
+  HMS_REDIRECT_SCHEME,
+} from "../../../../src/core/platform/hms/authConfig";
 import { createHmsAuthService } from "../../../../src/core/platform/hms/authService";
 import { SECURE_STORAGE_SERVICES } from "../../../../src/core/storage/keys";
 
 const mockStore: Record<string, string> = {};
+
+jest.mock("react-native-config", () => ({
+  HUAWEI_OAUTH_APP_ID: "huawei-client-id",
+}));
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -63,6 +70,11 @@ describe("createHmsAuthService", () => {
   });
 
   describe("signIn", () => {
+    it("uses the app callback scheme", () => {
+      expect(HMS_AUTH_CONFIG.redirectUrl).toBe(
+        `${HMS_REDIRECT_SCHEME}://oauth/callback`,
+      );
+    });
     it("should call authorize with HMS_AUTH_CONFIG", async () => {
       mockAuthorize.mockResolvedValue({
         accessToken: "at",

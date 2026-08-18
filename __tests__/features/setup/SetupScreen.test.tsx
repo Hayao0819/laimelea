@@ -62,7 +62,7 @@ const safeAreaMetrics = {
 
 function createMockServices(): PlatformServices {
   return {
-    type: "aosp",
+    type: "gms",
     auth: {
       isAvailable: jest.fn().mockResolvedValue(true),
       signIn: mockSignIn,
@@ -89,8 +89,11 @@ function createMockServices(): PlatformServices {
   };
 }
 
-function renderWithProviders(store = createStore()) {
-  mockCreatePlatformServices.mockReturnValue(createMockServices());
+async function renderWithProviders(
+  store = createStore(),
+  services = createMockServices(),
+) {
+  mockCreatePlatformServices.mockReturnValue(services);
 
   const utils = render(
     <SafeAreaProvider initialMetrics={safeAreaMetrics}>
@@ -101,6 +104,10 @@ function renderWithProviders(store = createStore()) {
       </JotaiProvider>
     </SafeAreaProvider>,
   );
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
   return { ...utils, store };
 }
 
@@ -160,7 +167,7 @@ describe("SetupScreen", () => {
 
     const settings = store.get(settingsAtom) as AppSettings;
     expect(settings.setupComplete).toBe(true);
-    expect(settings.cycleConfig.cycleLengthMinutes).toBe(1560); // 26h default
+    expect(settings.cycleConfig.cycleLengthMinutes).toBe(1560);
     expect(settings.cycleConfig.baseTimeMs).toBeGreaterThan(0);
   });
 
@@ -256,7 +263,6 @@ describe("SetupScreen", () => {
       });
 
       expect(queryByTestId(/^signed-in-account-/)).toBeNull();
-      // Sign-in button should still be visible after cancellation
       expect(getByTestId("google-sign-in-button")).toBeTruthy();
     });
 
@@ -287,7 +293,7 @@ describe("SetupScreen", () => {
       const { queryByTestId, queryByText } = await renderWithProviders();
 
       expect(queryByTestId("google-sign-in-button")).toBeNull();
-      expect(queryByText("setup.googleAccount")).toBeNull();
+      expect(queryByText("setup.backupAccount")).toBeNull();
     });
 
     it("should show Google account section when online", async () => {
@@ -299,7 +305,46 @@ describe("SetupScreen", () => {
       const { getByTestId, getByText } = await renderWithProviders();
 
       expect(getByTestId("google-sign-in-button")).toBeTruthy();
-      expect(getByText("setup.googleAccount")).toBeTruthy();
+      expect(getByText("setup.backupAccount")).toBeTruthy();
+    });
+
+    it("does not offer cloud sign-in on AOSP", async () => {
+      const services = createMockServices();
+      services.type = "aosp";
+
+      const { queryByTestId } = await renderWithProviders(
+        createStore(),
+        services,
+      );
+
+      expect(queryByTestId("google-sign-in-button")).toBeNull();
+      expect(services.auth.isAvailable).not.toHaveBeenCalled();
+    });
+
+    it("does not offer sign-in when platform auth is unavailable", async () => {
+      const services = createMockServices();
+      (services.auth.isAvailable as jest.Mock).mockResolvedValue(false);
+
+      const { queryByTestId } = await renderWithProviders(
+        createStore(),
+        services,
+      );
+
+      expect(queryByTestId("google-sign-in-button")).toBeNull();
+    });
+
+    it("does not offer sign-in when the availability check fails", async () => {
+      const services = createMockServices();
+      (services.auth.isAvailable as jest.Mock).mockRejectedValue(
+        new Error("service check failed"),
+      );
+
+      const { queryByTestId } = await renderWithProviders(
+        createStore(),
+        services,
+      );
+
+      expect(queryByTestId("google-sign-in-button")).toBeNull();
     });
   });
 });

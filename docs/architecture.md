@@ -46,7 +46,6 @@ dependencies:
   @date-fns/tz                        1.4.1
   @notifee/react-native               9.1.8
   @react-native-async-storage         3.0.1
-  @react-native-community/slider      5.1.2
   @react-native-google-signin         16.1.1
   @react-navigation/bottom-tabs       7.14.0
   @react-navigation/native            7.1.28
@@ -76,7 +75,6 @@ devDependencies:
   typescript                          5.9.3
   jest                                29.7.0
   @testing-library/react-native       13.3.3
-  msw                                 2.12.10
 ```
 
 ---
@@ -87,7 +85,7 @@ devDependencies:
 | ----- | ------------------------------ | -------- | --------------------------------------------------------------------- |
 | 1     | プロジェクトスキャフォールド   | **完了** | RN 0.84, pnpm, dir構造, theme, Providers, i18n, models, atoms         |
 | 2     | カスタム時間エンジン           | **完了** | conversions.ts + formatting.ts + 32テスト全パス                       |
-| -     | ライブラリバージョン監査       | **完了** | reanimated v4, slider v5, google-signin v16, eslint v9, prettier v3等 |
+| -     | ライブラリバージョン監査       | **完了** | reanimated v4, google-signin v16, eslint v9, prettier v3等            |
 | 3     | ストレージ・状態管理           | **完了** | Jotai永続化, SetupScreen, settingsAtom                                |
 | 4     | ナビゲーションシェル           | **完了** | Phase 1で実装済み（Bottom Tabs + Stack）                              |
 | 5     | 時計機能                       | **完了** | AnalogClock(SVG), DigitalClock, TimeToggle, useCurrentTime, 51テスト  |
@@ -728,7 +726,6 @@ react-native-paper v5の`List.Section`、`List.Item`、`Switch`、`RadioButton`�
 | 各設定項目       | `List.Item`                                                          |
 | ON/OFF切替       | `Switch` (List.Itemのright prop)                                     |
 | 2〜3択選択       | `SegmentedButtons`                                                   |
-| スライダー       | react-native-paperには無いため`@react-native-community/slider`を使用 |
 | タイムゾーン選択 | `BottomSheet` + `Searchbar` + `List`                                 |
 | 数値入力         | `TextInput` (mode="outlined", keyboardType="numeric")                |
 | Googleアカウント | `List.Item` + `Button`                                               |

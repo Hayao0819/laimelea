@@ -7,7 +7,7 @@ function systemTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
-export function resolveTimeZone(timeZone: string): string {
+function resolveTimeZone(timeZone: string): string {
   if (timeZone === "auto") return systemTimeZone();
 
   try {
@@ -37,7 +37,7 @@ function standardOffsetMinutes(timeZone: string, timestampMs: number): number {
   return Math.min(january, july);
 }
 
-export function getDisplayDate(
+function getDisplayDate(
   timestampMs: number,
   settings: Pick<AppSettings, "timezone" | "dstHandling">,
 ): TZDate {

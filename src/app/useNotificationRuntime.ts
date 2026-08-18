@@ -49,7 +49,7 @@ export function useNotificationRuntime(): void {
         timeoutId = null;
       }, 5000);
     };
-    checkInitialNotification();
+    checkInitialNotification().catch(() => undefined);
     return () => {
       if (intervalId) clearInterval(intervalId);
       if (timeoutId) clearTimeout(timeoutId);

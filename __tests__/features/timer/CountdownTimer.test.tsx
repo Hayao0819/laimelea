@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 
@@ -157,10 +157,47 @@ describe("CountdownTimer", () => {
   it("should call addTimer when NumpadInput onStart is triggered", async () => {
     const { getByTestId } = await renderWithProviders(<CountdownTimer />);
 
-    await fireEvent.press(getByTestId("numpad-start"));
+    await act(async () => {
+      fireEvent.press(getByTestId("numpad-start"));
+      await Promise.resolve();
+    });
 
     expect(mockAddTimer).toHaveBeenCalledWith(60000);
     expect(mockAddTimer).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows an error when a timer notification cannot be scheduled", async () => {
+    mockAddTimer.mockRejectedValueOnce(new Error("Schedule failed"));
+    const { getByTestId, getByText } = await renderWithProviders(
+      <CountdownTimer />,
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId("numpad-start"));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(getByText("timer.notificationFailed")).toBeTruthy();
+    });
+  });
+
+  it("shows the timer limit error when Android has no trigger capacity", async () => {
+    const error = new Error("Timer limit");
+    error.name = "TimerTriggerLimitError";
+    mockAddTimer.mockRejectedValueOnce(error);
+    const { getByTestId, getByText } = await renderWithProviders(
+      <CountdownTimer />,
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId("numpad-start"));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(getByText("timer.notificationLimitReached")).toBeTruthy();
+    });
   });
 
   it("should show completion snackbar when timer completes", async () => {

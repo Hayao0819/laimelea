@@ -17,13 +17,12 @@ metro_running() {
     | grep -q '^packager-status:running$'
 }
 
-prepare_connected_devices() {
+configure_connected_devices() {
   local serial
   local state
 
   while read -r serial state; do
     if [[ "$state" == "device" ]]; then
-      adb -s "$serial" reverse tcp:8081 tcp:8081
       adb -s "$serial" shell settings put secure immersive_mode_confirmations confirmed
     fi
   done < <(adb devices)
@@ -74,7 +73,7 @@ if ! metro_running; then
   fi
 fi
 
-prepare_connected_devices
+configure_connected_devices
 
 cd "$PROJECT_ROOT"
 pnpm exec detox test --configuration "$CONFIGURATION" "$@"

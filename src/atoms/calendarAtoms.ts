@@ -53,7 +53,7 @@ const calendarLastSyncOrLoadingAtom = unwrap(
   () => CALENDAR_LOADING as never,
 );
 
-export const calendarCacheHydratedAtom = atom<boolean>(
+const calendarCacheHydratedAtom = atom<boolean>(
   (get) =>
     get(calendarEventsOrLoadingAtom) !== (CALENDAR_LOADING as never) &&
     get(calendarLastSyncOrLoadingAtom) !== (CALENDAR_LOADING as never),

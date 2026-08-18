@@ -8,11 +8,11 @@ import {
   createTimerChannel,
   ensureNotificationPermissions,
 } from "../../src/core/notifications/notifeeSetup";
+import { detectPlatform } from "../../src/core/platform/detection";
 import { rescheduleAllEnabledAlarms } from "../../src/features/alarm/services/alarmRescheduler";
 import type { Alarm } from "../../src/models/Alarm";
 import { DEFAULT_SETTINGS } from "../../src/models/Settings";
 
-// Create simple synchronous atoms to avoid suspension from atomWithStorage
 const mockAlarmsAtom = atom<Alarm[]>([]);
 const mockSettingsAtom = atom(DEFAULT_SETTINGS);
 
@@ -139,7 +139,6 @@ jest.mock("@react-navigation/native", () => ({
   }) => children,
 }));
 
-// Import after mocks
 const {
   setupForegroundHandler,
 } = require("../../src/core/notifications/foregroundHandler");
@@ -147,10 +146,8 @@ const {
   recoverPendingBackupRestore,
 } = require("../../src/features/settings/services/restoreTransaction");
 
-// Import Providers after all mocks are set up
 const { Providers } = require("../../src/app/Providers");
 
-// Track AppState.addEventListener calls
 let appStateCallback: ((state: AppStateStatus) => void) | null = null;
 const mockRemove = jest.fn();
 
@@ -212,7 +209,6 @@ describe("Providers", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     appStateCallback = null;
-    // Restore mock return values after clearAllMocks
     mockIsReady.mockReturnValue(true);
     mockGetCurrentRoute.mockReturnValue(undefined);
     mockCanGoBack.mockReturnValue(false);
@@ -228,7 +224,6 @@ describe("Providers", () => {
     (setupForegroundHandler as jest.Mock).mockReturnValue(
       mockForegroundUnsubscribe,
     );
-    // Restore spy implementation after clearAllMocks
     (AppState.addEventListener as jest.Mock).mockImplementation(
       (_type: string, listener: (state: AppStateStatus) => void) => {
         appStateCallback ??= listener;
@@ -302,15 +297,77 @@ describe("Providers", () => {
       expect(mockRemove).toHaveBeenCalledTimes(1);
     });
 
-    it("does not synchronize alarms after restore recovery fails", async () => {
+    it("synchronizes alarms when restore recovery initially fails", async () => {
+      jest.useFakeTimers();
       (recoverPendingBackupRestore as jest.Mock).mockRejectedValueOnce(
         new Error("recovery failed"),
       );
 
-      await renderProviders(createStore(), [makeAlarm()]);
+      try {
+        await renderProviders(createStore(), [makeAlarm()]);
+        expect(rescheduleAllEnabledAlarms).not.toHaveBeenCalled();
 
-      expect(rescheduleAllEnabledAlarms).not.toHaveBeenCalled();
-      expect(AppState.addEventListener).not.toHaveBeenCalled();
+        await act(async () => {
+          jest.advanceTimersByTime(1_000);
+        });
+        expect(rescheduleAllEnabledAlarms).toHaveBeenCalledTimes(1);
+        expect(AppState.addEventListener).toHaveBeenCalledWith(
+          "change",
+          expect.any(Function),
+        );
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it("retries restore recovery three times", async () => {
+      jest.useFakeTimers();
+      (recoverPendingBackupRestore as jest.Mock).mockRejectedValue(
+        new Error("recovery failed"),
+      );
+
+      try {
+        await renderProviders();
+        expect(recoverPendingBackupRestore).toHaveBeenCalledTimes(1);
+
+        await act(async () => {
+          jest.advanceTimersByTime(1_000);
+        });
+        expect(recoverPendingBackupRestore).toHaveBeenCalledTimes(2);
+
+        await act(async () => {
+          jest.advanceTimersByTime(2_000);
+        });
+        expect(recoverPendingBackupRestore).toHaveBeenCalledTimes(3);
+
+        await act(async () => {
+          jest.advanceTimersByTime(10_000);
+        });
+        expect(recoverPendingBackupRestore).toHaveBeenCalledTimes(3);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it("cancels a pending restore retry after unmount", async () => {
+      jest.useFakeTimers();
+      (recoverPendingBackupRestore as jest.Mock).mockRejectedValue(
+        new Error("recovery failed"),
+      );
+
+      try {
+        const { unmount } = await renderProviders();
+        expect(recoverPendingBackupRestore).toHaveBeenCalledTimes(1);
+
+        unmount();
+        await act(async () => {
+          jest.advanceTimersByTime(10_000);
+        });
+
+        expect(recoverPendingBackupRestore).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -330,6 +387,33 @@ describe("Providers", () => {
       await waitFor(() => {
         expect(ensureNotificationPermissions).toHaveBeenCalledTimes(1);
       });
+    });
+
+    it("continues initialization when notification setup fails", async () => {
+      (createAlarmChannel as jest.Mock).mockRejectedValueOnce(
+        new Error("channel failed"),
+      );
+      (ensureNotificationPermissions as jest.Mock).mockRejectedValueOnce(
+        new Error("permission failed"),
+      );
+
+      await expect(renderProviders()).resolves.toBeDefined();
+    });
+
+    it("detects the platform without waiting for notification setup", async () => {
+      (createAlarmChannel as jest.Mock).mockImplementation(
+        () => new Promise(() => undefined),
+      );
+      (createTimerChannel as jest.Mock).mockImplementation(
+        () => new Promise(() => undefined),
+      );
+      (ensureNotificationPermissions as jest.Mock).mockImplementation(
+        () => new Promise(() => undefined),
+      );
+
+      await renderProviders();
+
+      expect(detectPlatform).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -551,6 +635,14 @@ describe("Providers", () => {
   });
 
   describe("initial notification", () => {
+    it("continues when reading the initial notification fails", async () => {
+      mockGetInitialNotification.mockRejectedValueOnce(
+        new Error("initial notification failed"),
+      );
+
+      await expect(renderProviders()).resolves.toBeDefined();
+    });
+
     it("does nothing when there is no initial notification", async () => {
       mockGetInitialNotification.mockResolvedValue(null);
       await renderProviders();

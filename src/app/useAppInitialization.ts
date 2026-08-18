@@ -13,9 +13,13 @@ export function useAppInitialization(): void {
   const setPlatformType = useSetAtom(platformTypeAtom);
 
   useEffect(() => {
-    createAlarmChannel();
-    createTimerChannel();
-    ensureNotificationPermissions();
-    detectPlatform().then(setPlatformType);
+    Promise.allSettled([
+      createAlarmChannel(),
+      createTimerChannel(),
+      ensureNotificationPermissions(),
+    ]).catch(() => undefined);
+    detectPlatform()
+      .then(setPlatformType)
+      .catch(() => undefined);
   }, [setPlatformType]);
 }

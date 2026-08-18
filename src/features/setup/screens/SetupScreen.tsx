@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { useAtomValue, useSetAtom } from "jotai";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Icon, Surface, Text, TextInput } from "react-native-paper";
@@ -31,6 +31,7 @@ export function SetupScreen() {
   const [baseTimeMs, setBaseTimeMs] = useState<number | null>(null);
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const [canSignIn, setCanSignIn] = useState(false);
   const insets = useSafeAreaInsets();
   const { isConnected } = useNetworkStatus();
 
@@ -45,17 +46,34 @@ export function SetupScreen() {
     return `${formatCustomDay(custom)}  ${formatCustomTime(custom)}`;
   }, [cycleLengthMinutes, baseTimeMs, isValid]);
 
+  useEffect(() => {
+    let active = true;
+    setCanSignIn(false);
+    const checkSignInAvailability = async (): Promise<void> => {
+      if (services.type === "aosp") return;
+      try {
+        const available = await services.auth.isAvailable();
+        if (active) setCanSignIn(available);
+      } catch {
+        if (active) setCanSignIn(false);
+      }
+    };
+    checkSignInAvailability().catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [services]);
+
   const handleUseNow = useCallback(() => {
     setBaseTimeMs(Date.now());
   }, []);
 
-  const handleGoogleSignIn = useCallback(async () => {
+  const handleSignIn = useCallback(async () => {
     setSigningIn(true);
     try {
       const result = await services.auth.signIn();
       setSignedInEmail(result.email);
     } catch {
-      // User cancelled or auth failed - sign in is optional
     } finally {
       setSigningIn(false);
     }
@@ -160,13 +178,13 @@ export function SetupScreen() {
         </Surface>
       )}
 
-      {isConnected !== false && (
+      {isConnected !== false && canSignIn && (
         <Surface style={styles.card} elevation={1}>
           <Text variant="titleMedium" accessibilityRole="header">
-            {t("setup.googleAccount")}
+            {t("setup.backupAccount")}
           </Text>
           <Text variant="bodySmall" style={styles.hint}>
-            {t("setup.googleAccountDescription")}
+            {t("setup.backupAccountDescription")}
           </Text>
           {signedInEmail ? (
             <View
@@ -181,15 +199,14 @@ export function SetupScreen() {
           ) : (
             <Button
               mode="outlined"
-              onPress={handleGoogleSignIn}
+              onPress={handleSignIn}
               loading={signingIn}
               disabled={signingIn}
               style={styles.button}
               testID="google-sign-in-button"
-              accessibilityLabel={t("setup.signInWithGoogle")}
-              icon="google"
+              accessibilityLabel={t("setup.signIn")}
             >
-              {t("setup.signInWithGoogle")}
+              {t("setup.signIn")}
             </Button>
           )}
         </Surface>

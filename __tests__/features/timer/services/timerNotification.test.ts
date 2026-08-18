@@ -4,10 +4,12 @@ import { Platform } from "react-native";
 
 import { STORAGE_KEYS } from "../../../../src/core/storage/keys";
 import {
+  ANDROID_TIMER_TRIGGER_LIMIT,
   cancelTimerTrigger,
   completeTimerFromNotification,
   scheduleTimerTrigger,
   showTimerCompleteNotification,
+  TimerTriggerLimitError,
 } from "../../../../src/features/timer/services/timerNotification";
 
 jest.mock("@notifee/react-native", () => ({
@@ -17,6 +19,7 @@ jest.mock("@notifee/react-native", () => ({
     createChannel: jest.fn().mockResolvedValue("timer"),
     createTriggerNotification: jest.fn().mockResolvedValue("trigger-id"),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
+    getTriggerNotificationIds: jest.fn().mockResolvedValue([]),
   },
   AndroidImportance: { DEFAULT: 3 },
   TriggerType: { TIMESTAMP: 0 },
@@ -38,6 +41,7 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 describe("showTimerCompleteNotification", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue([]);
     Object.defineProperty(Platform, "OS", {
       configurable: true,
       value: "android",
@@ -107,6 +111,7 @@ describe("showTimerCompleteNotification", () => {
 describe("scheduleTimerTrigger", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue([]);
     Object.defineProperty(Platform, "OS", {
       configurable: true,
       value: "android",
@@ -135,8 +140,8 @@ describe("scheduleTimerTrigger", () => {
         body: "Timer complete",
       }),
       expect.objectContaining({
-        type: 0, // TriggerType.TIMESTAMP
-        timestamp: 11000, // 1000 + 10000 - 0
+        type: 0,
+        timestamp: 11000,
         alarmManager: { allowWhileIdle: true },
       }),
     );
@@ -154,7 +159,7 @@ describe("scheduleTimerTrigger", () => {
     expect(notifee.createTriggerNotification).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        timestamp: 12000, // 5000 + 10000 - 3000
+        timestamp: 12000,
       }),
     );
   });
@@ -228,25 +233,99 @@ describe("scheduleTimerTrigger", () => {
     );
   });
 
-  it("should catch and warn on scheduling failure", async () => {
+  it("rejects when scheduling fails", async () => {
     (notifee.createTriggerNotification as jest.Mock).mockRejectedValueOnce(
       new Error("Schedule failed"),
     );
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation();
+
+    await expect(
+      scheduleTimerTrigger({
+        id: "timer-6",
+        label: "Failing",
+        durationMs: 10000,
+        startedAt: 1000,
+        pausedElapsedMs: 0,
+      }),
+    ).rejects.toThrow("Schedule failed");
+  });
+
+  it("rejects before creating a new Android trigger at the system limit", async () => {
+    (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue(
+      Array.from(
+        { length: ANDROID_TIMER_TRIGGER_LIMIT },
+        (_, index) => `trigger-${index}`,
+      ),
+    );
+
+    await expect(
+      scheduleTimerTrigger({
+        id: "timer-over-limit",
+        label: "Over limit",
+        durationMs: 10000,
+        startedAt: 1000,
+        pausedElapsedMs: 0,
+      }),
+    ).rejects.toBeInstanceOf(TimerTriggerLimitError);
+    expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+  });
+
+  it("updates an existing trigger even when Android is at its limit", async () => {
+    (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue(
+      Array.from({ length: ANDROID_TIMER_TRIGGER_LIMIT }, (_, index) =>
+        index === 0 ? "timer-timer-6" : `trigger-${index}`,
+      ),
+    );
 
     await scheduleTimerTrigger({
       id: "timer-6",
-      label: "Failing",
+      label: "Existing",
       durationMs: 10000,
       startedAt: 1000,
       pausedElapsedMs: 0,
     });
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      "Failed to schedule timer trigger:",
-      expect.any(Error),
+    expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("serializes the limit check across concurrent timer registrations", async () => {
+    const ids = Array.from(
+      { length: ANDROID_TIMER_TRIGGER_LIMIT - 1 },
+      (_, index) => `trigger-${index}`,
     );
-    warnSpy.mockRestore();
+    (notifee.getTriggerNotificationIds as jest.Mock)
+      .mockResolvedValueOnce(ids)
+      .mockResolvedValueOnce([...ids, "timer-first"]);
+    let finishFirst: (() => void) | undefined;
+    (notifee.createTriggerNotification as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          finishFirst = () => resolve("timer-first");
+        }),
+    );
+
+    const first = scheduleTimerTrigger({
+      id: "first",
+      label: "First",
+      durationMs: 10000,
+      startedAt: 1000,
+      pausedElapsedMs: 0,
+    });
+    const second = scheduleTimerTrigger({
+      id: "second",
+      label: "Second",
+      durationMs: 10000,
+      startedAt: 1000,
+      pausedElapsedMs: 0,
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(notifee.getTriggerNotificationIds).toHaveBeenCalledTimes(1);
+
+    finishFirst?.();
+    await first;
+    await expect(second).rejects.toBeInstanceOf(TimerTriggerLimitError);
+    expect(notifee.createTriggerNotification).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -362,6 +441,7 @@ describe("completeTimerFromNotification", () => {
 describe("cancelTimerTrigger", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue([]);
   });
 
   it("should cancel trigger notification with prefixed id", async () => {
@@ -372,19 +452,14 @@ describe("cancelTimerTrigger", () => {
     );
   });
 
-  it("should catch and warn on cancellation failure", async () => {
+  it("rejects when cancellation fails", async () => {
     (notifee.cancelTriggerNotification as jest.Mock).mockRejectedValueOnce(
       new Error("Cancel failed"),
     );
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation();
 
-    await cancelTimerTrigger("timer-2");
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      "Failed to cancel timer trigger:",
-      expect.any(Error),
+    await expect(cancelTimerTrigger("timer-2")).rejects.toThrow(
+      "Cancel failed",
     );
-    warnSpy.mockRestore();
   });
 
   it("waits for an in-flight schedule before cancelling the same timer", async () => {
@@ -406,6 +481,8 @@ describe("cancelTimerTrigger", () => {
     const cancel = cancelTimerTrigger("racing-timer");
 
     expect(notifee.cancelTriggerNotification).not.toHaveBeenCalled();
+    await Promise.resolve();
+    await Promise.resolve();
     finishSchedule?.();
     await Promise.all([schedule, cancel]);
 

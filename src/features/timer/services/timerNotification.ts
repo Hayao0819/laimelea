@@ -11,7 +11,18 @@ import type { TimerState } from "../../../models/Timer";
 import { completeTimers } from "./timerState";
 
 let timerStateQueue: Promise<void> = Promise.resolve();
-const timerNotificationQueues = new Map<string, Promise<void>>();
+let timerNotificationQueue: Promise<void> = Promise.resolve();
+
+export const ANDROID_TIMER_TRIGGER_LIMIT = 50;
+
+export class TimerTriggerLimitError extends Error {
+  constructor() {
+    super(
+      "The maximum number of Android timer notifications is already scheduled.",
+    );
+    this.name = "TimerTriggerLimitError";
+  }
+}
 
 function enqueueTimerStateUpdate<T>(operation: () => Promise<T>): Promise<T> {
   const result = timerStateQueue.then(operation, operation);
@@ -23,21 +34,13 @@ function enqueueTimerStateUpdate<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 function enqueueTimerNotificationOperation<T>(
-  timerId: string,
   operation: () => Promise<T>,
 ): Promise<T> {
-  const previous = timerNotificationQueues.get(timerId);
-  const result = previous ? previous.then(operation, operation) : operation();
-  const settled = result.then(
+  const result = timerNotificationQueue.then(operation, operation);
+  timerNotificationQueue = result.then(
     () => undefined,
     () => undefined,
   );
-  timerNotificationQueues.set(timerId, settled);
-  settled.then(() => {
-    if (timerNotificationQueues.get(timerId) === settled) {
-      timerNotificationQueues.delete(timerId);
-    }
-  });
   return result;
 }
 
@@ -148,10 +151,21 @@ export async function scheduleTimerTrigger(timer: {
   startedAt: number;
   pausedElapsedMs: number;
 }): Promise<void> {
-  return enqueueTimerNotificationOperation(timer.id, async () => {
+  return enqueueTimerNotificationOperation(async () => {
     const completionTime =
       timer.startedAt + timer.durationMs - timer.pausedElapsedMs;
     if (completionTime <= Date.now()) return;
+
+    const notificationId = `timer-${timer.id}`;
+    if (Platform.OS === "android") {
+      const triggerIds = await notifee.getTriggerNotificationIds();
+      if (
+        !triggerIds.includes(notificationId) &&
+        triggerIds.length >= ANDROID_TIMER_TRIGGER_LIMIT
+      ) {
+        throw new TimerTriggerLimitError();
+      }
+    }
 
     const trigger: TimestampTrigger = {
       type: TriggerType.TIMESTAMP,
@@ -159,49 +173,41 @@ export async function scheduleTimerTrigger(timer: {
       alarmManager: { allowWhileIdle: true },
     };
 
-    try {
-      await notifee.createTriggerNotification(
-        {
-          id: `timer-${timer.id}`,
-          data: { timerId: timer.id },
-          title: timer.label || "Timer",
-          body: "Timer complete",
-          ...(Platform.OS === "android"
-            ? {
-                android: {
-                  channelId: TIMER_CHANNEL_ID,
-                  sound: "default",
-                  vibrationPattern: [300, 500],
-                  autoCancel: true,
-                  pressAction: { id: "default" },
+    await notifee.createTriggerNotification(
+      {
+        id: notificationId,
+        data: { timerId: timer.id },
+        title: timer.label || "Timer",
+        body: "Timer complete",
+        ...(Platform.OS === "android"
+          ? {
+              android: {
+                channelId: TIMER_CHANNEL_ID,
+                sound: "default",
+                vibrationPattern: [300, 500],
+                autoCancel: true,
+                pressAction: { id: "default" },
+              },
+            }
+          : {
+              ios: {
+                sound: "default",
+                foregroundPresentationOptions: {
+                  badge: true,
+                  banner: true,
+                  list: true,
+                  sound: true,
                 },
-              }
-            : {
-                ios: {
-                  sound: "default",
-                  foregroundPresentationOptions: {
-                    badge: true,
-                    banner: true,
-                    list: true,
-                    sound: true,
-                  },
-                },
-              }),
-        },
-        trigger,
-      );
-    } catch (error) {
-      console.warn("Failed to schedule timer trigger:", error);
-    }
+              },
+            }),
+      },
+      trigger,
+    );
   });
 }
 
 export async function cancelTimerTrigger(timerId: string): Promise<void> {
-  return enqueueTimerNotificationOperation(timerId, async () => {
-    try {
-      await notifee.cancelTriggerNotification(`timer-${timerId}`);
-    } catch (error) {
-      console.warn("Failed to cancel timer trigger:", error);
-    }
+  return enqueueTimerNotificationOperation(async () => {
+    await notifee.cancelTriggerNotification(`timer-${timerId}`);
   });
 }

@@ -2,7 +2,6 @@ package com.hayao0819.laimelea.alarm
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import com.facebook.react.bridge.Promise
@@ -17,6 +16,11 @@ class BatteryOptimizationModule(reactContext: ReactApplicationContext) :
 
     companion object {
         const val NAME = "BatteryOptimizationModule"
+
+        internal fun settingsIntent(): Intent =
+            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
     }
 
     override fun getName(): String = NAME
@@ -33,24 +37,12 @@ class BatteryOptimizationModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun requestIgnoreBatteryOptimizations(promise: Promise) {
+    fun openBatteryOptimizationSettings(promise: Promise) {
         try {
-            val pm = reactApplicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-            val packageName = reactApplicationContext.packageName
-
-            if (pm.isIgnoringBatteryOptimizations(packageName)) {
-                promise.resolve(true)
-                return
-            }
-
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:$packageName")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            reactApplicationContext.startActivity(intent)
+            reactApplicationContext.startActivity(settingsIntent())
             promise.resolve(true)
         } catch (e: Exception) {
-            promise.reject("BATTERY_OPT_ERROR", "Failed to request battery optimization exemption", e)
+            promise.reject("BATTERY_OPT_ERROR", "Failed to open battery optimization settings", e)
         }
     }
 }
