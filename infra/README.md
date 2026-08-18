@@ -6,14 +6,14 @@
 
 ### Terraform管理範囲
 
-| 項目                         | 管理方法  | Terraformリソース           |
-| ---------------------------- | --------- | --------------------------- |
-| GCPプロジェクト作成          | Terraform | `google_project`            |
-| API有効化                    | Terraform | `google_project_service`    |
-| Terraformステートバケット    | Terraform | `google_storage_bucket`     |
-| OAuth同意画面                | 手動      | なし（Terraform API非対応） |
-| OAuth Client ID（Web）       | 手動      | なし（Terraform API非対応） |
-| OAuth Client ID（Android）   | 手動      | なし（Terraform API非対応） |
+| 項目                       | 管理方法  | Terraformリソース           |
+| -------------------------- | --------- | --------------------------- |
+| GCPプロジェクト作成        | Terraform | `google_project`            |
+| API有効化                  | Terraform | `google_project_service`    |
+| Terraformステートバケット  | Terraform | `google_storage_bucket`     |
+| OAuth同意画面              | 手動      | なし（Terraform API非対応） |
+| OAuth Client ID（Web）     | 手動      | なし（Terraform API非対応） |
+| OAuth Client ID（Android） | 手動      | なし（Terraform API非対応） |
 
 ## 前提条件
 
