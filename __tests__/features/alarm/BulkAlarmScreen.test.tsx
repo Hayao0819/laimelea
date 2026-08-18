@@ -370,4 +370,32 @@ describe("BulkAlarmScreen", () => {
     );
     alertSpy.mockRestore();
   });
+
+  it("keeps an alarm when its rollback cannot be confirmed", async () => {
+    const store = createStore();
+    (scheduleAlarm as jest.Mock)
+      .mockResolvedValueOnce("trigger-1")
+      .mockRejectedValueOnce(new Error("schedule failed"));
+    (cancelAlarm as jest.Mock)
+      .mockRejectedValueOnce(new Error("cancel failed"))
+      .mockResolvedValue(undefined);
+    const alertSpy = jest.spyOn(Alert, "alert");
+    await renderWithProviders(store, []);
+
+    const options =
+      mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    await act(async () => {
+      await options.headerRight().props.onPress();
+    });
+
+    expect(await store.get(alarmsAtom)).toEqual([
+      expect.objectContaining({ notifeeTriggerId: "trigger-1" }),
+    ]);
+    expect(mockGoBack).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      "alarm.bulkCreate",
+      "alarm.bulkCreateFailed",
+    );
+    alertSpy.mockRestore();
+  });
 });

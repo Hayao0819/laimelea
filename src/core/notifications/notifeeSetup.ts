@@ -7,8 +7,6 @@ import { NativeModules, Platform } from "react-native";
 
 const ALARM_CHANNEL_ID = "alarm";
 const TIMER_CHANNEL_ID = "timer";
-const ALARM_CHANNEL_GROUP_ID = "alarms";
-const ALARM_VIBRATION_PATTERN = [300, 500, 200, 500];
 
 export interface AlarmDeliveryStatus {
   notificationsEnabled: boolean;
@@ -40,28 +38,6 @@ export async function createAlarmChannel(): Promise<string> {
     importance: AndroidImportance.HIGH,
     sound: "default",
     vibration: true,
-    bypassDnd: true,
-  });
-}
-
-export async function createAlarmDeliveryChannel(
-  vibrationEnabled: boolean,
-): Promise<string> {
-  const channelId = `alarm-v2-${vibrationEnabled ? "vibrate" : "still"}`;
-
-  await notifee.createChannelGroup({
-    id: ALARM_CHANNEL_GROUP_ID,
-    name: "Alarms",
-  });
-
-  return notifee.createChannel({
-    id: channelId,
-    name: "Alarm",
-    groupId: ALARM_CHANNEL_GROUP_ID,
-    importance: AndroidImportance.HIGH,
-    sound: undefined,
-    vibration: vibrationEnabled,
-    vibrationPattern: vibrationEnabled ? ALARM_VIBRATION_PATTERN : undefined,
     bypassDnd: true,
   });
 }
@@ -117,4 +93,4 @@ export async function openFullScreenIntentPermissionSettings(): Promise<void> {
   }
 }
 
-export { ALARM_CHANNEL_ID, ALARM_VIBRATION_PATTERN, TIMER_CHANNEL_ID };
+export { ALARM_CHANNEL_ID, TIMER_CHANNEL_ID };

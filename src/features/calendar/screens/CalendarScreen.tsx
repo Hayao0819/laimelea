@@ -33,6 +33,7 @@ import { CALENDAR_SYNC_WINDOW_MS } from "../../../core/calendar/calendarSyncServ
 import { useCalendarSync } from "../../../hooks/useCalendarSync";
 import type { Alarm } from "../../../models/Alarm";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import { useAlarmMutations } from "../../alarm/hooks/useAlarmMutations";
 import {
   cancelAlarm,
   scheduleAlarm,
@@ -42,9 +43,9 @@ import { MonthView } from "../components/MonthView";
 import { WeekView } from "../components/WeekView";
 import { useCalendarView } from "../hooks/useCalendarView";
 import {
+  createLinkedAlarm,
   LinkedAlarmTransactionError,
   rescheduleLinkedAlarm,
-  scheduleNewLinkedAlarm,
 } from "../services/linkedAlarmTransaction";
 
 function formatNavigationTitle(
@@ -94,6 +95,7 @@ export function CalendarScreen() {
   const alarmsRef = useRef(alarms);
   alarmsRef.current = alarms;
   const setAlarms = useSetAtom(alarmsAtom);
+  const { createAlarm } = useAlarmMutations();
   const { error, sync, isStale } = useCalendarSync();
   const hasSynced = useAtomValue(calendarHasSyncedAtom);
   const allEvents = useAtomValue(resolvedCalendarEventsAtom);
@@ -271,6 +273,7 @@ export function CalendarScreen() {
           const scheduledAlarm = await rescheduleLinkedAlarm(
             alarm,
             targetTimestampMs,
+            settings.cycleConfig,
           );
           const updatedAlarm = {
             ...scheduledAlarm,
@@ -330,58 +333,33 @@ export function CalendarScreen() {
       synchronize,
       synchronize,
     );
-  }, [alarms, allEvents, hasSynced, rescheduleAttempt, setAlarms, t]);
+  }, [
+    alarms,
+    allEvents,
+    hasSynced,
+    rescheduleAttempt,
+    setAlarms,
+    settings.cycleConfig,
+    t,
+  ]);
 
   const handleCreateAlarm = useCallback(
     async (event: CalendarEvent) => {
-      const now = Date.now();
-      const offsetMs = -settings.defaultEventReminderMin * 60 * 1000;
-      const { alarmDefaults } = settings;
+      const alarm = createLinkedAlarm(event, settings);
 
-      const alarm: Alarm = {
-        id: `alarm-${now}-${Math.random().toString(36).slice(2, 8)}`,
-        label: event.title,
-        enabled: true,
-        targetTimestampMs: event.startTimestampMs + offsetMs,
-        setInTimeSystem: "24h",
-        repeat: null,
-        dismissalMethod: alarmDefaults.dismissalMethod,
-        gradualVolumeDurationSec: alarmDefaults.gradualVolumeDurationSec,
-        snoozeDurationMin: alarmDefaults.snoozeDurationMin,
-        snoozeMaxCount: alarmDefaults.snoozeMaxCount,
-        snoozeCount: 0,
-        autoSilenceMin: 10,
-        soundUri: null,
-        vibrationEnabled: alarmDefaults.vibrationEnabled,
-        notifeeTriggerId: null,
-        skipNextOccurrence: false,
-        linkedCalendarEventId: event.id,
-        linkedCalendarSourceEventId: event.sourceEventId,
-        linkedEventOffsetMs: offsetMs,
-        mathDifficulty: alarmDefaults.mathDifficulty,
-        lastFiredAt: null,
-        createdAt: now,
-        updatedAt: now,
-      };
+      if (alarm.targetTimestampMs <= Date.now()) {
+        setSnackbar(t("calendar.alarmTimePassed"));
+        return;
+      }
 
       try {
-        const scheduledAlarm = await scheduleNewLinkedAlarm(alarm);
-        setAlarms((prev) =>
-          Array.isArray(prev) ? [...prev, scheduledAlarm] : [scheduledAlarm],
-        );
+        await createAlarm(alarm);
         setSnackbar(t("calendar.alarmCreated", { title: event.title }));
-      } catch (scheduleError) {
-        setSnackbar(
-          t(
-            scheduleError instanceof LinkedAlarmTransactionError &&
-              scheduleError.reason === "past"
-              ? "calendar.alarmTimePassed"
-              : "calendar.alarmScheduleFailed",
-          ),
-        );
+      } catch {
+        setSnackbar(t("calendar.alarmScheduleFailed"));
       }
     },
-    [settings, setAlarms, t],
+    [createAlarm, settings, t],
   );
 
   const handleEventPress = useCallback(

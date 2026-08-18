@@ -3,9 +3,7 @@ import { NativeModules, Platform } from "react-native";
 
 import {
   ALARM_CHANNEL_ID,
-  ALARM_VIBRATION_PATTERN,
   createAlarmChannel,
-  createAlarmDeliveryChannel,
   createTimerChannel,
   ensureNotificationPermissions,
   getAlarmDeliveryStatus,
@@ -73,55 +71,6 @@ describe("notifeeSetup", () => {
     it("should return channel id", async () => {
       const result = await createAlarmChannel();
       expect(result).toBe("channel-id");
-    });
-  });
-
-  describe("createAlarmDeliveryChannel", () => {
-    it("creates a stable channel for the same vibration setting", async () => {
-      const firstId = await createAlarmDeliveryChannel(true);
-      const secondId = await createAlarmDeliveryChannel(true);
-
-      expect(firstId).toBe(secondId);
-      const [firstChannel] = (notifee.createChannel as jest.Mock).mock.calls;
-      expect(firstChannel[0].id).toMatch(/^alarm-v2-/);
-      expect(notifee.createChannelGroup).toHaveBeenCalledWith({
-        id: "alarms",
-        name: "Alarms",
-      });
-      expect(notifee.createChannel).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          id: firstChannel[0].id,
-          sound: undefined,
-          vibration: true,
-          vibrationPattern: ALARM_VIBRATION_PATTERN,
-        }),
-      );
-    });
-
-    it("uses only vibration-specific silent channels", async () => {
-      const firstVibratingId = await createAlarmDeliveryChannel(true);
-      const secondVibratingId = await createAlarmDeliveryChannel(true);
-      const noVibrationId = await createAlarmDeliveryChannel(false);
-
-      expect(firstVibratingId).toBe("channel-id");
-      expect(secondVibratingId).toBe("channel-id");
-      expect(noVibrationId).toBe("channel-id");
-      const channelIds = (notifee.createChannel as jest.Mock).mock.calls.map(
-        ([channel]) => channel.id,
-      );
-      expect(new Set(channelIds).size).toBe(2);
-      expect(notifee.createChannel).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({ sound: undefined, vibration: true }),
-      );
-      expect(notifee.createChannel).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({ sound: undefined, vibration: true }),
-      );
-      expect(notifee.createChannel).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({ sound: undefined, vibration: false }),
-      );
     });
   });
 

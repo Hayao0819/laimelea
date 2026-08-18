@@ -82,12 +82,36 @@ describe("bootRescheduleTask", () => {
 
     expect(AsyncStorage.getItem).toHaveBeenCalledWith("@laimelea/alarms");
     expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(
-      alarms,
+      alarms.map((alarm) => expect.objectContaining(alarm)),
       DEFAULT_SETTINGS.cycleConfig,
     );
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-      "@laimelea/alarms",
-      JSON.stringify(alarms),
+    const [storageKey, storedAlarms] = (AsyncStorage.setItem as jest.Mock).mock
+      .calls[0];
+    expect(storageKey).toBe("@laimelea/alarms");
+    expect(JSON.parse(storedAlarms)).toEqual(
+      alarms.map((alarm) => expect.objectContaining(alarm)),
+    );
+  });
+
+  it("fills missing nested settings before rescheduling", async () => {
+    const alarms = [makeAlarm()];
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+      if (key === "@laimelea/alarms") {
+        return Promise.resolve(JSON.stringify(alarms));
+      }
+      return Promise.resolve(
+        JSON.stringify({ cycleConfig: { cycleLengthMinutes: 1_500 } }),
+      );
+    });
+
+    await bootRescheduleTask();
+
+    expect(rescheduleAllEnabledAlarms).toHaveBeenCalledWith(
+      alarms.map((alarm) => expect.objectContaining(alarm)),
+      {
+        cycleLengthMinutes: 1_500,
+        baseTimeMs: DEFAULT_SETTINGS.cycleConfig.baseTimeMs,
+      },
     );
   });
 

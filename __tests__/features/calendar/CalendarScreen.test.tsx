@@ -26,6 +26,7 @@ import {
   scheduleAlarm,
 } from "../../../src/features/alarm/services/alarmScheduler";
 import { CalendarScreen } from "../../../src/features/calendar/screens/CalendarScreen";
+import { requestClockWidgetUpdate } from "../../../src/features/widget/services/widgetUpdater";
 import type { Alarm } from "../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../src/models/CalendarEvent";
 import { DEFAULT_SETTINGS } from "../../../src/models/Settings";
@@ -77,6 +78,10 @@ jest.mock("../../../src/core/storage/asyncStorageAdapter", () => ({
       },
     };
   },
+}));
+
+jest.mock("../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
 }));
 
 jest.mock("react-i18next", () => ({
@@ -406,7 +411,9 @@ describe("CalendarScreen", () => {
         linkedCalendarEventId: "event-alarm",
         enabled: true,
       }),
+      DEFAULT_SETTINGS.cycleConfig,
     );
+    expect(requestClockWidgetUpdate).toHaveBeenCalled();
     expect((store.get(alarmsAtom) as Alarm[])[0]?.notifeeTriggerId).toBe(
       "trigger-id",
     );
@@ -622,6 +629,7 @@ describe("CalendarScreen", () => {
           targetTimestampMs: expectedTarget,
           notifeeTriggerId: null,
         }),
+        DEFAULT_SETTINGS.cycleConfig,
       );
     });
 
@@ -651,7 +659,11 @@ describe("CalendarScreen", () => {
       });
 
       await waitFor(() => {
-        expect(recoverAlarmSchedule).toHaveBeenCalledWith(linkedAlarm);
+        expect(recoverAlarmSchedule).toHaveBeenCalledWith(
+          linkedAlarm,
+          expect.any(Number),
+          DEFAULT_SETTINGS.cycleConfig,
+        );
       });
 
       expect(scheduleAlarm).toHaveBeenNthCalledWith(
@@ -659,6 +671,7 @@ describe("CalendarScreen", () => {
         expect.objectContaining({
           targetTimestampMs: futureStart - 15 * 60 * 1000,
         }),
+        DEFAULT_SETTINGS.cycleConfig,
       );
       expect(scheduleAlarm).toHaveBeenCalledTimes(1);
       expect(store.get(alarmsAtom)).toEqual([

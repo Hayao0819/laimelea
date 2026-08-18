@@ -9,15 +9,25 @@ export async function launchApp() {
 }
 
 async function launchWhenReady(resetAppState: boolean, readyTestId: string) {
-  await device.launchApp({
+  const launchOptions = {
     newInstance: true,
     ...(resetAppState ? { resetAppState: true } : {}),
     launchArgs: {
       detoxEnableSynchronization: 0,
     },
-  });
-  await waitVisible(readyTestId, 30000);
-  await device.enableSynchronization();
+  };
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await device.launchApp(launchOptions);
+      await waitVisible(readyTestId, 30000);
+      await device.enableSynchronization();
+      return;
+    } catch (error) {
+      if (attempt === 1) throw error;
+      await device.terminateApp().catch(() => {});
+    }
+  }
 }
 
 export async function completeSetup(hours = "26", minutes = "0") {

@@ -1,8 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { STORAGE_KEYS } from "../../../core/storage/keys";
+import {
+  readStoredAlarms,
+  readStoredSettings,
+} from "../../../core/storage/storedAppState";
 import type { Alarm } from "../../../models/Alarm";
-import { type AppSettings, DEFAULT_SETTINGS } from "../../../models/Settings";
 import { scheduleNextAlarmOccurrence } from "./alarmRescheduler";
 
 export interface AlarmDeliveryData {
@@ -30,26 +33,6 @@ function enqueueDelivery<T>(task: () => Promise<T>): Promise<T> {
     () => undefined,
   );
   return result;
-}
-
-function parseStoredSettings(rawSettings: string | null): AppSettings {
-  if (!rawSettings) {
-    return DEFAULT_SETTINGS;
-  }
-  let stored: Partial<AppSettings>;
-  try {
-    stored = JSON.parse(rawSettings) as Partial<AppSettings>;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-  return {
-    ...DEFAULT_SETTINGS,
-    ...stored,
-    cycleConfig: {
-      ...DEFAULT_SETTINGS.cycleConfig,
-      ...stored.cycleConfig,
-    },
-  };
 }
 
 function parseOccurrenceTimestamp(value: unknown): number | null {
@@ -90,11 +73,11 @@ async function processAlarmDeliveryInternal(
     };
   }
 
-  const [rawAlarms, rawSettings] = await Promise.all([
-    AsyncStorage.getItem(STORAGE_KEYS.ALARMS),
-    AsyncStorage.getItem(STORAGE_KEYS.SETTINGS),
+  const [alarms, settings] = await Promise.all([
+    readStoredAlarms(),
+    readStoredSettings(),
   ]);
-  if (!rawAlarms) {
+  if (!alarms) {
     return {
       handled: false,
       alarms: null,
@@ -103,17 +86,6 @@ async function processAlarmDeliveryInternal(
     };
   }
 
-  let alarms: Alarm[];
-  try {
-    alarms = JSON.parse(rawAlarms) as Alarm[];
-  } catch {
-    return {
-      handled: false,
-      alarms: null,
-      updatedAlarm: null,
-      rescheduleFailed: false,
-    };
-  }
   const alarmIndex = alarms.findIndex((alarm) => alarm.id === data.alarmId);
   if (alarmIndex < 0) {
     return {
@@ -193,7 +165,6 @@ async function processAlarmDeliveryInternal(
     };
   }
 
-  const settings = parseStoredSettings(rawSettings);
   const deliveredAlarm: Alarm = {
     ...alarm,
     targetTimestampMs: occurrenceTimestampMs,

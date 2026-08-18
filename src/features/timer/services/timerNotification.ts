@@ -8,6 +8,7 @@ import { Platform } from "react-native";
 import { TIMER_CHANNEL_ID } from "../../../core/notifications/notifeeSetup";
 import { STORAGE_KEYS } from "../../../core/storage/keys";
 import type { TimerState } from "../../../models/Timer";
+import { completeTimers } from "./timerState";
 
 let timerStateQueue: Promise<void> = Promise.resolve();
 const timerNotificationQueues = new Map<string, Promise<void>>();
@@ -99,11 +100,7 @@ export async function completeTimerFromNotification(
   return enqueueTimerStateUpdate(async () => {
     const timers = await readPersistedTimers();
     if (timers == null) return;
-    const completedTimers = timers.map((timer) =>
-      timer.id === timerId && timer.isRunning
-        ? { ...timer, remainingMs: 0, isRunning: false, startedAt: null }
-        : timer,
-    );
+    const completedTimers = completeTimers(timers, [timerId]);
 
     if (completedTimers.some((timer, index) => timer !== timers[index])) {
       await AsyncStorage.setItem(

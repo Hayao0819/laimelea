@@ -8,6 +8,7 @@ import {
   consumeCompletedTimerIds,
   scheduleTimerTrigger,
 } from "../features/timer/services/timerNotification";
+import { completeTimers } from "../features/timer/services/timerState";
 import type { TimerState } from "../models/Timer";
 
 const TICK_INTERVAL = 100;
@@ -84,18 +85,8 @@ export function useTimers(): UseTimersReturn {
               tick();
               return;
             }
-            const completedTimerIdSet = new Set(completedTimerIds);
             setTimers((previousTimers) =>
-              previousTimers.map((timer) =>
-                completedTimerIdSet.has(timer.id) && timer.isRunning
-                  ? {
-                      ...timer,
-                      remainingMs: 0,
-                      isRunning: false,
-                      startedAt: null,
-                    }
-                  : timer,
-              ),
+              completeTimers(previousTimers, completedTimerIds),
             );
           })
           .catch(() => {});

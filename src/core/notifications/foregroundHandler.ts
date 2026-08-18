@@ -7,14 +7,14 @@ import type { Alarm } from "../../models/Alarm";
 export function setupForegroundHandler(
   onAlarmFired: (alarmId: string) => void,
   onAlarmsUpdated?: (alarms: Alarm[]) => void,
-  onTimerCompleted?: (timerId: string) => void,
+  onTimerCompleted?: (timerId: string) => void | Promise<void>,
 ) {
   return notifee.onForegroundEvent(async ({ type, detail }) => {
     if (type === EventType.DELIVERED) {
       const timerId = detail.notification?.data?.timerId;
       if (typeof timerId === "string") {
         await completeTimerFromNotification(timerId);
-        onTimerCompleted?.(timerId);
+        await onTimerCompleted?.(timerId);
         return;
       }
       const result = await processAlarmDelivery(

@@ -1,15 +1,12 @@
 import { atom } from "jotai";
 import { atomWithStorage, unwrap } from "jotai/utils";
 
+import { resolveSettings } from "../core/storage/appState";
 import { createAsyncStorage } from "../core/storage/asyncStorageAdapter";
 import { STORAGE_KEYS } from "../core/storage/keys";
 import type { CycleConfig } from "../models/CustomTime";
 import type { AppSettings } from "../models/Settings";
-import {
-  DEFAULT_ALARM_DEFAULTS,
-  DEFAULT_SETTINGS,
-  DEFAULT_WIDGET_SETTINGS,
-} from "../models/Settings";
+import { DEFAULT_SETTINGS } from "../models/Settings";
 
 export const settingsAtom = atomWithStorage<AppSettings>(
   STORAGE_KEYS.SETTINGS,
@@ -32,20 +29,7 @@ const syncSettingsAtom = unwrap(
 );
 
 export const resolvedSettingsAtom = atom<AppSettings>((get) => {
-  const stored = get(syncSettingsAtom);
-  return {
-    ...DEFAULT_SETTINGS,
-    ...stored,
-    cycleConfig: {
-      ...DEFAULT_SETTINGS.cycleConfig,
-      ...stored?.cycleConfig,
-    },
-    alarmDefaults: { ...DEFAULT_ALARM_DEFAULTS, ...stored?.alarmDefaults },
-    widgetSettings: {
-      ...DEFAULT_WIDGET_SETTINGS,
-      ...stored?.widgetSettings,
-    },
-  };
+  return resolveSettings(get(syncSettingsAtom));
 });
 
 export const cycleConfigAtom = atom<CycleConfig>(

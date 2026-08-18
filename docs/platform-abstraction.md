@@ -1,18 +1,18 @@
 # プラットフォーム抽象化レイヤー
 
-GMS/HMS/AOSP を統一インターフェースで切り替える基盤。アラーム・通知は AOSP API のみで動作し GMS 不要。GMS 依存は**認証・バックアップ・睡眠データ**の 3 機能のみで、これらをインターフェースで抽象化している。カレンダー読取は全プラットフォームで Android CalendarContract（カスタム Turbo Module）を使用し、Google Calendar REST API は使用しない。
+GMS/HMS/AOSP を統一インターフェースで切り替える基盤。アラームと通知は AOSP API のみで動作し、GMS は不要。認証、バックアップ、睡眠データをプラットフォームごとのサービスとして切り替える。カレンダー読取は全プラットフォームで Android CalendarContract（カスタム Turbo Module）を使用し、Google Calendar REST API は使用しない。
 
 ## アーキテクチャ概要
 
 ```txt
 Providers.tsx (mount)
-  └─ detectPlatform()           ← GMS 有無を判定
+  └─ detectPlatform()           ← GMS と端末メーカーを判定
        └─ platformTypeAtom      ← "gms" | "hms" | "aosp"
             └─ platformServicesAtom (derived)
                  └─ createPlatformServices(type)
                       ├─ aosp/ ─ authService, calendarService, backupService, sleepService
                       ├─ gms/  ─ authService, calendarService, backupService, sleepService
-                      └─ hms/  ─ (AOSP を再利用、将来実装)
+                      └─ hms/  ─ authService, backupService (calendar/sleep は AOSP を再利用)
 ```
 
 ## ディレクトリ構成
@@ -22,7 +22,8 @@ src/core/platform/
 ├── types.ts              # 全インターフェース定義 (PlatformServices, Auth, Calendar, Backup, Sleep)
 ├── detection.ts          # detectPlatform() — GoogleSignin.hasPlayServices() で GMS 検出
 ├── factory.ts            # createPlatformServices() — type に応じたサービス生成
-├── index.ts              # barrel export
+├── driveBackupService.ts # GMS/HMS Driveバックアップの共通処理
+├── oidcAuthService.ts    # AOSP/HMS OAuth2認証の共通処理
 ├── aosp/
 │   ├── authService.ts    # react-native-app-auth + PKCE (Chrome Custom Tabs)
 │   ├── authConfig.ts     # AOSP 用 OAuth2 設定 (issuer, redirect, scopes)
@@ -37,15 +38,21 @@ src/core/platform/
 │   ├── backupService.ts  # Google Drive appDataFolder API (googleDriveApi 経由)
 │   ├── sleepService.ts   # Health Connect API (react-native-health-connect)
 │   └── index.ts
-├── hms/                  # 空 (将来の Huawei Mobile Services 対応用)
+├── hms/
+│   ├── authService.ts    # Huawei OAuth2 + PKCE
+│   ├── authConfig.ts     # Huawei OAuth2 設定
+│   ├── backupService.ts  # Huawei Drive appDataFolder API (huaweiDriveApi 経由)
+│   └── index.ts
 └── native/
     ├── NativeCalendarModule.ts  # Turbo Module spec (CalendarContract バインディング)
     └── calendarModule.ts        # Native module ブリッジ
 
 src/core/drive/
 ├── googleDriveApi.ts            # Google Drive appDataFolder API クライアント
-└── __tests__/
-    └── googleDriveApi.test.ts   # Drive API テスト
+└── huaweiDriveApi.ts            # Huawei Drive appDataFolder API クライアント
+
+__tests__/core/drive/
+└── googleDriveApi.test.ts # Drive API テスト
 
 src/atoms/
 └── platformAtoms.ts      # platformTypeAtom + derived platformServicesAtom
@@ -68,24 +75,26 @@ src/atoms/
 
 全 Phase 完了済み。
 
-| サービス | AOSP                                 | GMS                                          | HMS           |
-| -------- | ------------------------------------ | -------------------------------------------- | ------------- |
-| Auth     | react-native-app-auth + PKCE         | @react-native-google-signin v16              | 未実装 (将来) |
-| Calendar | CalendarContract Turbo Module        | CalendarContract Turbo Module (AOSP と同一)  | 未実装 (将来) |
-| Backup   | AsyncStorage ローカル backup/restore | Google Drive appDataFolder                   | 未実装 (将来) |
-| Sleep    | 手動入力 CRUD (AsyncStorage)         | Health Connect (react-native-health-connect) | 未実装 (将来) |
+| サービス | AOSP                                 | GMS                                          | HMS                                         |
+| -------- | ------------------------------------ | -------------------------------------------- | ------------------------------------------- |
+| Auth     | react-native-app-auth + PKCE         | @react-native-google-signin v16              | Huawei OAuth2 + PKCE                        |
+| Calendar | CalendarContract Turbo Module        | CalendarContract Turbo Module (AOSP と同一)  | CalendarContract Turbo Module (AOSP と同一) |
+| Backup   | AsyncStorage ローカル backup/restore | Google Drive appDataFolder                   | Huawei Drive appDataFolder                  |
+| Sleep    | 手動入力 (AsyncStorage)              | Health Connect (react-native-health-connect) | 手動入力 (AOSP と同一)                      |
 
 ### 各実装の詳細
 
 **GMS Auth**: `@react-native-google-signin/google-signin` v16 でネイティブ認証。`react-native-config` から Web Client ID を読み込み。スコープは `drive.appdata` のみ（バックアップ用）。
 
-**AOSP Auth**: `react-native-app-auth` で Chrome Custom Tabs + PKCE による Google OAuth2。GMS 不要で Google API にアクセス可能。トークンは AsyncStorage に永続化し、自動リフレッシュ対応。`tokenUtils.ts` で JWT id_token からメール抽出。スコープは `drive.appdata` のみ。
+**AOSP Auth**: `react-native-app-auth` で Chrome Custom Tabs + PKCE による Google OAuth2。GMS 不要で Google API にアクセス可能。トークンは端末のセキュアストレージに保存し、自動リフレッシュにも対応する。`tokenUtils.ts` で JWT id_token からメールを抽出する。スコープは `drive.appdata` のみ。
 
-**Calendar（全プラットフォーム共通）**: Kotlin Turbo Module (`NativeCalendarModule`) で Android CalendarContract を直接読取。`READ_CALENDAR` パーミッションのみで動作し、OAuth 認証不要。GMS/AOSP 問わず同一の `createAospCalendarService()` を使用。
+**Calendar（全プラットフォーム共通）**: Kotlin Turbo Module (`NativeCalendarModule`) で Android CalendarContract を直接読取。`READ_CALENDAR` パーミッションのみで動作し、OAuth 認証不要。すべてのプラットフォームで同一の `createAospCalendarService()` を使用する。
 
 **GMS Backup**: `googleDriveApi.ts` で Google Drive appDataFolder にバックアップファイルをアップロード/ダウンロード。ファイルの検索・作成・更新・取得に対応。
 
 **AOSP Backup**: AsyncStorage ベースのローカル backup/restore。クラウド同期なし（ファイルエクスポート/インポートは将来実装予定）。
+
+**HMS Auth と Backup**: `react-native-app-auth` を使って Huawei OAuth2 に接続し、Huawei Drive appDataFolder にバックアップを保存する。カレンダーは CalendarContract、睡眠は手動入力を AOSP 実装と共有する。
 
 **GMS Sleep**: `react-native-health-connect` で Health Connect API から睡眠セッションを取得。睡眠ステージ (unknown/awake/sleeping/out_of_bed/light/deep/rem) をマッピング。
 
@@ -98,12 +107,14 @@ detectPlatform()
   │
   ├─ GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false })
   │   ├─ true  → "gms"
-  │   └─ false → "aosp"
+  │   └─ false → 端末メーカーを確認
+  │       ├─ Huawei → "hms"
+  │       └─ それ以外 → "aosp"
   │
-  └─ catch → "aosp"
+  └─ catch → 端末メーカーを確認
 ```
 
-HMS 検出は将来フェーズで `HmsAvailability.isHuaweiMobileServicesAvailable()` を追加予定。
+HMS は端末メーカー名が `huawei` の場合に選択する。
 
 ## コンポーネントからの使用方法
 
@@ -143,21 +154,21 @@ function MyComponent() {
 
 ## テスト
 
-テストファイルは `__tests__/core/platform/` および `src/core/drive/__tests__/` に配置。
+テストファイルは `__tests__/core/platform/` および `__tests__/core/drive/` に配置。
 
-| ファイル                       | テスト数 | 内容                                                        |
-| ------------------------------ | -------- | ----------------------------------------------------------- |
-| `detection.test.ts`            | 2        | GMS available / unavailable                                 |
-| `factory.test.ts`              | 4        | aosp/gms/hms 各タイプ + 実装差異                            |
-| `aospServices.test.ts`         | 25       | auth + calendar + backup + sleep 統合テスト                 |
-| `gmsServices.test.ts`          | 14       | auth + backup + sleep 統合テスト                            |
-| `aosp/authService.test.ts`     | 12       | AppAuth 認証フロー、トークン管理                            |
-| `aosp/backupService.test.ts`   | 6        | AsyncStorage backup/restore                                 |
-| `aosp/calendarService.test.ts` | 8        | CalendarContract Turbo Module 経由の読取                    |
-| `aosp/tokenUtils.test.ts`      | 6        | JWT デコード、メール抽出                                    |
-| `gms/authService.test.ts`      | 7        | GoogleSignin wrapper                                        |
-| `gms/backupService.test.ts`    | 13       | Google Drive appDataFolder API                              |
-| `drive/googleDriveApi.test.ts` | -        | Drive API クライアント (`src/core/drive/__tests__/` に配置) |
+| ファイル                       | テスト数 | 内容                                        |
+| ------------------------------ | -------- | ------------------------------------------- |
+| `detection.test.ts`            | 2        | GMS available / unavailable                 |
+| `factory.test.ts`              | 4        | aosp/gms/hms 各タイプ + 実装差異            |
+| `aospServices.test.ts`         | 25       | auth + calendar + backup + sleep 統合テスト |
+| `gmsServices.test.ts`          | 14       | auth + backup + sleep 統合テスト            |
+| `aosp/authService.test.ts`     | 12       | AppAuth 認証フロー、トークン管理            |
+| `aosp/backupService.test.ts`   | 6        | AsyncStorage backup/restore                 |
+| `aosp/calendarService.test.ts` | 8        | CalendarContract Turbo Module 経由の読取    |
+| `aosp/tokenUtils.test.ts`      | 6        | JWT デコード、メール抽出                    |
+| `gms/authService.test.ts`      | 7        | GoogleSignin wrapper                        |
+| `gms/backupService.test.ts`    | 13       | Google Drive appDataFolder API              |
+| `drive/googleDriveApi.test.ts` | -        | Google Drive API クライアント               |
 
 テスト実行:
 
@@ -170,4 +181,3 @@ pnpm jest __tests__/core/platform/
 | 項目                 | 内容                                                          |
 | -------------------- | ------------------------------------------------------------- |
 | AOSP ファイル Export | AsyncStorage ローカルバックアップをファイルエクスポートに拡張 |
-| HMS 実装             | `hms/` ディレクトリに Huawei Mobile Services 対応を追加       |

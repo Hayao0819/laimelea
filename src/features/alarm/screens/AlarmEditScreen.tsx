@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
@@ -23,22 +23,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { radius, spacing } from "../../../app/spacing";
-import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import type { Alarm, AlarmRepeat } from "../../../models/Alarm";
 import type { DismissalMethod, MathDifficulty } from "../../../models/Settings";
 import type { RootStackParamList } from "../../../navigation/types";
-import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmSoundPicker } from "../components/AlarmSoundPicker";
 import { AlarmTimePicker } from "../components/AlarmTimePicker";
 import { DismissalPreview } from "../components/DismissalPreview";
 import { RepeatPicker } from "../components/RepeatPicker";
-import {
-  cancelAlarm,
-  recoverAlarmSchedule,
-  scheduleAlarm,
-} from "../services/alarmScheduler";
+import { useAlarmMutations } from "../hooks/useAlarmMutations";
 import { getNextAlarmTimestamp } from "../services/alarmTime";
 import { getAllStrategies, getStrategy } from "../strategies";
 
@@ -66,7 +60,8 @@ export function AlarmEditScreen() {
   const navigation = useNavigation<Props["navigation"]>();
   const route = useRoute<Props["route"]>();
   const { t } = useTranslation();
-  const [alarms, setAlarms] = useAtom(alarmsAtom);
+  const { alarms, createAlarm, replaceAlarm, deleteAlarm } =
+    useAlarmMutations();
   const settings = useAtomValue(resolvedSettingsAtom);
 
   const alarmId = route.params?.alarmId;
@@ -159,30 +154,14 @@ export function AlarmEditScreen() {
 
     try {
       if (existingAlarm) {
-        await cancelAlarm(existingAlarm);
+        await replaceAlarm(existingAlarm, alarm);
+      } else {
+        await createAlarm(alarm);
       }
-      const triggerId = await scheduleAlarm(alarm);
-      alarm.notifeeTriggerId = triggerId;
     } catch {
-      if (existingAlarm) {
-        const recoveredAlarm = await recoverAlarmSchedule(existingAlarm, now);
-        setAlarms(
-          alarms.map((storedAlarm) =>
-            storedAlarm.id === existingAlarm.id ? recoveredAlarm : storedAlarm,
-          ),
-        );
-      }
       Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
       return;
     }
-
-    if (existingAlarm) {
-      setAlarms(alarms.map((a) => (a.id === alarm.id ? alarm : a)));
-    } else {
-      setAlarms([...alarms, alarm]);
-    }
-
-    requestClockWidgetUpdate();
     navigation.goBack();
   }, [
     computeTargetTimestamp,
@@ -198,8 +177,8 @@ export function AlarmEditScreen() {
     soundUri,
     vibration,
     mathDifficulty,
-    alarms,
-    setAlarms,
+    createAlarm,
+    replaceAlarm,
     navigation,
     t,
   ]);
@@ -213,25 +192,15 @@ export function AlarmEditScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await cancelAlarm(existingAlarm);
-            setAlarms(alarms.filter((a) => a.id !== existingAlarm.id));
-            requestClockWidgetUpdate();
+            await deleteAlarm(existingAlarm);
             navigation.goBack();
           } catch {
-            const recoveredAlarm = await recoverAlarmSchedule(existingAlarm);
-            setAlarms(
-              alarms.map((storedAlarm) =>
-                storedAlarm.id === existingAlarm.id
-                  ? recoveredAlarm
-                  : storedAlarm,
-              ),
-            );
             Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
           }
         },
       },
     ]);
-  }, [existingAlarm, alarms, setAlarms, navigation, t]);
+  }, [existingAlarm, deleteAlarm, navigation, t]);
 
   const handleTestAlarm = useCallback(async () => {
     const now = Date.now();
@@ -264,9 +233,7 @@ export function AlarmEditScreen() {
     };
 
     try {
-      const triggerId = await scheduleAlarm(testAlarm);
-      testAlarm.notifeeTriggerId = triggerId;
-      setAlarms([...alarms, testAlarm]);
+      await createAlarm(testAlarm, false);
       setTestSnackbarVisible(true);
     } catch {
       Alert.alert(t("alarm.testAlarm"), t("alarm.testAlarmFailed"));
@@ -279,8 +246,7 @@ export function AlarmEditScreen() {
     snoozeDuration,
     vibration,
     mathDifficulty,
-    alarms,
-    setAlarms,
+    createAlarm,
     t,
   ]);
 

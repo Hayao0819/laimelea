@@ -262,6 +262,31 @@ describe("alarmScheduler", () => {
       );
     });
 
+    it("uses normalized persisted cycle settings when no config is supplied", async () => {
+      const alarm = makeAlarm({
+        repeat: { type: "customCycleInterval", customCycleIntervalDays: 2 },
+      });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
+        JSON.stringify({ cycleConfig: { cycleLengthMinutes: 900 } }),
+      );
+
+      await scheduleAlarm(alarm);
+
+      expect(scheduleAlarmAudio).toHaveBeenCalledWith(
+        alarm.id,
+        alarm.targetTimestampMs,
+        alarm.soundUri,
+        alarm.gradualVolumeDurationSec * 1000,
+        alarm.autoSilenceMin * 60 * 1000,
+        false,
+        "customCycleInterval",
+        [],
+        2 * 900 * 60 * 1000,
+        alarm.label,
+        alarm.vibrationEnabled,
+      );
+    });
+
     it("does not create a visual fallback when native scheduling fails", async () => {
       (scheduleAlarmAudio as jest.Mock).mockRejectedValueOnce(
         new Error("native failure"),

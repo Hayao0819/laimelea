@@ -1,13 +1,19 @@
 import type { Alarm } from "../../../models/Alarm";
+import type { CalendarEvent } from "../../../models/CalendarEvent";
+import type { CycleConfig } from "../../../models/CustomTime";
+import type { AppSettings } from "../../../models/Settings";
+import {
+  AlarmMutationError,
+  replaceAlarmSchedule,
+} from "../../alarm/services/alarmMutationService";
 import {
   cancelAlarm,
   recoverAlarmSchedule,
-  scheduleAlarm,
 } from "../../alarm/services/alarmScheduler";
 
 export class LinkedAlarmTransactionError extends Error {
   constructor(
-    readonly reason: "past" | "schedule-failed",
+    readonly reason: "schedule-failed",
     readonly cause?: unknown,
     readonly recoveredAlarm?: Alarm,
   ) {
@@ -16,28 +22,54 @@ export class LinkedAlarmTransactionError extends Error {
   }
 }
 
-export async function scheduleNewLinkedAlarm(alarm: Alarm): Promise<Alarm> {
-  if (alarm.targetTimestampMs <= Date.now()) {
-    throw new LinkedAlarmTransactionError("past");
-  }
-
-  try {
-    const notifeeTriggerId = await scheduleAlarm(alarm);
-    return { ...alarm, notifeeTriggerId };
-  } catch (error) {
-    throw new LinkedAlarmTransactionError("schedule-failed", error);
-  }
+export function createLinkedAlarm(
+  event: CalendarEvent,
+  settings: AppSettings,
+  now = Date.now(),
+): Alarm {
+  const linkedEventOffsetMs = -settings.defaultEventReminderMin * 60 * 1000;
+  const { alarmDefaults } = settings;
+  return {
+    id: `alarm-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    label: event.title,
+    enabled: true,
+    targetTimestampMs: event.startTimestampMs + linkedEventOffsetMs,
+    setInTimeSystem: "24h",
+    repeat: null,
+    dismissalMethod: alarmDefaults.dismissalMethod,
+    gradualVolumeDurationSec: alarmDefaults.gradualVolumeDurationSec,
+    snoozeDurationMin: alarmDefaults.snoozeDurationMin,
+    snoozeMaxCount: alarmDefaults.snoozeMaxCount,
+    snoozeCount: 0,
+    autoSilenceMin: 10,
+    soundUri: null,
+    vibrationEnabled: alarmDefaults.vibrationEnabled,
+    notifeeTriggerId: null,
+    skipNextOccurrence: false,
+    linkedCalendarEventId: event.id,
+    linkedCalendarSourceEventId: event.sourceEventId,
+    linkedEventOffsetMs,
+    mathDifficulty: alarmDefaults.mathDifficulty,
+    lastFiredAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 export async function rescheduleLinkedAlarm(
   alarm: Alarm,
   targetTimestampMs: number,
+  cycleConfig?: CycleConfig,
 ): Promise<Alarm> {
   if (targetTimestampMs <= Date.now()) {
     try {
       await cancelAlarm(alarm);
     } catch (error) {
-      const recoveredAlarm = await recoverAlarmSchedule(alarm);
+      const recoveredAlarm = await recoverAlarmSchedule(
+        alarm,
+        Date.now(),
+        cycleConfig,
+      );
       throw new LinkedAlarmTransactionError(
         "schedule-failed",
         error,
@@ -61,25 +93,12 @@ export async function rescheduleLinkedAlarm(
   };
 
   try {
-    await cancelAlarm(alarm);
+    return await replaceAlarmSchedule(alarm, updatedAlarm, cycleConfig);
   } catch (error) {
-    const recoveredAlarm = await recoverAlarmSchedule(alarm);
     throw new LinkedAlarmTransactionError(
       "schedule-failed",
       error,
-      recoveredAlarm,
-    );
-  }
-
-  try {
-    const notifeeTriggerId = await scheduleAlarm(updatedAlarm);
-    return { ...updatedAlarm, notifeeTriggerId };
-  } catch (error) {
-    const recoveredAlarm = await recoverAlarmSchedule(alarm);
-    throw new LinkedAlarmTransactionError(
-      "schedule-failed",
-      error,
-      recoveredAlarm,
+      error instanceof AlarmMutationError ? error.recoveredAlarm : undefined,
     );
   }
 }

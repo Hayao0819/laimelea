@@ -1,7 +1,7 @@
 import notifee from "@notifee/react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
@@ -9,14 +9,12 @@ import { IconButton, Snackbar, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
-import type { Alarm, BulkAlarmParams } from "../../../models/Alarm";
+import type { BulkAlarmParams } from "../../../models/Alarm";
 import type { DismissalMethod } from "../../../models/Settings";
 import type { RootStackParamList } from "../../../navigation/types";
-import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { BulkAlarmForm } from "../components/BulkAlarmForm";
-import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
+import { useAlarmMutations } from "../hooks/useAlarmMutations";
 import {
   ANDROID_ALARM_TRIGGER_LIMIT,
   generateBulkAlarms,
@@ -27,7 +25,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "BulkAlarm">;
 export function BulkAlarmScreen() {
   const navigation = useNavigation<Props["navigation"]>();
   const { t } = useTranslation();
-  const [alarms, setAlarms] = useAtom(alarmsAtom);
+  const { alarms, createAlarms } = useAlarmMutations();
   const settings = useAtomValue(resolvedSettingsAtom);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -93,7 +91,6 @@ export function BulkAlarmScreen() {
     if (preview.alarms.length === 0 || preview.limitExceeded || saving) return;
 
     setSaving(true);
-    const rollbackAlarms: Alarm[] = [];
     try {
       const triggerIds = await notifee.getTriggerNotificationIds();
       if (
@@ -108,29 +105,17 @@ export function BulkAlarmScreen() {
         );
         return;
       }
-      const scheduledAlarms: Alarm[] = [];
-      for (const alarm of preview.alarms) {
-        rollbackAlarms.push(alarm);
-        const triggerId = await scheduleAlarm(alarm);
-        const scheduledAlarm = { ...alarm, notifeeTriggerId: triggerId };
-        rollbackAlarms[rollbackAlarms.length - 1] = scheduledAlarm;
-        scheduledAlarms.push(scheduledAlarm);
-      }
-      setAlarms([...alarms, ...scheduledAlarms]);
-      requestClockWidgetUpdate();
+      const scheduledAlarms = await createAlarms(preview.alarms);
       setSnackMessage(
         t("alarm.bulkCreated", { count: scheduledAlarms.length }),
       );
       navigation.goBack();
     } catch {
-      await Promise.allSettled(
-        rollbackAlarms.map((alarm) => cancelAlarm(alarm)),
-      );
       Alert.alert(t("alarm.bulkCreate"), t("alarm.bulkCreateFailed"));
     } finally {
       setSaving(false);
     }
-  }, [preview, saving, alarms, setAlarms, navigation, t]);
+  }, [preview, saving, createAlarms, navigation, t]);
 
   const SaveButton = useCallback(
     () => (

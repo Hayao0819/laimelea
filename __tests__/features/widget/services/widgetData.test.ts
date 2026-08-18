@@ -24,12 +24,23 @@ beforeEach(() => {
 
 describe("loadSettings", () => {
   it("returns parsed settings merged with defaults when AsyncStorage has data", async () => {
-    const stored = { theme: "dark", timeFormat: "12h" };
+    const stored = {
+      theme: "dark",
+      timeFormat: "12h",
+      widgetSettings: { accentColor: "#000000" },
+    };
     mockGetItem.mockResolvedValue(JSON.stringify(stored));
 
     const result = await loadSettings();
 
-    expect(result).toEqual({ ...DEFAULT_SETTINGS, ...stored });
+    expect(result).toEqual({
+      ...DEFAULT_SETTINGS,
+      ...stored,
+      widgetSettings: {
+        ...DEFAULT_SETTINGS.widgetSettings,
+        accentColor: "#000000",
+      },
+    });
   });
 
   it("returns DEFAULT_SETTINGS when AsyncStorage returns null", async () => {
@@ -99,7 +110,9 @@ describe("loadAlarms", () => {
 
     const result = await loadAlarms();
 
-    expect(result).toEqual(sampleAlarms);
+    expect(result).toEqual(
+      sampleAlarms.map((alarm) => expect.objectContaining(alarm)),
+    );
   });
 
   it("returns empty array when AsyncStorage returns null", async () => {

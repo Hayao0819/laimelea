@@ -2,7 +2,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { format } from "date-fns";
 import { useAtomValue } from "jotai";
-import { useSetAtom } from "jotai";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -18,18 +17,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { radius, spacing } from "../../../app/spacing";
-import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { calendarEventsAtom } from "../../../atoms/calendarAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
-import type { Alarm } from "../../../models/Alarm";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
 import type { RootStackParamList } from "../../../navigation/types";
-import {
-  LinkedAlarmTransactionError,
-  scheduleNewLinkedAlarm,
-} from "../services/linkedAlarmTransaction";
+import { useAlarmMutations } from "../../alarm/hooks/useAlarmMutations";
+import { createLinkedAlarm } from "../services/linkedAlarmTransaction";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
@@ -49,7 +44,7 @@ export function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const events = useAtomValue(calendarEventsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
-  const setAlarms = useSetAtom(alarmsAtom);
+  const { createAlarm } = useAlarmMutations();
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   const { eventId } = route.params;
@@ -61,54 +56,21 @@ export function EventDetailScreen() {
 
   const handleCreateAlarm = useCallback(
     async (ev: CalendarEvent) => {
-      const now = Date.now();
-      const offsetMs = -settings.defaultEventReminderMin * 60 * 1000;
-      const { alarmDefaults } = settings;
+      const alarm = createLinkedAlarm(ev, settings);
 
-      const alarm: Alarm = {
-        id: `alarm-${now}-${Math.random().toString(36).slice(2, 8)}`,
-        label: ev.title,
-        enabled: true,
-        targetTimestampMs: ev.startTimestampMs + offsetMs,
-        setInTimeSystem: "24h",
-        repeat: null,
-        dismissalMethod: alarmDefaults.dismissalMethod,
-        gradualVolumeDurationSec: alarmDefaults.gradualVolumeDurationSec,
-        snoozeDurationMin: alarmDefaults.snoozeDurationMin,
-        snoozeMaxCount: alarmDefaults.snoozeMaxCount,
-        snoozeCount: 0,
-        autoSilenceMin: 10,
-        soundUri: null,
-        vibrationEnabled: alarmDefaults.vibrationEnabled,
-        notifeeTriggerId: null,
-        skipNextOccurrence: false,
-        linkedCalendarEventId: ev.id,
-        linkedCalendarSourceEventId: ev.sourceEventId,
-        linkedEventOffsetMs: offsetMs,
-        mathDifficulty: alarmDefaults.mathDifficulty,
-        lastFiredAt: null,
-        createdAt: now,
-        updatedAt: now,
-      };
+      if (alarm.targetTimestampMs <= Date.now()) {
+        setSnackbar(t("calendar.alarmTimePassed"));
+        return;
+      }
 
       try {
-        const scheduledAlarm = await scheduleNewLinkedAlarm(alarm);
-        setAlarms((prev) =>
-          Array.isArray(prev) ? [...prev, scheduledAlarm] : [scheduledAlarm],
-        );
+        await createAlarm(alarm);
         navigation.goBack();
-      } catch (error) {
-        setSnackbar(
-          t(
-            error instanceof LinkedAlarmTransactionError &&
-              error.reason === "past"
-              ? "calendar.alarmTimePassed"
-              : "calendar.alarmScheduleFailed",
-          ),
-        );
+      } catch {
+        setSnackbar(t("calendar.alarmScheduleFailed"));
       }
     },
-    [settings, setAlarms, navigation, t],
+    [createAlarm, settings, navigation, t],
   );
 
   if (!event) {

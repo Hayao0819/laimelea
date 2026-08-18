@@ -66,7 +66,7 @@ function formatRealTime(timestampMs: number): string {
 
 function getNextAlarm(alarms: Alarm[], nowMs: number): Alarm | undefined {
   return alarms
-    .filter((a) => a.enabled && a.targetTimestampMs > nowMs)
+    .filter((a) => !a.isTest && a.enabled && a.targetTimestampMs > nowMs)
     .sort((a, b) => a.targetTimestampMs - b.targetTimestampMs)[0];
 }
 

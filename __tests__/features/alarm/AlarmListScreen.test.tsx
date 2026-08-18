@@ -227,6 +227,7 @@ describe("AlarmListScreen", () => {
         id: alarm.id,
         targetTimestampMs: expect.any(Number),
       }),
+      DEFAULT_SETTINGS.cycleConfig,
     );
     const storedAlarms = await store.get(alarmsAtom);
     expect(storedAlarms[0].targetTimestampMs).toBeGreaterThan(now);
@@ -270,11 +271,53 @@ describe("AlarmListScreen", () => {
       const storedAlarms = await store.get(alarmsAtom);
       expect(storedAlarms[0].notifeeTriggerId).toBe("recovered-trigger-id");
     });
-    expect(mockRecoverAlarmSchedule).toHaveBeenCalledWith(alarm);
+    expect(mockRecoverAlarmSchedule).toHaveBeenCalledWith(
+      alarm,
+      expect.any(Number),
+      DEFAULT_SETTINGS.cycleConfig,
+    );
     expect(alertSpy).toHaveBeenCalledWith(
       "alarm.saveAlarm",
       "alarm.scheduleFailed",
     );
+    alertSpy.mockRestore();
+  });
+
+  it("does not overwrite a newer edit when recovery finishes late", async () => {
+    const alarm = makeAlarm({ updatedAt: 100, notifeeTriggerId: "old" });
+    let resolveRecovery: ((alarm: Alarm) => void) | undefined;
+    mockCancelAlarm.mockRejectedValueOnce(new Error("cancel failed"));
+    mockRecoverAlarmSchedule.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRecovery = resolve;
+        }),
+    );
+    const alertSpy = jest.spyOn(Alert, "alert");
+    const { getByTestId, store } = await renderWithProviders(createStore(), [
+      alarm,
+    ]);
+
+    act(() => {
+      fireEvent(getByTestId("alarm-switch-test-alarm-1"), "valueChange", false);
+    });
+    await waitFor(() => {
+      expect(mockRecoverAlarmSchedule).toHaveBeenCalled();
+    });
+
+    const newerAlarm = {
+      ...alarm,
+      label: "Edited",
+      targetTimestampMs: alarm.targetTimestampMs + 60_000,
+      updatedAt: 200,
+    };
+    act(() => store.set(alarmsAtom, [newerAlarm]));
+    await act(async () => {
+      resolveRecovery?.({ ...alarm, notifeeTriggerId: "recovered" });
+      await Promise.resolve();
+    });
+
+    expect(await store.get(alarmsAtom)).toEqual([newerAlarm]);
     alertSpy.mockRestore();
   });
 });

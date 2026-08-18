@@ -187,6 +187,36 @@ describe("ClockWidget", () => {
       expect(alarmTexts[0].text).not.toContain("Past");
     });
 
+    it("should skip temporary test alarms", async () => {
+      const alarms = [
+        makeAlarm({
+          id: "test",
+          label: "Test",
+          isTest: true,
+          targetTimestampMs: fixedNowMs + 1000,
+        }),
+        makeAlarm({
+          id: "regular",
+          label: "Regular",
+          targetTimestampMs: fixedNowMs + 5000,
+        }),
+      ];
+
+      const { toJSON } = await render(
+        <ClockWidget
+          cycleConfig={baseCycleConfig}
+          alarms={alarms}
+          nowMs={fixedNowMs}
+        />,
+      );
+      const texts = collectTextWidgets(toJSON());
+      const alarmTexts = texts.filter((t) => t.text.startsWith("\u23F0"));
+
+      expect(alarmTexts).toHaveLength(1);
+      expect(alarmTexts[0].text).toContain("Regular");
+      expect(alarmTexts[0].text).not.toContain("Test");
+    });
+
     it("should return undefined when no alarms match", async () => {
       const alarms = [
         makeAlarm({

@@ -96,12 +96,12 @@ devDependencies:
 | 8     | 一括アラーム作成               | **完了** | BulkAlarmForm、BulkAlarmScreen、プレビュー付き                        |
 | 9     | タイマー機能                   | **完了** | CountdownTimer + Stopwatch、ドリフト補正、完了通知                    |
 | 10    | プラットフォーム抽象化レイヤー | **完了** | GMS/HMS/AOSP実装、CalendarContract Turbo Module自前実装               |
-| 11    | カレンダー連携                 | **完了** | Google Calendar API、CalendarScreen、DaySelector、EventDetailScreen   |
+| 11    | カレンダー連携                 | **完了** | CalendarContract、月/週/アジェンダ表示、EventDetailScreen             |
 | 12    | カレンダー予定連動アラーム     | **完了** | calendarAlarmSync、EventCardアラームボタン                            |
 | 13    | 設定画面                       | **完了** | 全設定1画面、バックアップ/復元（JSON serialize）                      |
 | 14    | 睡眠ログ・周期自動検出         | **完了** | cycleDetector、Health Connect、手動入力、SleepLogScreen               |
 | 15    | ホーム画面ウィジェット         | **完了** | ClockWidget、WidgetTaskHandler、設定/アラーム変更時更新               |
-| 16    | テスト・仕上げ                 | **完了** | 78 suites / 707 tests、a11yラベル27ファイル、E2Eテスト                |
+| 16    | テスト・仕上げ                 | **完了** | Jest、Detox、Android instrumented test、a11y対応                      |
 | 17    | カレンダーデザイン改善         | **完了** | MonthView/WeekView/AgendaView、CustomDayTimeline、NowIndicator        |
 | 18    | Terraform GCPプロジェクト管理  | **完了** | infra/ディレクトリ、react-native-config、.env管理                     |
 | -     | Google Drive Backup            | **完了** | GMS Drive appDataFolder API、drive.appdataスコープ                    |
@@ -1031,7 +1031,7 @@ RootNavigator (NativeStack)
 
 - CalendarContract Turbo Module で全プラットフォーム統一のカレンダー読取
 - OAuth認証フロー（GMS: GoogleSignin / AOSP: AppAuth + PKCE）— バックアップ用
-- CalendarScreen MVP（DaySelector + EventCard + EventDetailScreen）
+- CalendarScreen（月/週/アジェンダ表示 + EventCard + EventDetailScreen）
 - CalendarContract Turbo Module（Kotlin、AOSP向け）
 - キャッシュレイヤー + 同期mutex (`useCalendarSync`)
 - カレンダーリスト同期、表示カレンダーフィルタリング
@@ -1068,14 +1068,14 @@ RootNavigator (NativeStack)
 
 ### Phase 16: テスト・仕上げ ✅ 完了
 
-- ユニットテスト: 67 suites, 551 tests all passing
+- Jestによるユニット・画面・サービス結合テスト
 - E2Eテスト: calendar, sleep, settings 追加（既存: alarm, clock, navigation, setup, timer）
 - アクセシビリティ対応: 27ファイルに accessibilityLabel/Role/State 追加
 - 残タスク: アプリアイコン・スプラッシュ画面、Android 12-15実機テスト
 
 ### Phase 17: カレンダーデザイン改善 ✅ 完了
 
-現状のCalendarScreenは単一のリストビュー（DaySelector + FlatList）のみで、Chipベースの日付選択と基本的なEventCardで構成されている。2025-2026年のカレンダーUI/UXトレンドを反映し、モダンなデザインに刷新する。
+CalendarScreenを単一リストから月・週・アジェンダの3表示へ変更した。日付移動、予定カード、カスタム時間軸を各表示で共有する。
 
 #### 17a: 複数ビューの導入
 
@@ -1083,7 +1083,7 @@ RootNavigator (NativeStack)
 
 - **月ビュー（MonthView）**: 7列グリッドレイアウト。日付セルは角丸の個別カードとして分離（Google Calendar M3 Expressive風）。イベントはドットインジケーターで表示し、タップでアジェンダに展開。現在日はprimaryカラーの塗りつぶし円。テーマのDynamic Colorを背景に適用
 - **週ビュー（WeekView）**: 7列 × 時間軸の縦スクロールグリッド。イベントを時間ブロック（高さ＝所要時間に比例した色付き矩形）で表示。重なりはブロック幅を縮小して並列配置。現在時刻を赤/アクセント色の横線（nowインジケーター）で表示。終日イベントは上部ストリップに表示
-- **アジェンダビュー（AgendaView）**: 日別グループヘッダー付きの時系列イベントリスト。無限スクロール対応。リッチなEventCardで時間・タイトル・場所・カレンダー色を表示。現在の「CalendarScreen + DaySelector」の改良版
+- **アジェンダビュー（AgendaView）**: 日別グループヘッダー付きの時系列イベントリスト。無限スクロール対応。EventCardで時間・タイトル・場所・カレンダー色を表示
 
 ビュー切り替えはreact-native-paperの`SegmentedButtons`を使用。選択状態はJotai atomで永続化。
 
@@ -1097,13 +1097,11 @@ RootNavigator (NativeStack)
 - **視覚的優先度**: 直近のイベント（1時間以内）は微妙なelevation/shadowで強調
 - **終日イベント**: 背景を薄いカレンダー色で塗りつぶしたフルワイドChipに変更
 
-#### 17c: DaySelector → ミニカレンダーヘッダー
+#### 17c: 日付ナビゲーション
 
-現在のChipベースの横スクロールを改善。
-
-- **月ビュー時**: 月グリッドがメインコンテンツなのでDaySelectorを非表示にし、月/年タイトルと前後ナビゲーション矢印のみ表示
-- **週/アジェンダビュー時**: コンパクトな週カレンダーストリップ。各日セルに曜日（短縮）+ 日付番号。選択日はprimaryカラー円。イベントありの日はドットインジケーター表示。スワイプで週送り対応
-- **「今日」ボタン**: FABスタイルの小型ボタンに変更、右下に固定配置
+- **月ビュー**: 月グリッドと月/年タイトル、前後ナビゲーションを表示
+- **週ビュー**: 曜日と日付を並べ、選択日と予定の有無を色とドットで表示
+- **アジェンダビュー**: 選択日単位で予定をまとめ、前後移動と「今日」への移動を共通ヘッダーに配置
 
 #### 17d: タイムラインビュー（CustomDayTimeline）
 
@@ -1128,7 +1126,7 @@ react-native-reanimated v4を活用したスムーズなトランジション。
 
 現在のカレンダー画面のダークモード対応を強化。
 
-- **イベントカラー**: ダーク背景上での可読性を確保するため、イベント色のsaturationとluminanceを自動調整するユーティリティ関数作成
+- **イベントカラー**: カレンダー色を各表示のボーダーや薄い背景色に使い、テーマ色をフォールバックにする
 - **表面レベルのトーナルエレベーション**: 純黒ではなくsurface/surfaceContainerのM3トークンを使用
 - **コントラスト比**: テキスト/背景のコントラスト比がWCAG AA（4.5:1）以上を維持
 
@@ -1139,7 +1137,6 @@ src/features/calendar/
 ├── screens/
 │   └── CalendarScreen.tsx          # ビュー切り替えロジック追加
 ├── components/
-│   ├── DaySelector.tsx             # ミニカレンダーヘッダーに刷新
 │   ├── EventCard.tsx               # 左ボーダー・時間範囲・場所表示
 │   ├── MonthView.tsx               # 新規: 月グリッドビュー
 │   ├── WeekView.tsx                # 新規: 週タイムグリッド
@@ -1147,10 +1144,8 @@ src/features/calendar/
 │   ├── CustomDayTimeline.tsx       # 既存スタブを本実装
 │   ├── TimelineEventBlock.tsx      # 新規: タイムライン上のイベントブロック
 │   └── NowIndicator.tsx            # 新規: 現在時刻インジケーター
-├── hooks/
-│   └── useCalendarView.ts          # 新規: ビュー状態管理
-└── utils/
-    └── eventColorUtils.ts          # 新規: ダークモード色補正
+└── hooks/
+    └── useCalendarView.ts          # ビュー状態管理
 
 src/atoms/
 └── calendarAtoms.ts                # calendarViewModeAtom追加
@@ -1569,8 +1564,8 @@ src/features/settings/
 src/features/game2048/
   logic/gameTypes.ts, gameEngine.ts
   atoms/game2048Atoms.ts
-  components/GameBoard.tsx, GameTile.tsx, GameHeader.tsx, GameOverlay.tsx, BoardSizeSelector.tsx, SaveSlotList.tsx
-  screens/Game2048Screen.tsx
+  components/GameBoard.tsx, GameTile.tsx, GameHeader.tsx, GameOverlay.tsx, SaveSlotList.tsx
+  screens/Game2048Screen.tsx, Game2048SettingsScreen.tsx, Game2048TreeScreen.tsx
 scripts/generate-licenses.ts
 ```
 

@@ -10,6 +10,7 @@ import { calendarEventsAtom } from "../../../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
 import { scheduleAlarm } from "../../../../src/features/alarm/services/alarmScheduler";
 import { EventDetailScreen } from "../../../../src/features/calendar/screens/EventDetailScreen";
+import { requestClockWidgetUpdate } from "../../../../src/features/widget/services/widgetUpdater";
 import type { Alarm } from "../../../../src/models/Alarm";
 import type { CalendarEvent } from "../../../../src/models/CalendarEvent";
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
@@ -46,6 +47,10 @@ jest.mock("../../../../src/core/storage/asyncStorageAdapter", () => ({
       },
     };
   },
+}));
+
+jest.mock("../../../../src/features/widget/services/widgetUpdater", () => ({
+  requestClockWidgetUpdate: jest.fn(),
 }));
 
 jest.mock("react-i18next", () => ({
@@ -272,7 +277,9 @@ describe("EventDetailScreen", () => {
         linkedCalendarEventId: "event-alarm",
         enabled: true,
       }),
+      DEFAULT_SETTINGS.cycleConfig,
     );
+    expect(requestClockWidgetUpdate).toHaveBeenCalled();
 
     // Verify alarm was added to store
     const alarms = await store.get(alarmsAtom);

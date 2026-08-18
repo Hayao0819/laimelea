@@ -311,6 +311,7 @@ describe("AlarmEditScreen", () => {
     expect(mockRecoverAlarmSchedule).toHaveBeenCalledWith(
       existingAlarm,
       expect.any(Number),
+      DEFAULT_SETTINGS.cycleConfig,
     );
     expect(mockGoBack).not.toHaveBeenCalled();
   });

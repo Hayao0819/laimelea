@@ -5,7 +5,7 @@ import {
   findBackupFile,
   getFileMetadata,
   uploadBackup,
-} from "../googleDriveApi";
+} from "../../../src/core/drive/googleDriveApi";
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;

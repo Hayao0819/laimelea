@@ -1,6 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, FlatList, StyleSheet, View } from "react-native";
@@ -8,26 +7,18 @@ import { FAB, Snackbar, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import { alarmsAtom } from "../../../atoms/alarmAtoms";
-import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
 import type { Alarm } from "../../../models/Alarm";
 import type { RootStackParamList } from "../../../navigation/types";
-import { requestClockWidgetUpdate } from "../../widget/services/widgetUpdater";
 import { AlarmCard } from "../components/AlarmCard";
-import { getAlarmToSchedule } from "../services/alarmRescheduler";
-import {
-  cancelAlarm,
-  recoverAlarmSchedule,
-  scheduleAlarm,
-} from "../services/alarmScheduler";
+import { useAlarmMutations } from "../hooks/useAlarmMutations";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function AlarmListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
-  const [alarms, setAlarms] = useAtom(alarmsAtom);
-  const settings = useAtomValue(resolvedSettingsAtom);
+  const { alarms, cycleConfig, setAlarmEnabled, skipNextAlarm, deleteAlarm } =
+    useAlarmMutations();
   const [snackMessage, setSnackMessage] = React.useState("");
   const [fabOpen, setFabOpen] = React.useState(false);
   const theme = useTheme();
@@ -36,51 +27,16 @@ export function AlarmListScreen() {
 
   const handleToggle = useCallback(
     async (alarm: Alarm) => {
-      const updated: Alarm = {
-        ...alarm,
-        enabled: !alarm.enabled,
-        updatedAt: Date.now(),
-      };
-
-      if (updated.enabled) {
-        const alarmToSchedule = getAlarmToSchedule(
-          updated,
-          settings.cycleConfig,
-        );
-        if (!alarmToSchedule) {
-          Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
-          return;
+      try {
+        await setAlarmEnabled(alarm, !alarm.enabled);
+        if (!alarm.enabled) {
+          setSnackMessage(t("alarm.scheduled"));
         }
-        try {
-          const triggerId = await scheduleAlarm(alarmToSchedule);
-          updated.targetTimestampMs = alarmToSchedule.targetTimestampMs;
-          updated.skipNextOccurrence = alarmToSchedule.skipNextOccurrence;
-          updated.notifeeTriggerId = triggerId;
-        } catch {
-          Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
-          return;
-        }
-        setSnackMessage(t("alarm.scheduled"));
-      } else {
-        try {
-          await cancelAlarm(alarm);
-        } catch {
-          const recoveredAlarm = await recoverAlarmSchedule(alarm);
-          setAlarms(
-            alarms.map((storedAlarm) =>
-              storedAlarm.id === alarm.id ? recoveredAlarm : storedAlarm,
-            ),
-          );
-          Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
-          return;
-        }
-        updated.notifeeTriggerId = null;
+      } catch {
+        Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
       }
-
-      setAlarms(alarms.map((a) => (a.id === alarm.id ? updated : a)));
-      requestClockWidgetUpdate();
     },
-    [alarms, setAlarms, settings.cycleConfig, t],
+    [setAlarmEnabled, t],
   );
 
   const handlePress = useCallback(
@@ -93,80 +49,37 @@ export function AlarmListScreen() {
   const handleLongPress = useCallback(
     async (alarm: Alarm) => {
       try {
-        await cancelAlarm(alarm);
-        setAlarms(alarms.filter((a) => a.id !== alarm.id));
-        requestClockWidgetUpdate();
+        await deleteAlarm(alarm);
       } catch {
-        const recoveredAlarm = await recoverAlarmSchedule(alarm);
-        setAlarms(
-          alarms.map((storedAlarm) =>
-            storedAlarm.id === alarm.id ? recoveredAlarm : storedAlarm,
-          ),
-        );
         Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
       }
     },
-    [alarms, setAlarms, t],
+    [deleteAlarm, t],
   );
 
   const handleSkipNext = useCallback(
     async (alarm: Alarm) => {
-      const alarmToSchedule = getAlarmToSchedule(
-        { ...alarm, skipNextOccurrence: true },
-        settings.cycleConfig,
-      );
-      if (!alarmToSchedule) {
-        Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
-        return;
-      }
-
       try {
-        await cancelAlarm(alarm);
-        const triggerId = await scheduleAlarm(alarmToSchedule);
-        const now = Date.now();
-        setAlarms(
-          alarms.map((current) =>
-            current.id === alarm.id
-              ? {
-                  ...alarmToSchedule,
-                  notifeeTriggerId: triggerId,
-                  updatedAt: now,
-                }
-              : current,
-          ),
-        );
-        requestClockWidgetUpdate();
+        await skipNextAlarm(alarm);
       } catch {
-        const recoveredAlarm = await recoverAlarmSchedule(alarm);
-        setAlarms(
-          alarms.map((storedAlarm) =>
-            storedAlarm.id === alarm.id ? recoveredAlarm : storedAlarm,
-          ),
-        );
         Alert.alert(t("alarm.saveAlarm"), t("alarm.scheduleFailed"));
       }
     },
-    [alarms, setAlarms, settings.cycleConfig, t],
+    [skipNextAlarm, t],
   );
 
   const renderItem = useCallback(
     ({ item }: { item: Alarm }) => (
       <AlarmCard
         alarm={item}
-        cycleConfig={settings.cycleConfig}
+        cycleConfig={cycleConfig}
         onToggle={handleToggle}
         onSkipNext={handleSkipNext}
         onPress={handlePress}
         onLongPress={handleLongPress}
       />
     ),
-    [
-      settings.cycleConfig,
-      handleToggle,
-      handleSkipNext,
-      handlePress,
-      handleLongPress,
-    ],
+    [cycleConfig, handleToggle, handleSkipNext, handlePress, handleLongPress],
   );
 
   const keyExtractor = useCallback((item: Alarm) => item.id, []);

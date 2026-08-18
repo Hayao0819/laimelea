@@ -94,6 +94,22 @@ describe("setupForegroundHandler", () => {
     expect(onAlarmFired).not.toHaveBeenCalled();
   });
 
+  it("waits for timer persistence before updating in-memory state", async () => {
+    const onTimerCompleted = jest.fn();
+    (completeTimerFromNotification as jest.Mock).mockRejectedValueOnce(
+      new Error("write failed"),
+    );
+    setupForegroundHandler(onAlarmFired, undefined, onTimerCompleted);
+
+    await expect(
+      registeredCallback({
+        type: 3,
+        detail: { notification: { data: { timerId: "timer-123" } } },
+      }),
+    ).rejects.toThrow("write failed");
+    expect(onTimerCompleted).not.toHaveBeenCalled();
+  });
+
   it("does not open an alarm when delivery was ignored", async () => {
     (processAlarmDelivery as jest.Mock).mockResolvedValueOnce({
       handled: false,

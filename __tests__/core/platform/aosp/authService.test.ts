@@ -276,6 +276,34 @@ describe("createAospAuthService", () => {
       ).toBeUndefined();
     });
 
+    it.each([
+      {},
+      {
+        accessToken: 42,
+        refreshToken: "rt",
+        idToken: "it",
+        email: "user@gmail.com",
+        expirationDate: "2099-01-01T00:00:00Z",
+      },
+      {
+        accessToken: "at",
+        refreshToken: "rt",
+        idToken: "it",
+        email: "user@gmail.com",
+        expirationDate: "invalid",
+      },
+    ])("clears a stored state with an invalid schema", async (state) => {
+      mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE] =
+        JSON.stringify(state);
+
+      const auth = createAospAuthService();
+
+      await expect(auth.getAccessToken()).resolves.toBeNull();
+      expect(
+        mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE],
+      ).toBeUndefined();
+    });
+
     it("should return null when refresh fails", async () => {
       mockStore[SECURE_STORAGE_SERVICES.AOSP_AUTH_STATE] = JSON.stringify({
         accessToken: "expired-token",

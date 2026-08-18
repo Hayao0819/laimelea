@@ -2,12 +2,10 @@ import notifee, {
   type TimestampTrigger,
   TriggerType,
 } from "@notifee/react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 import { getAlarmDeliveryStatus } from "../../../core/notifications/notifeeSetup";
-import { STORAGE_KEYS } from "../../../core/storage/keys";
-import { DEFAULT_CYCLE_LENGTH_MINUTES } from "../../../core/time/constants";
+import { readStoredSettings } from "../../../core/storage/storedAppState";
 import type { Alarm } from "../../../models/Alarm";
 import type { CycleConfig } from "../../../models/CustomTime";
 import { cancelAlarmAudio, scheduleAlarmAudio } from "./ringtoneService";
@@ -45,31 +43,14 @@ async function getNativeRepeatIntervalMs(
         1000,
     );
   }
-  try {
-    const rawSettings = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
-    const storedSettings = rawSettings
-      ? (JSON.parse(rawSettings) as {
-          cycleConfig?: { cycleLengthMinutes?: number };
-        })
-      : undefined;
-    const cycleLengthMinutes =
-      storedSettings?.cycleConfig?.cycleLengthMinutes ??
-      DEFAULT_CYCLE_LENGTH_MINUTES;
-    return Math.max(
-      0,
-      (alarm.repeat.customCycleIntervalDays ?? 0) *
-        cycleLengthMinutes *
-        60 *
-        1000,
-    );
-  } catch {
-    return (
-      (alarm.repeat.customCycleIntervalDays ?? 0) *
-      DEFAULT_CYCLE_LENGTH_MINUTES *
+  const { cycleLengthMinutes } = (await readStoredSettings()).cycleConfig;
+  return Math.max(
+    0,
+    (alarm.repeat.customCycleIntervalDays ?? 0) *
+      cycleLengthMinutes *
       60 *
-      1000
-    );
-  }
+      1000,
+  );
 }
 
 export async function scheduleAlarm(
@@ -168,9 +149,10 @@ export async function cancelAlarm(alarm: Alarm): Promise<void> {
 export async function recoverAlarmSchedule(
   alarm: Alarm,
   now = Date.now(),
+  cycleConfig?: CycleConfig,
 ): Promise<Alarm> {
   try {
-    const notifeeTriggerId = await scheduleAlarm(alarm);
+    const notifeeTriggerId = await scheduleAlarm(alarm, cycleConfig);
     return { ...alarm, notifeeTriggerId };
   } catch {
     return {
