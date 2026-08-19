@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createStore } from "jotai";
 
 import {
@@ -11,6 +12,7 @@ import {
   loadSnapshotAtom,
   milestoneAutoSaveAtom,
   newGameAtom,
+  normalizeGame2048Store,
   pushHistoryAtom,
   resolvedStoreAtom,
   saveSnapshotAtom,
@@ -75,6 +77,10 @@ function makeGameState(overrides: Partial<GameState> = {}): GameState {
   };
 }
 
+function makeBoardOfSize(size: BoardSize): number[][] {
+  return Array.from({ length: size }, () => Array(size).fill(0) as number[]);
+}
+
 describe("game2048Atoms", () => {
   describe("resolvedStoreAtom", () => {
     it("should return default store initially", () => {
@@ -100,6 +106,154 @@ describe("game2048Atoms", () => {
       // Default fields still present
       expect(resolved.history).toEqual([]);
       expect(resolved.snapshots).toEqual([]);
+    });
+  });
+
+  describe("persisted state normalization", () => {
+    it("replaces malformed values and dangling snapshot references", () => {
+      const validSnapshot = {
+        id: "valid-snapshot",
+        name: "Save",
+        state: makeGameState(),
+        timestamp: 1_700_000_000_000,
+        parentSnapshotId: "missing-snapshot",
+      };
+      const normalized = normalizeGame2048Store({
+        currentGame: {
+          ...makeGameState(),
+          board: [[2, 0, 0, 0]],
+        },
+        bestScores: { 3: 10, 4: -1, 5: "bad", 6: 30 },
+        history: [{ ...makeGameState(), boardSize: 5 }],
+        snapshots: [
+          validSnapshot,
+          { ...validSnapshot, id: "valid-snapshot" },
+          { ...validSnapshot, id: "invalid-snapshot", state: "bad" },
+        ],
+        unlockedAt: -1,
+        perSizeGames: {
+          4: { game: makeGameState(), history: [makeGameState()] },
+          5: { game: makeGameState(), history: [] },
+        },
+        settings: { luckyMode: "yes" },
+        activeSnapshotId: "missing-snapshot",
+        autoSaveMaxTile: { 3: 8, 4: Infinity, 5: 32, 6: -2 },
+      });
+
+      expect(normalized.currentGame).toMatchObject({
+        boardSize: 4,
+        score: 0,
+      });
+      expect(normalized.bestScores).toEqual({ 3: 10, 4: 0, 5: 0, 6: 30 });
+      expect(normalized.history).toEqual([]);
+      expect(normalized.snapshots).toEqual([
+        expect.objectContaining({
+          id: "valid-snapshot",
+          parentSnapshotId: null,
+        }),
+      ]);
+      expect(normalized.unlockedAt).toBeNull();
+      expect(normalized.perSizeGames).toEqual({
+        4: expect.objectContaining({ history: [makeGameState()] }),
+      });
+      expect(normalized.settings).toEqual({ luckyMode: false });
+      expect(normalized.activeSnapshotId).toBeNull();
+      // currentGame was malformed and fell back to a freshly created game,
+      // so autoSaveMaxTile[4] is reseeded from that board's actual max tile
+      // instead of staying at the invalid stored value.
+      expect(normalized.autoSaveMaxTile).toEqual({
+        3: 8,
+        4: getMaxTile(normalized.currentGame.board),
+        5: 32,
+        6: 0,
+      });
+      expect([2, 4]).toContain(normalized.autoSaveMaxTile[4]);
+    });
+
+    it("breaks cyclic snapshot parent references", () => {
+      const normalized = normalizeGame2048Store({
+        ...createDefaultStore(),
+        snapshots: [
+          {
+            id: "first",
+            name: "First",
+            state: makeGameState(),
+            timestamp: 1,
+            parentSnapshotId: "second",
+          },
+          {
+            id: "second",
+            name: "Second",
+            state: makeGameState(),
+            timestamp: 2,
+            parentSnapshotId: "first",
+          },
+        ],
+      });
+
+      expect(
+        normalized.snapshots.map((snapshot) => snapshot.parentSnapshotId),
+      ).toEqual([null, null]);
+    });
+
+    it("seeds autoSaveMaxTile from the board when a legacy backup lacks the key entirely", () => {
+      const legacyGame = makeGameState({
+        board: [
+          [512, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 8000,
+        boardSize: 4,
+      });
+
+      const normalized = normalizeGame2048Store({
+        currentGame: legacyGame,
+        bestScores: { 3: 0, 4: 8000, 5: 0, 6: 0 },
+        history: [],
+        snapshots: [],
+        unlockedAt: null,
+        perSizeGames: {},
+        settings: { luckyMode: false },
+        activeSnapshotId: null,
+      });
+
+      expect(normalized.autoSaveMaxTile[4]).toBe(512);
+    });
+
+    it("does not create a spurious milestone on the first move after restoring a legacy backup", () => {
+      const legacyGame = makeGameState({
+        board: [
+          [512, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 8000,
+        boardSize: 4,
+      });
+      const legacyStore = {
+        currentGame: legacyGame,
+        bestScores: { 3: 0, 4: 8000, 5: 0, 6: 0 },
+        history: [],
+        snapshots: [],
+        unlockedAt: null,
+        perSizeGames: {},
+        settings: { luckyMode: false },
+        activeSnapshotId: null,
+      };
+
+      const store = createStore();
+      store.set(game2048StoreAtom, legacyStore as unknown as Game2048Store);
+
+      const nextMoveState = {
+        ...legacyGame,
+        moveCount: legacyGame.moveCount + 1,
+      };
+      store.set(milestoneAutoSaveAtom, nextMoveState);
+
+      expect(store.get(snapshotsAtom)).toHaveLength(0);
     });
   });
 
@@ -378,6 +532,21 @@ describe("game2048Atoms", () => {
 
       expect(store.get(activeSnapshotIdAtom)).toBeNull();
     });
+
+    it("restores the previous store when persistence fails", async () => {
+      const initial = createDefaultStore();
+      const store = createStore();
+      await Promise.resolve(store.set(game2048StoreAtom, initial));
+      jest
+        .mocked(AsyncStorage.setItem)
+        .mockRejectedValueOnce(new Error("storage unavailable"));
+
+      await expect(
+        Promise.resolve(store.set(newGameAtom, 3)),
+      ).resolves.toBeUndefined();
+
+      expect(store.get(resolvedStoreAtom)).toEqual(initial);
+    });
   });
 
   describe("settingsAtom", () => {
@@ -426,6 +595,15 @@ describe("game2048Atoms", () => {
     it("should return stored activeSnapshotId", () => {
       const store = createInitializedStore({
         activeSnapshotId: "snap-123",
+        snapshots: [
+          {
+            id: "snap-123",
+            name: "Save",
+            state: makeGameState(),
+            timestamp: 1,
+            parentSnapshotId: null,
+          },
+        ],
       });
       expect(store.get(activeSnapshotIdAtom)).toBe("snap-123");
     });
@@ -616,12 +794,21 @@ describe("game2048Atoms", () => {
     it("should set parentSnapshotId to current activeSnapshotId", () => {
       const store = createInitializedStore({
         activeSnapshotId: "parent-snap",
+        snapshots: [
+          {
+            id: "parent-snap",
+            name: "Save",
+            state: makeGameState(),
+            timestamp: 1,
+            parentSnapshotId: null,
+          },
+        ],
       });
 
       store.set(saveSnapshotAtom, false);
 
       const snapshots = store.get(snapshotsAtom);
-      expect(snapshots[0].parentSnapshotId).toBe("parent-snap");
+      expect(snapshots[1].parentSnapshotId).toBe("parent-snap");
     });
 
     it("should set parentSnapshotId to null when no active snapshot", () => {
@@ -689,7 +876,7 @@ describe("game2048Atoms", () => {
         timestamp: 1000,
         parentSnapshotId: null,
       };
-      const store = createInitializedStore();
+      const store = createInitializedStore({ snapshots: [snapshot] });
 
       store.set(loadSnapshotAtom, snapshot);
 
@@ -895,6 +1082,385 @@ describe("game2048Atoms", () => {
       expect(resolved.autoSaveMaxTile[4]).toBe(16);
       // Size 3 should be unaffected
       expect(resolved.autoSaveMaxTile[3]).toBe(64);
+    });
+  });
+
+  describe("createDefaultStore autoSaveMaxTile seeding", () => {
+    it("seeds autoSaveMaxTile[4] from the initial board so the first move creates no spurious milestone snapshot", () => {
+      const defaultData = createDefaultStore();
+      const initialMaxTile = getMaxTile(defaultData.currentGame.board);
+      expect(defaultData.autoSaveMaxTile[4]).toBe(initialMaxTile);
+
+      const store = createInitializedStore(defaultData);
+      const newState = { ...defaultData.currentGame, moveCount: 1 };
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      expect(store.get(snapshotsAtom)).toHaveLength(0);
+    });
+  });
+
+  describe("switchBoardSizeAtom autoSaveMaxTile seeding", () => {
+    it("seeds autoSaveMaxTile for a never-played size so the first move creates no spurious milestone snapshot", () => {
+      const store = createInitializedStore();
+
+      store.set(switchBoardSizeAtom, 5);
+
+      const resolved = store.get(resolvedStoreAtom);
+      const initialMaxTile = getMaxTile(resolved.currentGame.board);
+      expect(resolved.autoSaveMaxTile[5]).toBe(initialMaxTile);
+
+      store.set(milestoneAutoSaveAtom, {
+        ...resolved.currentGame,
+        moveCount: 1,
+      });
+
+      expect(store.get(snapshotsAtom)).toHaveLength(0);
+    });
+
+    it("does not reseed autoSaveMaxTile when switching to a previously played size", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 0, 5: 64, 6: 0 },
+        perSizeGames: {
+          5: {
+            game: makeGameState({
+              boardSize: 5,
+              board: makeBoardOfSize(5),
+            }),
+            history: [],
+          },
+        },
+      });
+
+      store.set(switchBoardSizeAtom, 5);
+
+      expect(store.get(resolvedStoreAtom).autoSaveMaxTile[5]).toBe(64);
+    });
+  });
+
+  describe("loadSnapshotAtom perSizeGames archiving", () => {
+    it("archives the outgoing game into perSizeGames and clears it again when the snapshot is the same size", () => {
+      const currentGame = makeGameState({ score: 42, boardSize: 4 });
+      const history = [makeGameState({ score: 10 })];
+      const snapshot: GameSnapshot = {
+        id: "snap-same-size",
+        name: "Save #1",
+        state: makeGameState({ score: 999, boardSize: 4 }),
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore({ currentGame, history });
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.currentGame).toEqual(snapshot.state);
+      expect(resolved.perSizeGames[4]).toBeUndefined();
+    });
+
+    it("archives the outgoing game and clears a stale entry when loading a different-size snapshot", () => {
+      const currentGame = makeGameState({ score: 42, boardSize: 4 });
+      const history = [makeGameState({ score: 10 })];
+      const staleGame5 = makeGameState({
+        score: 777,
+        boardSize: 5,
+        board: makeBoardOfSize(5),
+      });
+      const snapshot: GameSnapshot = {
+        id: "snap-diff-size",
+        name: "Save #1",
+        state: makeGameState({
+          score: 999,
+          boardSize: 5,
+          board: makeBoardOfSize(5),
+        }),
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore({
+        currentGame,
+        history,
+        perSizeGames: { 5: { game: staleGame5, history: [] } },
+      });
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(resolved.currentGame).toEqual(snapshot.state);
+      expect(resolved.perSizeGames[4]).toEqual({ game: currentGame, history });
+      expect(resolved.perSizeGames[5]).toBeUndefined();
+    });
+
+    it("never leaves a perSizeGames entry for the newly active board size", () => {
+      const snapshot: GameSnapshot = {
+        id: "snap-invariant",
+        name: "Save #1",
+        state: makeGameState({
+          score: 5,
+          boardSize: 3,
+          board: makeBoardOfSize(3),
+        }),
+        timestamp: 1000,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore({
+        currentGame: makeGameState({ boardSize: 4 }),
+      });
+
+      store.set(loadSnapshotAtom, snapshot);
+
+      const resolved = store.get(resolvedStoreAtom);
+      expect(
+        resolved.perSizeGames[resolved.currentGame.boardSize],
+      ).toBeUndefined();
+    });
+  });
+
+  describe("saveSnapshotAtom auto-save pruning", () => {
+    it("prunes the oldest game-over auto-saves beyond the retention limit for that board size", () => {
+      const manualSnapshot: GameSnapshot = {
+        id: "manual-1",
+        name: "Save #1 · 1pt · 4×4",
+        state: makeGameState(),
+        timestamp: 1,
+        parentSnapshotId: null,
+      };
+      const milestoneSnapshot: GameSnapshot = {
+        id: "milestone-1",
+        name: "Reached 16 #1 · 1pt · 4×4",
+        state: makeGameState(),
+        timestamp: 2,
+        parentSnapshotId: null,
+      };
+      const gameOverSnapshots: GameSnapshot[] = [1, 2, 3].map((n) => ({
+        id: `gameover-${n}`,
+        name: `Game Over #${n} · ${n}pt · 4×4`,
+        state: makeGameState({ score: n }),
+        timestamp: 100 + n,
+        parentSnapshotId: null,
+      }));
+      const store = createInitializedStore({
+        currentGame: makeGameState({
+          score: 999,
+          boardSize: 4,
+          isGameOver: true,
+        }),
+        snapshots: [manualSnapshot, milestoneSnapshot, ...gameOverSnapshots],
+      });
+
+      store.set(saveSnapshotAtom, true);
+
+      const snapshots = store.get(snapshotsAtom);
+      const gameOverKept = snapshots.filter((snapshot) =>
+        snapshot.name.startsWith("Game Over"),
+      );
+      expect(gameOverKept).toHaveLength(3);
+      expect(
+        gameOverKept.some((snapshot) => snapshot.id === "gameover-1"),
+      ).toBe(false);
+      expect(
+        gameOverKept.some((snapshot) => snapshot.id === "gameover-3"),
+      ).toBe(true);
+      expect(snapshots.some((snapshot) => snapshot.id === "manual-1")).toBe(
+        true,
+      );
+      expect(snapshots.some((snapshot) => snapshot.id === "milestone-1")).toBe(
+        true,
+      );
+    });
+
+    it("keeps all snapshots when landing exactly at the retention limit of 3", () => {
+      const gameOverSnapshots: GameSnapshot[] = [1, 2].map((n) => ({
+        id: `gameover-${n}`,
+        name: `Game Over #${n} · ${n}pt · 4×4`,
+        state: makeGameState({ score: n }),
+        timestamp: 100 + n,
+        parentSnapshotId: null,
+      }));
+      const store = createInitializedStore({
+        currentGame: makeGameState({
+          score: 999,
+          boardSize: 4,
+          isGameOver: true,
+        }),
+        snapshots: gameOverSnapshots,
+      });
+
+      store.set(saveSnapshotAtom, true);
+
+      const snapshots = store.get(snapshotsAtom);
+      const gameOverKept = snapshots.filter((snapshot) =>
+        snapshot.name.startsWith("Game Over"),
+      );
+      expect(gameOverKept).toHaveLength(3);
+      expect(gameOverKept.map((snapshot) => snapshot.id)).toEqual(
+        expect.arrayContaining(["gameover-1", "gameover-2"]),
+      );
+    });
+
+    it("only prunes game-over auto-saves for the matching board size", () => {
+      const gameOverSize4 = [1, 2, 3].map((n) => ({
+        id: `size4-${n}`,
+        name: `Game Over #${n} · ${n}pt · 4×4`,
+        state: makeGameState({ score: n, boardSize: 4 }),
+        timestamp: 100 + n,
+        parentSnapshotId: null,
+      }));
+      const gameOverSize5: GameSnapshot = {
+        id: "size5-1",
+        name: "Game Over #1 · 1pt · 5×5",
+        state: makeGameState({
+          score: 1,
+          boardSize: 5,
+          board: makeBoardOfSize(5),
+        }),
+        timestamp: 50,
+        parentSnapshotId: null,
+      };
+      const store = createInitializedStore({
+        currentGame: makeGameState({
+          score: 999,
+          boardSize: 4,
+          isGameOver: true,
+        }),
+        snapshots: [...gameOverSize4, gameOverSize5],
+      });
+
+      store.set(saveSnapshotAtom, true);
+
+      const snapshots = store.get(snapshotsAtom);
+      expect(snapshots.some((snapshot) => snapshot.id === "size5-1")).toBe(
+        true,
+      );
+    });
+  });
+
+  describe("snapshot name numbering after deletion", () => {
+    it("saveSnapshotAtom does not reuse a deleted snapshot's number", () => {
+      const store = createInitializedStore({
+        snapshots: [
+          {
+            id: "s1",
+            name: "Save #1 · 10pt · 4×4",
+            state: makeGameState(),
+            timestamp: 1,
+            parentSnapshotId: null,
+          },
+          {
+            id: "s3",
+            name: "Save #3 · 30pt · 4×4",
+            state: makeGameState(),
+            timestamp: 3,
+            parentSnapshotId: null,
+          },
+        ],
+      });
+
+      store.set(saveSnapshotAtom, false);
+
+      const snapshots = store.get(snapshotsAtom);
+      const newest = snapshots[snapshots.length - 1];
+      expect(newest.name).toBe("Save #4 · 0pt · 4×4");
+    });
+
+    it("milestoneAutoSaveAtom does not reuse a deleted milestone's number", () => {
+      const store = createInitializedStore({
+        autoSaveMaxTile: { 3: 0, 4: 8, 5: 0, 6: 0 },
+        snapshots: [
+          {
+            id: "m1",
+            name: "Reached 8 #1 · 10pt · 4×4",
+            state: makeGameState(),
+            timestamp: 1,
+            parentSnapshotId: null,
+          },
+          {
+            id: "m3",
+            name: "Reached 8 #3 · 30pt · 4×4",
+            state: makeGameState(),
+            timestamp: 3,
+            parentSnapshotId: null,
+          },
+        ],
+      });
+      const newState = makeGameState({
+        board: [
+          [2, 4, 8, 16],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        score: 100,
+        boardSize: 4,
+      });
+
+      store.set(milestoneAutoSaveAtom, newState);
+
+      const snapshots = store.get(snapshotsAtom);
+      const newest = snapshots[snapshots.length - 1];
+      expect(newest.name).toBe("Reached 16 #4 · 100pt · 4×4");
+    });
+  });
+
+  describe("isTileValue via normalizeGame2048Store", () => {
+    it("rejects a board containing an invalid tile value of 1 and falls back to default", () => {
+      const normalized = normalizeGame2048Store({
+        currentGame: {
+          ...makeGameState(),
+          score: 999,
+          board: [
+            [1, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      });
+
+      expect(normalized.currentGame).toMatchObject({ boardSize: 4, score: 0 });
+      expect(normalized.currentGame.board.flat()).not.toContain(1);
+    });
+  });
+
+  describe("commitGameStoreAtom throwing updater guard", () => {
+    it("does not reject when the updater throws, avoiding an unhandled rejection", async () => {
+      const initial = createDefaultStore();
+      const store = createStore();
+      await Promise.resolve(store.set(game2048StoreAtom, initial));
+
+      await expect(
+        Promise.resolve(
+          store.set(pushHistoryAtom, undefined as unknown as GameState),
+        ),
+      ).resolves.toBeUndefined();
+
+      expect(store.get(resolvedStoreAtom)).toEqual(initial);
+    });
+  });
+
+  describe("game2048StoreAtom no-op write skip", () => {
+    it("does not write to storage when the updater returns the identical reference", async () => {
+      const initial = createDefaultStore();
+      const store = createStore();
+      await Promise.resolve(store.set(game2048StoreAtom, initial));
+      jest.mocked(AsyncStorage.setItem).mockClear();
+
+      await Promise.resolve(
+        store.set(game2048StoreAtom, (previous) => previous),
+      );
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    });
+
+    it("does not write to storage when undo runs with an empty history", async () => {
+      const initial = createDefaultStore();
+      const store = createStore();
+      await Promise.resolve(store.set(game2048StoreAtom, initial));
+      jest.mocked(AsyncStorage.setItem).mockClear();
+
+      await Promise.resolve(store.set(undoAtom));
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
     });
   });
 

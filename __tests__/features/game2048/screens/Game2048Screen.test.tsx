@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
@@ -67,6 +68,12 @@ function createInitializedStore(overrides: Partial<Game2048Store> = {}) {
   return store;
 }
 
+function createUnhydratedStore() {
+  const store = createStore();
+  store.set(settingsAtom, DEFAULT_SETTINGS);
+  return store;
+}
+
 function createGameOverStore() {
   return createInitializedStore({
     currentGame: {
@@ -121,9 +128,67 @@ describe("Game2048Screen", () => {
     expect(getByTestId("game-2048-screen")).toBeTruthy();
   });
 
+  it("keeps controls unavailable until persisted game data has hydrated", async () => {
+    let resolveStorage: (value: string | null) => void = () => {};
+    const storedGame = new Promise<string | null>((resolve) => {
+      resolveStorage = resolve;
+    });
+    jest.mocked(AsyncStorage.getItem).mockImplementationOnce(() => storedGame);
+
+    const { getByTestId, queryByTestId } = await renderWithProviders(
+      createUnhydratedStore(),
+    );
+
+    expect(getByTestId("game2048-loading")).toBeTruthy();
+    expect(queryByTestId("game-board")).toBeNull();
+    expect(queryByTestId("new-game-button")).toBeNull();
+
+    await act(async () => {
+      resolveStorage(null);
+      await storedGame;
+    });
+
+    await waitFor(() => {
+      expect(getByTestId("game-2048-screen")).toBeTruthy();
+    });
+  });
+
   it("should display the game board", async () => {
     const { getByTestId } = await renderWithProviders();
     expect(getByTestId("game-board")).toBeTruthy();
+  });
+
+  it("fits the board into the available landscape height", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    fireEvent(getByTestId("game-board-area"), "layout", {
+      nativeEvent: {
+        layout: { x: 0, y: 0, width: 800, height: 220 },
+      },
+    });
+
+    const boardStyle = StyleSheet.flatten(
+      getByTestId("game-board").props.style,
+    );
+    expect(boardStyle.width).toBe(220);
+    expect(boardStyle.height).toBe(220);
+    expect(getByTestId("game-2048-bottom-bar")).toBeTruthy();
+  });
+
+  it("keeps a board square inside a small landscape board area", async () => {
+    const { getByTestId } = await renderWithProviders();
+
+    fireEvent(getByTestId("game-board-area"), "layout", {
+      nativeEvent: {
+        layout: { x: 0, y: 0, width: 480, height: 96 },
+      },
+    });
+
+    const boardStyle = StyleSheet.flatten(
+      getByTestId("game-board").props.style,
+    );
+    expect(boardStyle.width).toBe(96);
+    expect(boardStyle.height).toBe(96);
   });
 
   it("should display the header with score", async () => {
@@ -159,6 +224,14 @@ describe("Game2048Screen", () => {
   });
 
   describe("auto-save on game over", () => {
+    it("does not auto-save an already completed game after hydration", async () => {
+      const store = createGameOverStore();
+
+      await renderWithProviders(store);
+
+      expect(store.get(resolvedStoreAtom).snapshots).toEqual([]);
+    });
+
     it("should auto-save snapshot when game transitions to game over", async () => {
       // Start with a game that is NOT game over
       const store = createInitializedStore();
@@ -334,7 +407,7 @@ describe("Game2048Screen", () => {
       const store = createInitializedStore({
         currentGame: {
           board: [
-            [16, 4, 0, 0],
+            [8, 4, 0, 0],
             [0, 0, 0, 0],
             [0, 0, 0, 0],
             [0, 0, 0, 2],

@@ -11,6 +11,7 @@ import {
   hasReachedWinTarget,
   MAX_HISTORY_SIZE,
   move,
+  nextSnapshotIndex,
   slideRow,
   spawnTile,
   spawnTileLucky,
@@ -1172,14 +1173,59 @@ describe("createDefaultStore new fields", () => {
     expect(store.activeSnapshotId).toBeNull();
   });
 
-  it("has zero autoSaveMaxTile for all sizes", () => {
+  it("has zero autoSaveMaxTile for unstarted sizes", () => {
     const store = createDefaultStore();
-    expect(store.autoSaveMaxTile).toEqual({ 3: 0, 4: 0, 5: 0, 6: 0 });
+    expect(store.autoSaveMaxTile[3]).toBe(0);
+    expect(store.autoSaveMaxTile[5]).toBe(0);
+    expect(store.autoSaveMaxTile[6]).toBe(0);
+  });
+
+  it("seeds autoSaveMaxTile[4] from the initial board's max tile", () => {
+    const store = createDefaultStore();
+    expect(store.autoSaveMaxTile[4]).toBe(getMaxTile(store.currentGame.board));
+    expect([2, 4]).toContain(store.autoSaveMaxTile[4]);
   });
 });
 
 describe("MAX_HISTORY_SIZE", () => {
   it("is 100", () => {
     expect(MAX_HISTORY_SIZE).toBe(100);
+  });
+});
+
+describe("nextSnapshotIndex", () => {
+  it("returns 1 for an empty list", () => {
+    expect(nextSnapshotIndex([])).toBe(1);
+  });
+
+  it("returns one past the highest existing index", () => {
+    expect(
+      nextSnapshotIndex(["Save #1 · 10pt · 4×4", "Save #2 · 20pt · 4×4"]),
+    ).toBe(3);
+  });
+
+  it("ignores names without a #N suffix", () => {
+    expect(nextSnapshotIndex(["untitled", "no index here"])).toBe(1);
+  });
+
+  it("ignores names without a #N suffix mixed in with indexed names", () => {
+    expect(
+      nextSnapshotIndex([
+        "untitled",
+        "Save #2 · 20pt · 4×4",
+        "no index here",
+        "Save #1 · 10pt · 4×4",
+      ]),
+    ).toBe(3);
+  });
+
+  it("is not confused by index order and picks the maximum regardless of position", () => {
+    expect(
+      nextSnapshotIndex([
+        "Save #3 · 30pt · 4×4",
+        "Save #1 · 10pt · 4×4",
+        "Save #2 · 20pt · 4×4",
+      ]),
+    ).toBe(4);
   });
 });

@@ -3,6 +3,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
+  ActivityIndicator,
   List,
   SegmentedButtons,
   Switch,
@@ -14,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { spacing } from "../../../app/spacing";
 import {
   currentGameAtom,
+  game2048HydratedAtom,
   hasGameStartedAtom,
   settingsAtom,
   switchBoardSizeAtom,
@@ -26,6 +28,7 @@ export function Game2048SettingsScreen(): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const settings = useAtomValue(settingsAtom);
+  const gameHydrated = useAtomValue(game2048HydratedAtom);
   const hasGameStarted = useAtomValue(hasGameStartedAtom);
   const currentGame = useAtomValue(currentGameAtom);
   const updateSettings = useSetAtom(updateSettingsAtom);
@@ -48,6 +51,14 @@ export function Game2048SettingsScreen(): React.JSX.Element {
     },
     [switchBoardSize],
   );
+
+  if (!gameHydrated) {
+    return (
+      <View style={styles.loading} testID="game2048-loading">
+        <ActivityIndicator />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -103,6 +114,11 @@ export function Game2048SettingsScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   scroll: {
     paddingBottom: spacing.xl,
+  },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   segmentContainer: {
     paddingHorizontal: spacing.base,

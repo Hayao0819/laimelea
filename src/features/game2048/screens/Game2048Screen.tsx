@@ -2,8 +2,18 @@ import { useNavigation } from "@react-navigation/native";
 import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
-import { Button, IconButton, useTheme } from "react-native-paper";
+import {
+  type LayoutChangeEvent,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  IconButton,
+  useTheme,
+} from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
@@ -13,6 +23,7 @@ import {
   canUndoAtom,
   currentGameAtom,
   deleteSnapshotAtom,
+  game2048HydratedAtom,
   loadSnapshotAtom,
   milestoneAutoSaveAtom,
   newGameAtom,
@@ -33,8 +44,10 @@ export function Game2048Screen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const navigation = useNavigation();
   const game = useAtomValue(currentGameAtom);
+  const gameHydrated = useAtomValue(game2048HydratedAtom);
   const bestScores = useAtomValue(bestScoresAtom);
   const canUndo = useAtomValue(canUndoAtom);
   const snapshots = useAtomValue(snapshotsAtom);
@@ -50,18 +63,41 @@ export function Game2048Screen() {
 
   const [saveListVisible, setSaveListVisible] = useState(false);
   const [lastDirection, setLastDirection] = useState<Direction | null>(null);
+  const fallbackBoardSize = Math.max(
+    0,
+    Math.min(
+      windowWidth - insets.left - insets.right - spacing.base * 2,
+      windowHeight * 0.55,
+    ),
+  );
+  const [boardSize, setBoardSize] = useState(fallbackBoardSize);
+
+  const handleBoardAreaLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    const nextSize = Math.max(0, Math.floor(Math.min(width, height)));
+    setBoardSize((current) => (current === nextSize ? current : nextSize));
+  }, []);
 
   const gameRef = useRef(game);
   gameRef.current = game;
 
-  // Auto-save on game over
   const prevGameOverRef = useRef(false);
+  const gameOverBaselineReadyRef = useRef(false);
   useEffect(() => {
+    if (!gameHydrated) {
+      gameOverBaselineReadyRef.current = false;
+      return;
+    }
+    if (!gameOverBaselineReadyRef.current) {
+      prevGameOverRef.current = game.isGameOver;
+      gameOverBaselineReadyRef.current = true;
+      return;
+    }
     if (game.isGameOver && !prevGameOverRef.current) {
       saveSnapshot(true);
     }
     prevGameOverRef.current = game.isGameOver;
-  }, [game.isGameOver, saveSnapshot]);
+  }, [game.isGameOver, gameHydrated, saveSnapshot]);
 
   const handleMove = useCallback(
     (direction: Direction) => {
@@ -115,6 +151,14 @@ export function Game2048Screen() {
     [deleteSnapshot],
   );
 
+  if (!gameHydrated) {
+    return (
+      <View style={styles.loading} testID="game2048-loading">
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
@@ -151,25 +195,32 @@ export function Game2048Screen() {
         />
       </View>
 
-      <View style={styles.boardContainer}>
-        <GameBoard
-          board={game.board}
-          boardSize={game.boardSize}
-          onMove={handleMove}
-          direction={lastDirection}
-        />
-        <GameOverlay
-          isGameOver={game.isGameOver}
-          hasWon={game.hasWon}
-          wonAcknowledged={game.wonAcknowledged}
-          canUndo={canUndo}
-          onKeepGoing={handleKeepGoing}
-          onTryAgain={handleTryAgain}
-          onUndo={() => {
-            setLastDirection(null);
-            undo();
-          }}
-        />
+      <View
+        style={styles.boardArea}
+        onLayout={handleBoardAreaLayout}
+        testID="game-board-area"
+      >
+        <View style={{ width: boardSize, height: boardSize }}>
+          <GameBoard
+            board={game.board}
+            boardSize={game.boardSize}
+            onMove={handleMove}
+            direction={lastDirection}
+            size={boardSize}
+          />
+          <GameOverlay
+            isGameOver={game.isGameOver}
+            hasWon={game.hasWon}
+            wonAcknowledged={game.wonAcknowledged}
+            canUndo={canUndo}
+            onKeepGoing={handleKeepGoing}
+            onTryAgain={handleTryAgain}
+            onUndo={() => {
+              setLastDirection(null);
+              undo();
+            }}
+          />
+        </View>
       </View>
 
       <View
@@ -205,14 +256,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   topButtons: {
     flexDirection: "row",
     justifyContent: "flex-end",
     paddingHorizontal: spacing.sm,
   },
-  boardContainer: {
+  boardArea: {
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: spacing.sm,
+    minHeight: 0,
   },
   bottomBar: {
     alignItems: "center",

@@ -293,13 +293,32 @@ export function generateSnapshotName(
   return `${prefix} #${index} · ${state.score}pt · ${state.boardSize}×${state.boardSize}`;
 }
 
+const SNAPSHOT_INDEX_PATTERN = /#(\d+)/;
+
+/**
+ * Next index for a snapshot name, derived from the highest existing index
+ * rather than a live count, so it never collides after deletions.
+ */
+export function nextSnapshotIndex(names: string[]): number {
+  let maxIndex = 0;
+  for (const name of names) {
+    const match = SNAPSHOT_INDEX_PATTERN.exec(name);
+    if (match) {
+      const value = Number(match[1]);
+      if (value > maxIndex) maxIndex = value;
+    }
+  }
+  return maxIndex + 1;
+}
+
 export function createDefaultSettings(): Game2048Settings {
   return { luckyMode: false };
 }
 
 export function createDefaultStore(): Game2048Store {
+  const currentGame = createNewGame(4);
   return {
-    currentGame: createNewGame(4),
+    currentGame,
     bestScores: { 3: 0, 4: 0, 5: 0, 6: 0 },
     history: [],
     snapshots: [],
@@ -307,6 +326,11 @@ export function createDefaultStore(): Game2048Store {
     perSizeGames: {},
     settings: createDefaultSettings(),
     activeSnapshotId: null,
-    autoSaveMaxTile: { 3: 0, 4: 0, 5: 0, 6: 0 },
+    autoSaveMaxTile: {
+      3: 0,
+      4: getMaxTile(currentGame.board),
+      5: 0,
+      6: 0,
+    },
   };
 }

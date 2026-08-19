@@ -2,15 +2,15 @@ import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { Text, useTheme } from "react-native-paper";
+import { ActivityIndicator, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import {
   activeSnapshotIdAtom,
-  game2048StoreAtom,
+  deleteSnapshotAtom,
+  game2048HydratedAtom,
   loadSnapshotAtom,
-  resolvedStoreAtom,
   snapshotsAtom,
 } from "../atoms/game2048Atoms";
 import { SnapshotTree } from "../components/SnapshotTree";
@@ -21,10 +21,10 @@ export function Game2048TreeScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const snapshots = useAtomValue(snapshotsAtom);
+  const gameHydrated = useAtomValue(game2048HydratedAtom);
   const activeSnapshotId = useAtomValue(activeSnapshotIdAtom);
   const loadSnapshot = useSetAtom(loadSnapshotAtom);
-  const setStore = useSetAtom(game2048StoreAtom);
-  const store = useAtomValue(resolvedStoreAtom);
+  const deleteSnapshot = useSetAtom(deleteSnapshotAtom);
 
   const handleLoad = useCallback(
     (snapshot: GameSnapshot) => {
@@ -35,15 +35,18 @@ export function Game2048TreeScreen() {
 
   const handleDelete = useCallback(
     (snapshotId: string) => {
-      setStore({
-        ...store,
-        snapshots: store.snapshots.filter((s) => s.id !== snapshotId),
-        activeSnapshotId:
-          store.activeSnapshotId === snapshotId ? null : store.activeSnapshotId,
-      });
+      deleteSnapshot(snapshotId);
     },
-    [store, setStore],
+    [deleteSnapshot],
   );
+
+  if (!gameHydrated) {
+    return (
+      <View style={styles.loading} testID="game2048-loading">
+        <ActivityIndicator />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -78,5 +81,10 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: spacing.md,
+  },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
