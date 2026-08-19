@@ -19,14 +19,25 @@ class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     installSplashScreen()
-    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O) {
-      window.addFlags(
-          WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-              WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
-      )
-    }
+    configureAlarmWindow(intent)
     super.onCreate(savedInstanceState)
     HealthConnectPermissionDelegate.setPermissionDelegate(this)
+  }
+
+  private fun configureAlarmWindow(intent: Intent?) {
+    setAlarmWindowActive(intent?.action?.endsWith(".ALARM_FIRING") == true)
+  }
+
+  fun setAlarmWindowActive(isAlarmFiring: Boolean) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+      setShowWhenLocked(isAlarmFiring)
+      setTurnScreenOn(isAlarmFiring)
+    } else {
+      val alarmWindowFlags =
+          WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+              WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+      if (isAlarmFiring) window.addFlags(alarmWindowFlags) else window.clearFlags(alarmWindowFlags)
+    }
   }
 
   override fun getMainComponentName(): String = "Laimelea"
@@ -34,6 +45,7 @@ class MainActivity : ReactActivity() {
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
+    configureAlarmWindow(intent)
     RingtoneModule.emitPendingAlarmDelivery(reactDelegate?.currentReactContext, intent)
   }
 

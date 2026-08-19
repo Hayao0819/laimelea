@@ -11,6 +11,7 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import android.os.UserManager
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
@@ -72,16 +73,17 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             reactContext?.emitDeviceEvent(ALARM_DELIVERY_EVENT, null)
         }
 
-        fun markAlarmAudioDispatched(context: Context, alarmId: String, timestampMs: Long) {
+        fun markAlarmAudioDispatched(context: Context, alarmId: String, timestampMs: Long): Boolean {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             synchronized(scheduledAudioLock) {
                 cleanupForgottenPrivateScheduledAudio(context)
                 val preferences = scheduledAudioPreferences(context)
                 val key = scheduledAudioKey(alarmId, timestampMs)
                 val scheduled = preferences.getString(key, null)?.let(::decodeScheduledAudio)
+                    ?: return false
                 val editor = preferences.edit().remove(key)
-                val nextTimestampMs = scheduled?.let(::nextTimestampAfterDelivery)
-                if (scheduled != null && nextTimestampMs != null) {
+                val nextTimestampMs = nextTimestampAfterDelivery(scheduled)
+                if (nextTimestampMs != null) {
                     val next = scheduled.copy(timestampMs = nextTimestampMs)
                     val registered = registerAlarmClock(alarmManager, context, next)
                     val storedNext = next.withRegistrationResult(registered)
@@ -90,9 +92,9 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                         encodeScheduledAudio(storedNext),
                     )
                 } else {
-                    scheduled?.let { forgetPrivateScheduledAudio(context, it.alarmId) }
+                    forgetPrivateScheduledAudio(context, scheduled.alarmId)
                 }
-                editor.commit()
+                return editor.commit()
             }
         }
 
@@ -113,7 +115,9 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 manager.createNotificationChannel(
                     android.app.NotificationChannel(
                         channelId,
-                        "Alarm",
+                        context.getString(
+                            com.hayao0819.laimelea.R.string.alarm_notification_channel,
+                        ),
                         NotificationManager.IMPORTANCE_HIGH,
                     ).apply {
                         setSound(null, null)
@@ -132,6 +136,7 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
                 context,
                 alarmId,
                 timestampMs,
+                autoSilenceMs,
             )
             val notification = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(com.hayao0819.laimelea.R.mipmap.ic_launcher)
@@ -259,31 +264,59 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
         private fun pendingDeliveryKey(alarmId: String, timestampMs: Long) =
             "$PENDING_DELIVERY_PREFIX$alarmId.$timestampMs"
 
-        private fun notificationId(alarmId: String) = alarmId.hashCode() and Int.MAX_VALUE
+        internal fun notificationId(alarmId: String) = alarmId.hashCode() and Int.MAX_VALUE
 
         private fun alarmFiringAction(packageName: String) = "$packageName.ALARM_FIRING"
+
+        internal fun alarmFiringIntent(
+            context: Context,
+            alarmId: String,
+            timestampMs: Long,
+            autoSilenceMs: Long = 0L,
+        ): Intent = Intent(context, alarmFiringActivity(isUserUnlocked(context))).apply {
+            action = alarmFiringAction(context.packageName)
+            data = Uri.Builder()
+                .scheme(context.packageName)
+                .authority("alarm")
+                .appendPath(alarmId)
+                .appendPath(timestampMs.toString())
+                .build()
+            putExtra(AlarmAudioService.EXTRA_ALARM_ID, alarmId)
+            putExtra(EXTRA_TRIGGER_TIMESTAMP_MS, timestampMs)
+            putExtra(AlarmAudioService.EXTRA_AUTO_SILENCE_MS, autoSilenceMs)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
 
         internal fun alarmFiringPendingIntent(
             context: Context,
             alarmId: String,
             timestampMs: Long,
+            autoSilenceMs: Long = 0L,
         ): PendingIntent = PendingIntent.getActivity(
             context,
             notificationId(alarmId),
-            Intent(context, com.hayao0819.laimelea.MainActivity::class.java).apply {
-                action = alarmFiringAction(context.packageName)
-                data = Uri.Builder()
-                    .scheme(context.packageName)
-                    .authority("alarm")
-                    .appendPath(alarmId)
-                    .appendPath(timestampMs.toString())
-                    .build()
-                putExtra(AlarmAudioService.EXTRA_ALARM_ID, alarmId)
-                putExtra(EXTRA_TRIGGER_TIMESTAMP_MS, timestampMs)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            },
+            alarmFiringIntent(context, alarmId, timestampMs, autoSilenceMs),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+
+        // Skips the notification's full-screen intent entirely, so it still opens the
+        // dismiss UI when the notification itself couldn't be shown (permission denied, etc).
+        fun launchAlarmFiringActivity(
+            context: Context,
+            alarmId: String,
+            timestampMs: Long,
+            autoSilenceMs: Long = 0L,
+        ) {
+            runCatching {
+                context.startActivity(alarmFiringIntent(context, alarmId, timestampMs, autoSilenceMs))
+            }
+        }
+
+        internal fun alarmFiringActivity(userUnlocked: Boolean): Class<out android.app.Activity> = if (userUnlocked) {
+            com.hayao0819.laimelea.MainActivity::class.java
+        } else {
+            AlarmStopActivity::class.java
+        }
 
         private fun alarmStopPendingIntent(
             context: Context,
@@ -365,6 +398,11 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             }
         }
 
+        fun scheduledAlarmIds(context: Context): List<String> =
+            scheduledAudioPreferences(context).all.values
+                .mapNotNull { (it as? String)?.let(::decodeScheduledAudio)?.alarmId }
+                .distinct()
+
         internal fun migrateLegacyScheduledAudio(
             context: Context,
             alarmManager: AlarmManager,
@@ -439,7 +477,8 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
         private fun alarmClockShowIntent(context: Context): PendingIntent = PendingIntent.getActivity(
             context,
             0,
-            Intent(context, com.hayao0819.laimelea.MainActivity::class.java).apply {
+            Intent(context, alarmFiringActivity(isUserUnlocked(context))).apply {
+                action = "${context.packageName}.ALARM_CLOCK_SHOW"
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -458,7 +497,7 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
         private fun privateScheduledAudioCleanupKey(alarmId: String): String =
             "$PRIVATE_SCHEDULED_AUDIO_CLEANUP_PREFIX$alarmId"
 
-        private fun isUserUnlocked(context: Context): Boolean =
+        internal fun isUserUnlocked(context: Context): Boolean =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
                 context.getSystemService(UserManager::class.java)?.isUserUnlocked != false
 
@@ -765,6 +804,65 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
     override fun getName(): String = NAME
 
     @ReactMethod
+    fun scheduleTimer(timerId: String, label: String, remainingMs: Double, promise: Promise) {
+        try {
+            if (
+                !remainingMs.isFinite() ||
+                remainingMs <= 0 ||
+                remainingMs > TimerAlarmScheduler.MAX_REMAINING_MS
+            ) {
+                promise.reject("INVALID_TIMER", "Timer duration must be finite and positive.")
+                return
+            }
+            TimerAlarmScheduler.schedule(reactApplicationContext, timerId, label, remainingMs.toLong())
+            promise.resolve(null)
+        } catch (error: Exception) {
+            promise.reject("SCHEDULE_TIMER_FAILED", error)
+        }
+    }
+
+    @ReactMethod
+    fun cancelTimer(timerId: String, promise: Promise) {
+        try {
+            TimerAlarmScheduler.cancel(reactApplicationContext, timerId)
+            promise.resolve(null)
+        } catch (error: Exception) {
+            promise.reject("CANCEL_TIMER_FAILED", error)
+        }
+    }
+
+    @ReactMethod
+    fun consumeCompletedTimers(promise: Promise) {
+        promise.resolve(Arguments.fromList(TimerAlarmScheduler.consumeCompleted(reactApplicationContext)))
+    }
+
+    @ReactMethod
+    fun getTimerRemainingMs(timerId: String, promise: Promise) {
+        promise.resolve(TimerAlarmScheduler.remainingMs(reactApplicationContext, timerId)?.toDouble())
+    }
+
+    @ReactMethod
+    fun getScheduledTimerIds(promise: Promise) {
+        promise.resolve(Arguments.fromList(TimerAlarmScheduler.scheduledTimerIds(reactApplicationContext)))
+    }
+
+    @ReactMethod
+    fun getElapsedRealtimeSnapshot(promise: Promise) {
+        val snapshot = Arguments.createMap().apply {
+            putDouble("elapsedRealtimeMs", SystemClock.elapsedRealtime().toDouble())
+            putInt(
+                "bootCount",
+                Settings.Global.getInt(
+                    reactApplicationContext.contentResolver,
+                    Settings.Global.BOOT_COUNT,
+                    0,
+                ),
+            )
+        }
+        promise.resolve(snapshot)
+    }
+
+    @ReactMethod
     fun getAlarmRingtones(promise: Promise) {
         try {
             if (!canReadExternalAudio()) {
@@ -858,6 +956,19 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun setAlarmWindowActive(active: Boolean, promise: Promise) {
+        val activity = reactApplicationContext.currentActivity as? com.hayao0819.laimelea.MainActivity
+        if (activity == null) {
+            promise.resolve(null)
+            return
+        }
+        activity.runOnUiThread {
+            activity.setAlarmWindowActive(active)
+            promise.resolve(null)
+        }
+    }
+
+    @ReactMethod
     fun getDefaultAlarmUri(promise: Promise) {
         try {
             val defaultUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -934,6 +1045,11 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
         } catch (e: Exception) {
             promise.reject("RINGTONE_ERROR", "Failed to cancel alarm audio", e)
         }
+    }
+
+    @ReactMethod
+    fun getScheduledAlarmIds(promise: Promise) {
+        promise.resolve(Arguments.fromList(scheduledAlarmIds(reactApplicationContext)))
     }
 
     @ReactMethod

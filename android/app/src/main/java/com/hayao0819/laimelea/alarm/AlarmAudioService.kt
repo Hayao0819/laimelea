@@ -17,7 +17,6 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.facebook.react.ReactApplication
-import com.hayao0819.laimelea.MainActivity
 
 class AlarmAudioService : Service() {
 
@@ -28,9 +27,16 @@ class AlarmAudioService : Service() {
         const val EXTRA_AUTO_SILENCE_MS = "autoSilenceMs"
         const val EXTRA_LABEL = "label"
         const val EXTRA_VIBRATION_ENABLED = "vibrationEnabled"
+        const val EXTRA_UI_REACHABLE = "uiReachable"
         private const val CHANNEL_ID = "alarm-audio-playback"
         private const val FOREGROUND_NOTIFICATION_ID = 9001
         private const val STEP_INTERVAL_MS = 500L
+
+        // AOSP DeskClock's default auto-silence duration; used as a ceiling so audio started
+        // without a reachable stop UI (background-activity-launch restrictions can silently
+        // drop the fallback startActivity on API 29+) can't ring forever.
+        internal const val FALLBACK_MAX_RING_DURATION_MS = 15 * 60 * 1000L
+
         private var activeService: AlarmAudioService? = null
 
         fun setActiveVolume(volume: Float): Boolean {
@@ -39,54 +45,96 @@ class AlarmAudioService : Service() {
             return true
         }
 
-        fun stopActivePlayback(alarmId: String? = null) {
-            val service = activeService ?: return
-            if (alarmId == null || service.activeAlarmId == alarmId) {
-                service.stopCurrentStart()
-            }
+        fun stopActivePlayback(alarmId: String? = null, timestampMs: Long? = null) {
+            activeService?.stopPlayback(alarmId, timestampMs)
         }
+
+        internal data class ActivePlaybackDescriptor(
+            val alarmId: String,
+            val timestampMs: Long,
+            val autoSilenceMs: Long,
+        )
+
+        internal fun activePlaybackDescriptors(): List<ActivePlaybackDescriptor> =
+            activeService?.activePlaybacks?.values?.map {
+                ActivePlaybackDescriptor(it.alarmId, it.timestampMs, it.autoSilenceMs)
+            }.orEmpty()
+
+        internal fun matchesPlayback(
+            activeAlarmId: String,
+            activeTimestampMs: Long,
+            alarmId: String?,
+            timestampMs: Long?,
+        ): Boolean =
+            (alarmId == null || activeAlarmId == alarmId) &&
+                (timestampMs == null || activeTimestampMs == timestampMs)
+
+        internal fun shouldReplacePlayback(activeAlarmId: String, nextAlarmId: String): Boolean =
+            activeAlarmId == nextAlarmId
+
+        internal fun effectiveAutoSilenceMs(requestedAutoSilenceMs: Long, uiReachable: Boolean): Long =
+            if (uiReachable || requestedAutoSilenceMs in 1..FALLBACK_MAX_RING_DURATION_MS) {
+                requestedAutoSilenceMs
+            } else {
+                FALLBACK_MAX_RING_DURATION_MS
+            }
     }
 
+    private data class ActivePlayback(
+        val alarmId: String,
+        val timestampMs: Long,
+        val autoSilenceMs: Long,
+        val startId: Int,
+        var player: MediaPlayer? = null,
+        var gradualRunnable: Runnable? = null,
+        var autoSilenceRunnable: Runnable? = null,
+    )
+
     private val handler = Handler(Looper.getMainLooper())
-    private var player: MediaPlayer? = null
-    private var gradualRunnable: Runnable? = null
-    private var activeAlarmId: String? = null
-    private var activeOccurrenceTimestampMs = 0L
-    private var activeAutoSilenceMs = 0L
-    private var activeStartId = 0
+    private val activePlaybacks = mutableMapOf<String, ActivePlayback>()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val alarmId = intent?.getStringExtra(EXTRA_ALARM_ID) ?: run {
             stopSelf()
             return START_NOT_STICKY
         }
-        val soundUri = intent.getStringExtra(EXTRA_SOUND_URI)
-        val gradualDurationMs = intent.getLongExtra(EXTRA_GRADUAL_DURATION_MS, 0L)
-        val autoSilenceMs = intent.getLongExtra(EXTRA_AUTO_SILENCE_MS, 0L)
         val occurrenceTimestampMs = intent.getLongExtra(RingtoneModule.EXTRA_TRIGGER_TIMESTAMP_MS, 0L)
+        val playback = ActivePlayback(
+            alarmId = alarmId,
+            timestampMs = occurrenceTimestampMs,
+            autoSilenceMs = effectiveAutoSilenceMs(
+                intent.getLongExtra(EXTRA_AUTO_SILENCE_MS, 0L),
+                intent.getBooleanExtra(EXTRA_UI_REACHABLE, true),
+            ),
+            startId = startId,
+        )
+        val key = playbackKey(alarmId, occurrenceTimestampMs)
 
-        handler.removeCallbacksAndMessages(null)
-        if (
-            activeAlarmId != null &&
-            (activeAlarmId != alarmId || activeOccurrenceTimestampMs != occurrenceTimestampMs)
-        ) {
-            recordActiveAlarmStopped()
-        }
-        stopPlayback()
-        createChannel()
-        startForeground(alarmId)
-        activeAlarmId = alarmId
-        activeOccurrenceTimestampMs = occurrenceTimestampMs
-        activeAutoSilenceMs = autoSilenceMs
-        activeStartId = startId
+        activePlaybacks.remove(key)?.let(::releasePlayback)
+        activePlaybacks[key] = playback
+        activePlaybacks
+            .filterKeys { it != key }
+            .filterValues { shouldReplacePlayback(it.alarmId, alarmId) }
+            .keys
+            .toList()
+            .forEach { finishPlayback(it, recordStopped = true, cancelFiringNotification = false) }
         activeService = this
-        startPlayback(soundUri, gradualDurationMs, startId)
-        if (autoSilenceMs > 0) {
-            handler.postDelayed({
-                if (activeStartId != startId) return@postDelayed
-                recordActiveAlarmStopped()
-                stopSelfResult(startId)
-            }, autoSilenceMs)
+        createChannel()
+        startForeground(playback)
+
+        if (!startPlayback(
+                playback,
+                intent.getStringExtra(EXTRA_SOUND_URI),
+                intent.getLongExtra(EXTRA_GRADUAL_DURATION_MS, 0L),
+            )
+        ) {
+            finishPlayback(key, recordStopped = true)
+            return START_NOT_STICKY
+        }
+        if (playback.autoSilenceMs > 0) {
+            playback.autoSilenceRunnable = Runnable {
+                finishPlayback(key, recordStopped = true)
+            }.also { handler.postDelayed(it, playback.autoSilenceMs) }
         }
         return START_NOT_STICKY
     }
@@ -94,18 +142,12 @@ class AlarmAudioService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        val alarmId = activeAlarmId
+        activePlaybacks.values.toList().forEach(::releasePlayback)
+        activePlaybacks.clear()
         if (activeService === this) {
             activeService = null
         }
-        activeAlarmId = null
-        activeOccurrenceTimestampMs = 0L
-        activeAutoSilenceMs = 0L
-        activeStartId = 0
-        handler.removeCallbacksAndMessages(null)
-        stopPlayback()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        alarmId?.let { RingtoneModule.cancelAlarmFiringNotification(this, it, false) }
         super.onDestroy()
     }
 
@@ -115,7 +157,7 @@ class AlarmAudioService : Service() {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "Alarm audio",
+                getString(com.hayao0819.laimelea.R.string.alarm_audio_channel),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
                 setSound(null, null)
@@ -124,11 +166,15 @@ class AlarmAudioService : Service() {
         )
     }
 
-    private fun startForeground(alarmId: String) {
+    private fun startForeground(playback: ActivePlayback) {
         val contentIntent = PendingIntent.getActivity(
             this,
-            0,
-            Intent(this, MainActivity::class.java).apply {
+            RingtoneModule.notificationId(playback.alarmId),
+            Intent(this, RingtoneModule.alarmFiringActivity(RingtoneModule.isUserUnlocked(this))).apply {
+                action = "$packageName.ALARM_AUDIO_FOREGROUND.${playback.alarmId}.${playback.timestampMs}"
+                putExtra(EXTRA_ALARM_ID, playback.alarmId)
+                putExtra(RingtoneModule.EXTRA_TRIGGER_TIMESTAMP_MS, playback.timestampMs)
+                putExtra(EXTRA_AUTO_SILENCE_MS, playback.autoSilenceMs)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -141,30 +187,41 @@ class AlarmAudioService : Service() {
             .setOngoing(true)
             .setContentIntent(contentIntent)
             .build()
+        val foregroundServiceType =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            } else {
+                0
+            }
         ServiceCompat.startForeground(
             this,
             FOREGROUND_NOTIFICATION_ID,
             notification,
-            android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+            foregroundServiceType,
         )
     }
 
-    private fun startPlayback(uri: String?, gradualDurationMs: Long, startId: Int) {
+    private fun startPlayback(
+        playback: ActivePlayback,
+        uri: String?,
+        gradualDurationMs: Long,
+    ): Boolean {
         val preferredUri = when (uri) {
             null, "default" -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             else -> Uri.parse(uri)
         }
-        if (preferredUri != null && startPlayer(preferredUri, gradualDurationMs)) return
+        if (preferredUri != null && startPlayer(playback, preferredUri, gradualDurationMs)) return true
 
         val defaultUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        if (defaultUri != null && defaultUri != preferredUri && startPlayer(defaultUri, gradualDurationMs)) {
-            return
-        }
-        recordActiveAlarmStopped()
-        stopSelfResult(startId)
+        return defaultUri != null && defaultUri != preferredUri &&
+            startPlayer(playback, defaultUri, gradualDurationMs)
     }
 
-    private fun startPlayer(uri: Uri, gradualDurationMs: Long): Boolean {
+    private fun startPlayer(
+        playback: ActivePlayback,
+        uri: Uri,
+        gradualDurationMs: Long,
+    ): Boolean {
         val nextPlayer = MediaPlayer()
         try {
             nextPlayer.setAudioAttributes(
@@ -173,15 +230,15 @@ class AlarmAudioService : Service() {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build(),
             )
-            nextPlayer.setDataSource(this@AlarmAudioService, uri)
+            nextPlayer.setDataSource(this, uri)
             nextPlayer.isLooping = true
             val initialVolume = if (gradualDurationMs > 0) 0f else 1f
             nextPlayer.setVolume(initialVolume, initialVolume)
             nextPlayer.prepare()
             nextPlayer.start()
-            player = nextPlayer
+            playback.player = nextPlayer
             if (gradualDurationMs > 0) {
-                startGradualVolume(gradualDurationMs)
+                startGradualVolume(playback, gradualDurationMs)
             }
             return true
         } catch (_: Exception) {
@@ -190,52 +247,77 @@ class AlarmAudioService : Service() {
         }
     }
 
-    private fun startGradualVolume(durationMs: Long) {
+    private fun startGradualVolume(playback: ActivePlayback, durationMs: Long) {
         val startedAt = System.currentTimeMillis()
-        gradualRunnable = object : Runnable {
+        playback.gradualRunnable = object : Runnable {
             override fun run() {
                 val volume = ((System.currentTimeMillis() - startedAt).toFloat() / durationMs)
                     .coerceIn(0f, 1f)
-                setVolume(volume)
-                if (volume < 1f) {
+                playback.player?.setVolume(volume, volume)
+                if (volume < 1f && activePlaybacks.containsValue(playback)) {
                     handler.postDelayed(this, STEP_INTERVAL_MS)
                 }
             }
         }
-        handler.post(gradualRunnable!!)
+        handler.post(playback.gradualRunnable!!)
     }
 
     private fun setVolume(volume: Float) {
         val clamped = volume.coerceIn(0f, 1f)
-        player?.setVolume(clamped, clamped)
+        activePlaybacks.values.forEach { it.player?.setVolume(clamped, clamped) }
     }
 
-    private fun stopPlayback() {
-        gradualRunnable?.let(handler::removeCallbacks)
-        gradualRunnable = null
-        player?.let { activePlayer ->
+    private fun stopPlayback(alarmId: String?, timestampMs: Long?) {
+        activePlaybacks
+            .filterValues { playback ->
+                matchesPlayback(
+                    playback.alarmId,
+                    playback.timestampMs,
+                    alarmId,
+                    timestampMs,
+                )
+            }
+            .keys
+            .toList()
+            .forEach { finishPlayback(it, recordStopped = false) }
+    }
+
+    private fun finishPlayback(
+        key: String,
+        recordStopped: Boolean,
+        cancelFiringNotification: Boolean = true,
+    ) {
+        val playback = activePlaybacks.remove(key) ?: return
+        releasePlayback(playback)
+        if (recordStopped) {
+            RingtoneModule.recordStoppedAlarmDelivery(
+                this,
+                playback.alarmId,
+                playback.timestampMs,
+                playback.autoSilenceMs,
+            )
+            if (cancelFiringNotification) {
+                RingtoneModule.cancelAlarmFiringNotification(this, playback.alarmId, false)
+            }
+            val reactContext = (applicationContext as? ReactApplication)
+                ?.reactHost
+                ?.currentReactContext
+            RingtoneModule.emitAlarmDelivery(reactContext)
+        }
+        if (activePlaybacks.isEmpty()) {
+            stopSelf()
+        }
+    }
+
+    private fun releasePlayback(playback: ActivePlayback) {
+        playback.gradualRunnable?.let(handler::removeCallbacks)
+        playback.autoSilenceRunnable?.let(handler::removeCallbacks)
+        playback.player?.let { activePlayer ->
             runCatching { if (activePlayer.isPlaying) activePlayer.stop() }
             runCatching { activePlayer.release() }
         }
-        player = null
+        playback.player = null
     }
 
-    private fun recordActiveAlarmStopped() {
-        val alarmId = activeAlarmId ?: return
-        RingtoneModule.recordStoppedAlarmDelivery(
-            this,
-            alarmId,
-            activeOccurrenceTimestampMs,
-            activeAutoSilenceMs,
-        )
-        RingtoneModule.cancelAlarmFiringNotification(this, alarmId, false)
-        val reactContext = (applicationContext as? ReactApplication)
-            ?.reactHost
-            ?.currentReactContext
-        RingtoneModule.emitAlarmDelivery(reactContext)
-    }
-
-    private fun stopCurrentStart() {
-        stopSelfResult(activeStartId)
-    }
+    private fun playbackKey(alarmId: String, timestampMs: Long) = "$alarmId.$timestampMs"
 }

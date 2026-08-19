@@ -13,7 +13,7 @@ class AlarmAudioReceiver : BroadcastReceiver() {
         if (RingtoneModule.isAlarmStopIntent(intent)) {
             val timestampMs = intent.getLongExtra(RingtoneModule.EXTRA_TRIGGER_TIMESTAMP_MS, 0L)
             val autoSilenceMs = intent.getLongExtra(AlarmAudioService.EXTRA_AUTO_SILENCE_MS, 0L)
-            AlarmAudioService.stopActivePlayback(alarmId)
+            AlarmAudioService.stopActivePlayback(alarmId, timestampMs)
             RingtoneModule.recordStoppedAlarmDelivery(
                 context,
                 alarmId,
@@ -30,6 +30,12 @@ class AlarmAudioReceiver : BroadcastReceiver() {
         val timestampMs = intent.getLongExtra(RingtoneModule.EXTRA_TRIGGER_TIMESTAMP_MS, 0L)
         val autoSilenceMs = intent.getLongExtra(AlarmAudioService.EXTRA_AUTO_SILENCE_MS, 0L)
         val soundUri = intent.getStringExtra(AlarmAudioService.EXTRA_SOUND_URI)
+        if (
+            timestampMs <= 0 ||
+            !RingtoneModule.markAlarmAudioDispatched(context, alarmId, timestampMs)
+        ) {
+            return
+        }
         val notificationShown = runCatching {
             RingtoneModule.showAlarmFiringNotification(
                 context,
@@ -49,21 +55,21 @@ class AlarmAudioReceiver : BroadcastReceiver() {
                 soundUri == "__silent__",
             )
         }
-        if (timestampMs > 0) {
-            RingtoneModule.markAlarmAudioDispatched(context, alarmId, timestampMs)
-        }
         val reactContext = (context.applicationContext as? ReactApplication)
             ?.reactHost
             ?.currentReactContext
         RingtoneModule.emitAlarmDelivery(reactContext)
-        if (!RingtoneModule.shouldStartAlarmAudio(
-                soundUri,
-            )
-        ) {
+        if (!RingtoneModule.shouldStartAlarmAudio(soundUri)) {
             return
+        }
+        if (!notificationShown) {
+            // No notification means no full-screen intent either, so open the stop UI
+            // directly - audio is about to start and must stay stoppable.
+            RingtoneModule.launchAlarmFiringActivity(context, alarmId, timestampMs, autoSilenceMs)
         }
         val serviceIntent = Intent(context, AlarmAudioService::class.java).apply {
             putExtras(intent)
+            putExtra(AlarmAudioService.EXTRA_UI_REACHABLE, notificationShown)
         }
         ContextCompat.startForegroundService(context, serviceIntent)
     }

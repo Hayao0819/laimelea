@@ -1,6 +1,12 @@
 <resources>
     <string name="app_name">Laimelea</string>
     <string name="alarm_audio_title">Alarm is ringing</string>
+    <string name="alarm_audio_channel">Alarm audio</string>
+    <string name="alarm_notification_channel">Alarms</string>
     <string name="alarm_audio_description">Open the alarm notification to dismiss or snooze</string>
     <string name="alarm_audio_stop">Stop</string>
+    <string name="alarm_stop_screen_description">Alarm is ringing</string>
+    <string name="timer_notification_title">Timer</string>
+    <string name="timer_notification_complete">Timer complete</string>
+    <string name="timer_notification_channel">Timers</string>
 </resources>

@@ -2,6 +2,7 @@ package com.hayao0819.laimelea.alarm
 
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
 import android.app.AlarmManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -87,10 +88,98 @@ class AlarmBootReceiverTest {
     }
 
     @Test
-    fun nonSilentAudioStartsEvenWhenAlarmNotificationsAreUnavailable() {
+    fun audioOnlySkipsSilentAlarms() {
         assertTrue(RingtoneModule.shouldStartAlarmAudio(null))
         assertTrue(RingtoneModule.shouldStartAlarmAudio("content://media/audio/1"))
         assertTrue(!RingtoneModule.shouldStartAlarmAudio("__silent__"))
+    }
+
+    @Test
+    fun lockedDevicesUseTheDirectBootStopActivity() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        @Suppress("DEPRECATION")
+        val activityInfo = context.packageManager.getActivityInfo(
+            ComponentName(context, AlarmStopActivity::class.java),
+            0,
+        )
+
+        assertTrue(activityInfo.directBootAware)
+        assertEquals(AlarmStopActivity::class.java, RingtoneModule.alarmFiringActivity(false))
+        assertEquals(
+            com.hayao0819.laimelea.MainActivity::class.java,
+            RingtoneModule.alarmFiringActivity(true),
+        )
+    }
+
+    @Test
+    fun firingIntentCarriesTheAlarmOccurrenceExtras() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        val intent = RingtoneModule.alarmFiringIntent(context, "alarm-1", 1_000_000L, 60_000L)
+
+        assertEquals("alarm-1", intent.getStringExtra(AlarmAudioService.EXTRA_ALARM_ID))
+        assertEquals(1_000_000L, intent.getLongExtra(RingtoneModule.EXTRA_TRIGGER_TIMESTAMP_MS, 0L))
+        assertEquals(60_000L, intent.getLongExtra(AlarmAudioService.EXTRA_AUTO_SILENCE_MS, 0L))
+    }
+
+    @Test
+    fun autoSilenceFallsBackToABoundedCeilingWhenTheUiCouldNotBeShown() {
+        assertEquals(
+            AlarmAudioService.FALLBACK_MAX_RING_DURATION_MS,
+            AlarmAudioService.effectiveAutoSilenceMs(0L, uiReachable = false),
+        )
+        assertEquals(
+            AlarmAudioService.FALLBACK_MAX_RING_DURATION_MS,
+            AlarmAudioService.effectiveAutoSilenceMs(30 * 60_000L, uiReachable = false),
+        )
+        assertEquals(
+            60_000L,
+            AlarmAudioService.effectiveAutoSilenceMs(60_000L, uiReachable = false),
+        )
+    }
+
+    @Test
+    fun autoSilenceIsUnboundedWhenTheStopUiIsReachable() {
+        assertEquals(0L, AlarmAudioService.effectiveAutoSilenceMs(0L, uiReachable = true))
+        assertEquals(
+            30 * 60_000L,
+            AlarmAudioService.effectiveAutoSilenceMs(30 * 60_000L, uiReachable = true),
+        )
+    }
+
+    @Test
+    fun stoppingAnAlarmDisplaysTheNextRemainingPlaybackInstead() {
+        val remaining = listOf(
+            AlarmAudioService.Companion.ActivePlaybackDescriptor("alarm-2", 2_000_000L, 60_000L),
+        )
+
+        assertEquals("alarm-2", AlarmStopActivity.playbackToDisplayAfterStopping(remaining)?.alarmId)
+        assertNull(AlarmStopActivity.playbackToDisplayAfterStopping(emptyList()))
+    }
+
+    @Test
+    fun stopActivityUsesLegacyWindowFlagsBeforeApi27() {
+        assertFalse(AlarmStopActivity.supportsModernLockScreenApi(26))
+        assertTrue(AlarmStopActivity.supportsModernLockScreenApi(27))
+    }
+
+    @Test
+    fun stopActionsOnlyMatchTheirAlarmOccurrence() {
+        assertTrue(
+            AlarmAudioService.matchesPlayback("alarm-1", 1_000L, "alarm-1", 1_000L),
+        )
+        assertFalse(
+            AlarmAudioService.matchesPlayback("alarm-1", 1_000L, "alarm-1", 2_000L),
+        )
+        assertFalse(
+            AlarmAudioService.matchesPlayback("alarm-1", 1_000L, "alarm-2", 1_000L),
+        )
+    }
+
+    @Test
+    fun aNewOccurrenceOnlyReplacesPlaybackForTheSameAlarm() {
+        assertTrue(AlarmAudioService.shouldReplacePlayback("alarm-1", "alarm-1"))
+        assertFalse(AlarmAudioService.shouldReplacePlayback("alarm-1", "alarm-2"))
     }
 
     @Test
@@ -269,13 +358,36 @@ class AlarmBootReceiverTest {
     }
 
     @Test
-    fun silentPendingIntentRecordsAReceiverDelivery() {
+    fun scheduledSilentPendingIntentRecordsAReceiverDelivery() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val timestamp = System.currentTimeMillis()
         val alarmId = "silent-direct-$timestamp"
         val key = "delivery.$alarmId.$timestamp"
         val preferences = context.createDeviceProtectedStorageContext()
             .getSharedPreferences("pendingAlarmDeliveries", Context.MODE_PRIVATE)
+        val scheduledPreferences = context.createDeviceProtectedStorageContext()
+            .getSharedPreferences("scheduledAlarmAudio", Context.MODE_PRIVATE)
+        val scheduled = RingtoneModule.Companion.ScheduledAudio.fromTimestamp(
+            alarmId,
+            timestamp,
+            "__silent__",
+            0L,
+            0L,
+            false,
+            null,
+            emptyList(),
+            0L,
+            null,
+            true,
+        )
+        assertTrue(
+            scheduledPreferences.edit()
+                .putString(
+                    "scheduled.$alarmId.$timestamp",
+                    RingtoneModule.encodeScheduledAudio(scheduled),
+                )
+                .commit(),
+        )
         val pendingIntent = RingtoneModule.alarmAudioPendingIntent(
             context,
             alarmId,
@@ -291,6 +403,7 @@ class AlarmBootReceiverTest {
         } finally {
             pendingIntent.cancel()
             preferences.edit().remove(key).commit()
+            scheduledPreferences.edit().remove("scheduled.$alarmId.$timestamp").commit()
         }
     }
 
@@ -498,6 +611,40 @@ class AlarmBootReceiverTest {
 
         assertNull(preferences.getString(key, null))
         assertTrue(preferences.all.keys.none { it.startsWith("scheduled.one-shot.") })
+    }
+
+    @Test
+    fun secondDispatchForTheSameOccurrenceIsRejectedByTheDedupGate() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val timestamp = System.currentTimeMillis() - 1L
+        val alarmId = "dedup-alarm-${System.currentTimeMillis()}"
+        val preferences = context.createDeviceProtectedStorageContext()
+            .getSharedPreferences("scheduledAlarmAudio", Context.MODE_PRIVATE)
+        val key = "scheduled.$alarmId.$timestamp"
+        preferences.edit().putString(
+            key,
+            "$alarmId|$timestamp|0|0|2026|0|1|0|0|true|||0|",
+        ).commit()
+
+        try {
+            assertTrue(RingtoneModule.markAlarmAudioDispatched(context, alarmId, timestamp))
+            assertFalse(RingtoneModule.markAlarmAudioDispatched(context, alarmId, timestamp))
+        } finally {
+            cancelScheduledAlarms(context, alarmId)
+        }
+    }
+
+    @Test
+    fun cancelledOccurrenceIsRejectedBeforeDelivery() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        assertFalse(
+            RingtoneModule.markAlarmAudioDispatched(
+                context,
+                "cancelled-alarm",
+                System.currentTimeMillis(),
+            ),
+        )
     }
 
     @Test

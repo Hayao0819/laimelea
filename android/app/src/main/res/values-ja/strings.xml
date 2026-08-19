@@ -2,6 +2,12 @@
 <resources>
     <string name="app_name">Laimelea</string>
     <string name="alarm_audio_title">アラームが鳴っています</string>
+    <string name="alarm_audio_channel">アラーム音</string>
+    <string name="alarm_notification_channel">アラーム</string>
     <string name="alarm_audio_description">アラーム通知を開いて解除またはスヌーズしてください</string>
     <string name="alarm_audio_stop">停止</string>
+    <string name="alarm_stop_screen_description">アラームが鳴っています</string>
+    <string name="timer_notification_title">タイマー</string>
+    <string name="timer_notification_complete">タイマーが終了しました</string>
+    <string name="timer_notification_channel">タイマー</string>
 </resources>
