@@ -17,7 +17,16 @@ function generateTimeSlots(
   intervalMinutes: number,
   maxMinutes: number,
 ): number[] {
-  if (intervalMinutes <= 0) return [];
+  if (
+    !Number.isFinite(fromMinutes) ||
+    !Number.isFinite(toMinutes) ||
+    !Number.isFinite(maxMinutes) ||
+    maxMinutes <= 0 ||
+    !Number.isSafeInteger(intervalMinutes) ||
+    intervalMinutes <= 0
+  ) {
+    return [];
+  }
 
   if (fromMinutes === toMinutes) {
     return [fromMinutes];
@@ -29,7 +38,11 @@ function generateTimeSlots(
       ? toMinutes - fromMinutes
       : maxMinutes - fromMinutes + toMinutes;
 
-  for (let offset = 0; offset <= range; offset += intervalMinutes) {
+  for (
+    let offset = 0;
+    offset <= range && slots.length < ANDROID_ALARM_TRIGGER_LIMIT;
+    offset += intervalMinutes
+  ) {
     slots.push((fromMinutes + offset) % maxMinutes);
   }
 

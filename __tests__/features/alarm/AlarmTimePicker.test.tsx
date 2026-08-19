@@ -58,7 +58,7 @@ describe("AlarmTimePicker", () => {
     expect(minutesInput.props.value).toBe("07");
   });
 
-  it("should update hours on blur (clamped to maxHours)", async () => {
+  it("updates hours as they are entered and formats them on blur", async () => {
     const onChange = jest.fn();
     const { getByTestId } = await renderPicker({
       value: { hours: 5, minutes: 30 },
@@ -69,12 +69,11 @@ describe("AlarmTimePicker", () => {
 
     const hoursInput = getByTestId("hours-input");
 
-    // Focus, type, then blur to trigger onChange
     await fireEvent(hoursInput, "focus");
     await fireEvent.changeText(hoursInput, "20");
-    expect(onChange).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 20, minutes: 30 });
     await fireEvent(hoursInput, "blur");
-    expect(onChange).toHaveBeenCalledWith({ hours: 20, minutes: 30 });
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 20, minutes: 30 });
 
     onChange.mockClear();
 
@@ -85,7 +84,7 @@ describe("AlarmTimePicker", () => {
     expect(onChange).toHaveBeenCalledWith({ hours: 25, minutes: 30 });
   });
 
-  it("should update minutes on blur (clamped to 0-59)", async () => {
+  it("updates minutes as they are entered and clamps them", async () => {
     const onChange = jest.fn();
     const { getByTestId } = await renderPicker({
       value: { hours: 10, minutes: 0 },
@@ -97,8 +96,9 @@ describe("AlarmTimePicker", () => {
     // Valid minutes
     await fireEvent(minutesInput, "focus");
     await fireEvent.changeText(minutesInput, "45");
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 10, minutes: 45 });
     await fireEvent(minutesInput, "blur");
-    expect(onChange).toHaveBeenCalledWith({ hours: 10, minutes: 45 });
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 10, minutes: 45 });
 
     onChange.mockClear();
 
@@ -107,6 +107,22 @@ describe("AlarmTimePicker", () => {
     await fireEvent.changeText(minutesInput, "99");
     await fireEvent(minutesInput, "blur");
     expect(onChange).toHaveBeenCalledWith({ hours: 10, minutes: 59 });
+  });
+
+  it("preserves the entered hour when minutes are updated before blur", async () => {
+    const onChange = jest.fn();
+    const { getByTestId } = await renderPicker({
+      value: { hours: 7, minutes: 0 },
+      timeSystem: "24h",
+      onChange,
+    });
+
+    await fireEvent(getByTestId("hours-input"), "focus");
+    await fireEvent.changeText(getByTestId("hours-input"), "15");
+    await fireEvent(getByTestId("minutes-input"), "focus");
+    await fireEvent.changeText(getByTestId("minutes-input"), "51");
+
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 15, minutes: 51 });
   });
 
   it("should set to 0 when NaN input on blur", async () => {
@@ -129,6 +145,38 @@ describe("AlarmTimePicker", () => {
     await fireEvent.changeText(getByTestId("minutes-input"), "");
     await fireEvent(getByTestId("minutes-input"), "blur");
     expect(onChange).toHaveBeenCalledWith({ hours: 5, minutes: 0 });
+  });
+
+  it("allows the final partial hour of a custom cycle", async () => {
+    const onChange = jest.fn();
+    const { getByTestId } = await renderPicker({
+      cycleLengthMinutes: 90,
+      value: { hours: 1, minutes: 0 },
+      onChange,
+    });
+
+    await fireEvent(getByTestId("hours-input"), "focus");
+    await fireEvent.changeText(getByTestId("hours-input"), "1");
+    await fireEvent(getByTestId("hours-input"), "blur");
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 1, minutes: 0 });
+
+    await fireEvent(getByTestId("minutes-input"), "focus");
+    await fireEvent.changeText(getByTestId("minutes-input"), "45");
+    await fireEvent(getByTestId("minutes-input"), "blur");
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 1, minutes: 29 });
+  });
+
+  it("keeps a 30 minute cycle within its only valid hour", async () => {
+    const onChange = jest.fn();
+    const { getByTestId } = await renderPicker({
+      cycleLengthMinutes: 30,
+      onChange,
+    });
+
+    await fireEvent(getByTestId("hours-input"), "focus");
+    await fireEvent.changeText(getByTestId("hours-input"), "99");
+    await fireEvent(getByTestId("hours-input"), "blur");
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 0, minutes: 0 });
   });
 
   it("should calculate maxHours correctly for custom time system (cycleLengthMinutes / 60 - 1)", async () => {
@@ -206,7 +254,7 @@ describe("AlarmTimePicker", () => {
     expect(getByText("(0–23h)")).toBeTruthy();
   });
 
-  it("should not call onChange during editing (only on blur)", async () => {
+  it("keeps the parent value current during editing", async () => {
     const onChange = jest.fn();
     const { getByTestId } = await renderPicker({
       value: { hours: 5, minutes: 30 },
@@ -219,10 +267,10 @@ describe("AlarmTimePicker", () => {
     await fireEvent.changeText(hoursInput, "1");
     await fireEvent.changeText(hoursInput, "12");
 
-    expect(onChange).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenLastCalledWith({ hours: 12, minutes: 30 });
 
     await fireEvent(hoursInput, "blur");
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 
   it("should show local text while editing", async () => {

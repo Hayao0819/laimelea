@@ -169,6 +169,22 @@ describe("RepeatPicker", () => {
     });
   });
 
+  it("rejects non-finite interval values", async () => {
+    const onRepeatChange = jest.fn();
+    const { getByTestId } = await renderWithPaper(
+      <RepeatPicker
+        repeat={{ type: "interval", intervalMs: 24 * 3_600_000 }}
+        onRepeatChange={onRepeatChange}
+      />,
+    );
+
+    await fireEvent.press(getByTestId("repeat-picker-item"));
+    await fireEvent.changeText(getByTestId("interval-input"), "1e309");
+
+    expect(onRepeatChange).not.toHaveBeenCalled();
+    expect(getByTestId("interval-error")).toBeTruthy();
+  });
+
   it("should show weekday names in description for weekdays repeat", async () => {
     const onRepeatChange = jest.fn();
     const { getByText } = await renderWithPaper(

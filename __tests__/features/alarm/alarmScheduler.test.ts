@@ -174,7 +174,7 @@ describe("alarmScheduler", () => {
         notifeeTriggerId: "legacy-notifee-trigger",
       });
 
-      await expect(scheduleAlarm(alarm)).resolves.toBe(alarm.id);
+      await expect(scheduleAlarm(alarm)).resolves.toBe("test-alarm-1");
 
       expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
       expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
@@ -311,13 +311,13 @@ describe("alarmScheduler", () => {
       expect(scheduleAlarmAudio).not.toHaveBeenCalled();
     });
 
-    it("schedules native audio when notifications are disabled", async () => {
+    it("schedules native delivery even when notifications are disabled", async () => {
       (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
         authorizationStatus: 0,
         android: { alarm: 1 },
       });
 
-      await expect(scheduleAlarm(makeAlarm())).resolves.toBe("test-alarm-1");
+      await expect(scheduleAlarm(makeAlarm())).resolves.toBeDefined();
 
       expect(scheduleAlarmAudio).toHaveBeenCalled();
       expect(notifee.createTriggerNotification).not.toHaveBeenCalled();

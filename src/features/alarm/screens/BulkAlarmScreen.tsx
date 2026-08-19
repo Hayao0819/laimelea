@@ -22,6 +22,12 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, "BulkAlarm">;
 
+function parseIntervalMinutes(value: string): number {
+  if (!/^\d+$/.test(value)) return 0;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 0;
+}
+
 export function BulkAlarmScreen() {
   const navigation = useNavigation<Props["navigation"]>();
   const { t } = useTranslation();
@@ -56,7 +62,7 @@ export function BulkAlarmScreen() {
       fromMinute: fromTime.minutes,
       toHour: toTime.hours,
       toMinute: toTime.minutes,
-      intervalMinutes: parseInt(intervalMinutes, 10) || 0,
+      intervalMinutes: parseIntervalMinutes(intervalMinutes),
       timeSystem,
       dismissalMethod,
       gradualVolumeDurationSec: defaults.gradualVolumeDurationSec,

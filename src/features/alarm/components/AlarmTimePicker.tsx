@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Text, TextInput } from "react-native-paper";
@@ -28,40 +28,76 @@ export function AlarmTimePicker({
   onChange,
 }: AlarmTimePickerProps) {
   const { t } = useTranslation();
-  const maxHours =
-    timeSystem === "custom" ? Math.floor(cycleLengthMinutes / 60) - 1 : 23;
+  const maxMinutesOfDay =
+    timeSystem === "custom"
+      ? Math.max(0, Math.floor(cycleLengthMinutes) - 1)
+      : 23 * 60 + 59;
+  const maxHours = Math.floor(maxMinutesOfDay / 60);
+  const maxMinutesForHour = (hours: number) =>
+    hours === maxHours ? maxMinutesOfDay % 60 : 59;
 
   const [hoursText, setHoursText] = useState(pad2(value.hours));
   const [minutesText, setMinutesText] = useState(pad2(value.minutes));
   const [isEditingHours, setIsEditingHours] = useState(false);
   const [isEditingMinutes, setIsEditingMinutes] = useState(false);
+  const latestValue = useRef(value);
 
   useEffect(() => {
+    latestValue.current = value;
     if (!isEditingHours) {
       setHoursText(pad2(value.hours));
     }
-  }, [value.hours, isEditingHours]);
+  }, [value, isEditingHours]);
 
   useEffect(() => {
     if (!isEditingMinutes) {
       setMinutesText(pad2(value.minutes));
     }
-  }, [value.minutes, isEditingMinutes]);
+  }, [value, isEditingMinutes]);
+
+  const updateValue = (nextValue: TimeValue) => {
+    latestValue.current = nextValue;
+    onChange(nextValue);
+  };
+
+  const clampHours = (text: string) => {
+    const num = Number(text);
+    return Number.isFinite(num)
+      ? Math.min(Math.max(0, Math.floor(num)), maxHours)
+      : 0;
+  };
+
+  const clampMinutes = (text: string, hours: number) => {
+    const num = Number(text);
+    return Number.isFinite(num)
+      ? Math.min(Math.max(0, Math.floor(num)), maxMinutesForHour(hours))
+      : 0;
+  };
+
+  const handleHoursChange = (text: string) => {
+    setHoursText(text);
+    const hours = clampHours(text);
+    const minutes = Math.min(
+      latestValue.current.minutes,
+      maxMinutesForHour(hours),
+    );
+    updateValue({ hours, minutes });
+  };
+
+  const handleMinutesChange = (text: string) => {
+    setMinutesText(text);
+    const hours = latestValue.current.hours;
+    updateValue({ hours, minutes: clampMinutes(text, hours) });
+  };
 
   const handleHoursBlur = () => {
     setIsEditingHours(false);
-    const num = parseInt(hoursText, 10);
-    const clamped = isNaN(num) ? 0 : Math.min(Math.max(0, num), maxHours);
-    setHoursText(pad2(clamped));
-    onChange({ ...value, hours: clamped });
+    setHoursText(pad2(latestValue.current.hours));
   };
 
   const handleMinutesBlur = () => {
     setIsEditingMinutes(false);
-    const num = parseInt(minutesText, 10);
-    const clamped = isNaN(num) ? 0 : Math.min(Math.max(0, num), 59);
-    setMinutesText(pad2(clamped));
-    onChange({ ...value, minutes: clamped });
+    setMinutesText(pad2(latestValue.current.minutes));
   };
 
   return (
@@ -70,7 +106,7 @@ export function AlarmTimePicker({
         mode="outlined"
         keyboardType="numeric"
         value={hoursText}
-        onChangeText={setHoursText}
+        onChangeText={handleHoursChange}
         onFocus={() => setIsEditingHours(true)}
         onBlur={handleHoursBlur}
         selectTextOnFocus
@@ -86,7 +122,7 @@ export function AlarmTimePicker({
         mode="outlined"
         keyboardType="numeric"
         value={minutesText}
-        onChangeText={setMinutesText}
+        onChangeText={handleMinutesChange}
         onFocus={() => setIsEditingMinutes(true)}
         onBlur={handleMinutesBlur}
         selectTextOnFocus

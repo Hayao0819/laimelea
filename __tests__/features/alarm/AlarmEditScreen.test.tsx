@@ -304,15 +304,18 @@ describe("AlarmEditScreen", () => {
       mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
     await options.headerRight().props.onPress();
 
-    await waitFor(async () => {
-      const storedAlarms = await store.get(alarmsAtom);
-      expect(storedAlarms[0].notifeeTriggerId).toBe("recovered-trigger-id");
-    });
     expect(mockRecoverAlarmSchedule).toHaveBeenCalledWith(
       existingAlarm,
       expect.any(Number),
       DEFAULT_SETTINGS.cycleConfig,
     );
+    await waitFor(() => {
+      const storedAlarms = store.get(alarmsAtom);
+      if (!Array.isArray(storedAlarms)) {
+        throw new Error("alarms are still loading");
+      }
+      expect(storedAlarms[0].notifeeTriggerId).toBe("recovered-trigger-id");
+    });
     expect(mockGoBack).not.toHaveBeenCalled();
   });
 

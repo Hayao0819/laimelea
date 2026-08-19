@@ -53,6 +53,14 @@ function getRepeatDescription(
 
 const MS_PER_HOUR = 3_600_000;
 
+function intervalMsFromHours(text: string): number | null {
+  const hours = Number(text);
+  const intervalMs = hours * MS_PER_HOUR;
+  return Number.isFinite(hours) && hours > 0 && Number.isSafeInteger(intervalMs)
+    ? intervalMs
+    : null;
+}
+
 export function RepeatPicker({ repeat, onRepeatChange }: RepeatPickerProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -76,9 +84,7 @@ export function RepeatPicker({ repeat, onRepeatChange }: RepeatPickerProps) {
           weekdays: repeat?.weekdays ?? [],
         });
       } else if (m === "interval") {
-        const hours = parseFloat(intervalHours);
-        const ms =
-          !isNaN(hours) && hours > 0 ? hours * MS_PER_HOUR : 24 * MS_PER_HOUR;
+        const ms = intervalMsFromHours(intervalHours) ?? 24 * MS_PER_HOUR;
         setIntervalError(null);
         onRepeatChange({ type: "interval", intervalMs: ms });
       }
@@ -100,13 +106,13 @@ export function RepeatPicker({ repeat, onRepeatChange }: RepeatPickerProps) {
   const handleIntervalChange = useCallback(
     (text: string) => {
       setIntervalHours(text);
-      const hours = parseFloat(text);
-      if (isNaN(hours) || hours <= 0) {
+      const intervalMs = intervalMsFromHours(text);
+      if (intervalMs === null) {
         setIntervalError(t("alarm.repeatIntervalHours"));
         return;
       }
       setIntervalError(null);
-      onRepeatChange({ type: "interval", intervalMs: hours * MS_PER_HOUR });
+      onRepeatChange({ type: "interval", intervalMs });
     },
     [onRepeatChange, t],
   );

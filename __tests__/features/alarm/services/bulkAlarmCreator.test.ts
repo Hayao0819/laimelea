@@ -176,6 +176,49 @@ describe("generateBulkAlarms", () => {
     expect(result.alarms).toHaveLength(0);
   });
 
+  it("should return empty array when interval is not finite", () => {
+    const params = makeParams({ intervalMinutes: Number.POSITIVE_INFINITY });
+    const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
+
+    expect(result.alarms).toHaveLength(0);
+  });
+
+  it("should stop generating once the platform limit is exceeded", () => {
+    const params = makeParams({
+      fromHour: 0,
+      fromMinute: 0,
+      toHour: 1_000_000,
+      toMinute: 0,
+      intervalMinutes: 1,
+    });
+    const result = generateBulkAlarms(
+      params,
+      { ...defaultCycleConfig, cycleLengthMinutes: 60_000_001 },
+      defaults,
+      0,
+    );
+
+    expect(result.alarms).toHaveLength(ANDROID_ALARM_TRIGGER_LIMIT);
+  });
+
+  it("caps generated slots at exactly the platform trigger limit, never one over", () => {
+    const result = generateBulkAlarms(
+      makeParams({
+        fromHour: 0,
+        fromMinute: 0,
+        toHour: 1_000_000,
+        toMinute: 0,
+        intervalMinutes: 1,
+      }),
+      { ...defaultCycleConfig, cycleLengthMinutes: 60_000_001 },
+      defaults,
+      1,
+    );
+
+    expect(result.alarms).toHaveLength(ANDROID_ALARM_TRIGGER_LIMIT);
+    expect(result.limitExceeded).toBe(true);
+  });
+
   it("should generate unique IDs for all alarms", () => {
     const params = makeParams();
     const result = generateBulkAlarms(params, defaultCycleConfig, defaults, 0);
