@@ -89,7 +89,7 @@ export function useSettingsUpdate() {
 
   const updateWidgetSettings = useCallback(
     (partial: Partial<WidgetSettings>) => {
-      setSettings((current) =>
+      const persisted = setSettings((current) =>
         updateStoredSettings(current, (stored) => ({
           ...DEFAULT_SETTINGS,
           ...stored,
@@ -100,7 +100,7 @@ export function useSettingsUpdate() {
           },
         })),
       );
-      requestClockWidgetUpdate();
+      Promise.resolve(persisted).then(() => requestClockWidgetUpdate());
     },
     [setSettings],
   );

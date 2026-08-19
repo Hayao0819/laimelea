@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FlatList, StyleSheet } from "react-native";
 import { List, Modal, Portal, Searchbar, useTheme } from "react-native-paper";
 
@@ -113,6 +114,7 @@ export function TimezonePickerSheet({
   selectedTz,
   resetOption,
 }: Props) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const [query, setQuery] = useState("");
 
@@ -156,7 +158,7 @@ export function TimezonePickerSheet({
         testID="timezone-picker-modal"
       >
         <Searchbar
-          placeholder="Search timezone..."
+          placeholder={t("settings.timezoneSearchPlaceholder")}
           value={query}
           onChangeText={setQuery}
           style={styles.searchbar}

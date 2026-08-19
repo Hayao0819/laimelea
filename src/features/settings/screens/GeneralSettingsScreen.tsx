@@ -5,7 +5,6 @@ import { Button, List, SegmentedButtons, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import { resolveLanguage } from "../../../core/i18n";
 import type { BatteryOptimizationStatus } from "../hooks/useBatteryOptimization";
 import { useBatteryOptimization } from "../hooks/useBatteryOptimization";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
@@ -81,10 +80,15 @@ export function GeneralSettingsScreen() {
           <Text variant="bodyMedium" style={styles.segmentLabel}>
             {t("settings.language")}
           </Text>
-          <SegmentedButtons
-            value={resolveLanguage(settings.language)}
+          <SegmentedButtons<"auto" | "en" | "ja">
+            value={
+              settings.language === "en" || settings.language === "ja"
+                ? settings.language
+                : "auto"
+            }
             onValueChange={(v) => update({ language: v })}
             buttons={[
+              { value: "auto", label: t("settings.languageAuto") },
               { value: "en", label: t("settings.english") },
               { value: "ja", label: t("settings.japanese") },
             ]}

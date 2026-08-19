@@ -3,7 +3,10 @@ import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
 import { PaperProvider } from "react-native-paper";
 
-import { calendarListAtom } from "../../../../src/atoms/calendarAtoms";
+import {
+  calendarListAtom,
+  HIDE_ALL_CALENDARS_ID,
+} from "../../../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../../../src/atoms/settingsAtoms";
 import { CalendarSettingsScreen } from "../../../../src/features/settings/screens/CalendarSettingsScreen";
 import type { AppSettings } from "../../../../src/models/Settings";
@@ -118,6 +121,42 @@ describe("CalendarSettingsScreen", () => {
       expect(
         (store.get(settingsAtom) as AppSettings).visibleCalendarIds,
       ).toEqual(["home"]);
+    });
+  });
+
+  it("keeps all calendars selected for the legacy empty selection", async () => {
+    const { getByTestId, store } = await renderScreen(
+      { visibleCalendarIds: [] },
+      [
+        { id: "work", name: "Work", color: "#f00", isPrimary: true },
+        { id: "home", name: "Home", color: null, isPrimary: false },
+      ],
+    );
+
+    fireEvent.press(getByTestId("calendar-checkbox-work"));
+
+    await waitFor(() => {
+      expect(
+        (store.get(settingsAtom) as AppSettings).visibleCalendarIds,
+      ).toEqual(["home"]);
+    });
+  });
+
+  it("represents an all-hidden selection without restoring every calendar", async () => {
+    const { getByTestId, store } = await renderScreen(
+      { visibleCalendarIds: ["work"] },
+      [
+        { id: "work", name: "Work", color: "#f00", isPrimary: true },
+        { id: "home", name: "Home", color: null, isPrimary: false },
+      ],
+    );
+
+    fireEvent.press(getByTestId("calendar-checkbox-work"));
+
+    await waitFor(() => {
+      expect(
+        (store.get(settingsAtom) as AppSettings).visibleCalendarIds,
+      ).toEqual([HIDE_ALL_CALENDARS_ID]);
     });
   });
 });

@@ -35,8 +35,20 @@ export function SetupScreen() {
   const insets = useSafeAreaInsets();
   const { isConnected } = useNetworkStatus();
 
-  const cycleLengthMinutes = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
-  const isValid = cycleLengthMinutes > 0 && baseTimeMs !== null;
+  const parsedHours = Number(hours);
+  const parsedMinutes = Number(minutes);
+  const cycleLengthMinutes = parsedHours * 60 + parsedMinutes;
+  const isValid =
+    Number.isFinite(parsedHours) &&
+    Number.isFinite(parsedMinutes) &&
+    Number.isInteger(parsedHours) &&
+    Number.isInteger(parsedMinutes) &&
+    parsedHours >= 0 &&
+    parsedMinutes >= 0 &&
+    parsedMinutes <= 59 &&
+    Number.isSafeInteger(cycleLengthMinutes) &&
+    cycleLengthMinutes > 0 &&
+    baseTimeMs !== null;
 
   const preview = useMemo(() => {
     if (!isValid) return null;

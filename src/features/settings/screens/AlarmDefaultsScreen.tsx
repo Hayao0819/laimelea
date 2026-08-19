@@ -98,9 +98,9 @@ export function AlarmDefaultsScreen() {
             value={settings.alarmDefaults.dismissalMethod}
             onValueChange={(v) => updateAlarmDefaults({ dismissalMethod: v })}
             buttons={[
-              { value: "simple", label: "Simple" },
-              { value: "shake", label: "Shake" },
-              { value: "math", label: "Math" },
+              { value: "simple", label: t("settings.dismissalMethodSimple") },
+              { value: "shake", label: t("settings.dismissalMethodShake") },
+              { value: "math", label: t("settings.dismissalMethodMath") },
             ]}
           />
         </View>
@@ -121,7 +121,9 @@ export function AlarmDefaultsScreen() {
         />
         <List.Item
           title={t("settings.snoozeDuration")}
-          description={`${settings.alarmDefaults.snoozeDurationMin} min`}
+          description={t("alarm.autoSilenceMin", {
+            minutes: settings.alarmDefaults.snoozeDurationMin,
+          })}
           onPress={() =>
             updateAlarmDefaults({
               snoozeDurationMin: cycleNext(

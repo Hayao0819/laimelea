@@ -20,6 +20,11 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+let mockWritePromise: Promise<void> = Promise.resolve();
+const mockSetItem = jest.fn(
+  (_key: string, _value: unknown) => mockWritePromise,
+);
+
 jest.mock("../../../../src/core/storage/asyncStorageAdapter", () => ({
   createAsyncStorage: () => {
     const store = new Map<string, unknown>();
@@ -28,6 +33,7 @@ jest.mock("../../../../src/core/storage/asyncStorageAdapter", () => ({
         store.has(key) ? store.get(key) : initialValue,
       setItem: (key: string, value: unknown) => {
         store.set(key, value);
+        return mockSetItem(key, value);
       },
       removeItem: (key: string) => {
         store.delete(key);
@@ -52,6 +58,7 @@ function createWrapper() {
 describe("useSettingsUpdate", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWritePromise = Promise.resolve();
   });
 
   it("should return settings merged with defaults", async () => {
@@ -191,6 +198,32 @@ describe("useSettingsUpdate", () => {
 
     await act(async () => {
       result.current.updateWidgetSettings({ opacity: 50 });
+    });
+
+    expect(requestClockWidgetUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for the settings write to persist before requesting the widget update", async () => {
+    let resolveWrite!: () => void;
+    mockWritePromise = new Promise<void>((resolve) => {
+      resolveWrite = resolve;
+    });
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useSettingsUpdate(), {
+      wrapper: Wrapper,
+    });
+    await act(async () => {});
+
+    act(() => {
+      result.current.updateWidgetSettings({ opacity: 42 });
+    });
+
+    expect(requestClockWidgetUpdate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveWrite();
+      await Promise.resolve();
     });
 
     expect(requestClockWidgetUpdate).toHaveBeenCalledTimes(1);

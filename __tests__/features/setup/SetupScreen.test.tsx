@@ -153,6 +153,19 @@ describe("SetupScreen", () => {
     });
   });
 
+  it("keeps completion disabled for non-finite cycle input", async () => {
+    const { getByText, getByTestId } = await renderWithProviders();
+
+    await act(async () => {
+      fireEvent.changeText(getByTestId("cycle-hours"), "1e309");
+      fireEvent.press(getByText("setup.useNow"));
+    });
+
+    expect(getByTestId("done-button").props.accessibilityState?.disabled).toBe(
+      true,
+    );
+  });
+
   it("should set setupComplete to true on done", async () => {
     const store = createStore();
     const { getByText, getByTestId } = await renderWithProviders(store);

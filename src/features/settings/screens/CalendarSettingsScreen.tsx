@@ -12,7 +12,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import { calendarListAtom } from "../../../atoms/calendarAtoms";
+import {
+  calendarListAtom,
+  HIDE_ALL_CALENDARS_ID,
+} from "../../../atoms/calendarAtoms";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { useSnackbar } from "../hooks/useSnackbar";
 
@@ -39,12 +42,23 @@ export function CalendarSettingsScreen() {
   const toggleCalendarVisibility = useCallback(
     (calId: string) => {
       const current = settings.visibleCalendarIds;
-      const next = current.includes(calId)
-        ? current.filter((id) => id !== calId)
-        : [...current, calId];
+      const hidesAll = current.includes(HIDE_ALL_CALENDARS_ID);
+      let next: string[];
+      if (hidesAll) {
+        next = [calId];
+      } else if (current.length === 0) {
+        next = calendars
+          .filter((calendar) => calendar.id !== calId)
+          .map((calendar) => calendar.id);
+      } else if (current.includes(calId)) {
+        next = current.filter((id) => id !== calId);
+      } else {
+        next = [...current, calId];
+      }
+      if (next.length === 0) next = [HIDE_ALL_CALENDARS_ID];
       update({ visibleCalendarIds: next });
     },
-    [settings.visibleCalendarIds, update],
+    [calendars, settings.visibleCalendarIds, update],
   );
 
   return (
@@ -106,6 +120,7 @@ export function CalendarSettingsScreen() {
                 key={cal.id}
                 label={cal.name}
                 status={
+                  settings.visibleCalendarIds.length === 0 ||
                   settings.visibleCalendarIds.includes(cal.id)
                     ? "checked"
                     : "unchecked"

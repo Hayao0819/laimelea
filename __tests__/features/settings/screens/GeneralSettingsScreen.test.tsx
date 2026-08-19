@@ -140,6 +140,17 @@ describe("GeneralSettingsScreen", () => {
     });
   });
 
+  it("can return to the system language", async () => {
+    const { getByText, store } = await renderScreen({ language: "ja" });
+
+    await fireEvent.press(getByText("settings.languageAuto"));
+
+    await waitFor(() => {
+      const updated = store.get(settingsAtom) as AppSettings;
+      expect(updated.language).toBe("auto");
+    });
+  });
+
   it("updates timeFormat on segment press", async () => {
     const { getByText, store } = await renderScreen();
 

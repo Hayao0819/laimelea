@@ -92,11 +92,17 @@ describe("WidgetSettingsScreen", () => {
     );
   });
 
-  it("updates background color on input", async () => {
+  it("commits a valid background color on blur", async () => {
     const { getByTestId, store } = await renderScreen();
     const input = getByTestId("widget-bg-color-input");
 
     await fireEvent.changeText(input, "#FF0000");
+    expect(
+      (store.get(settingsAtom) as AppSettings).widgetSettings.backgroundColor,
+    ).toBe(DEFAULT_WIDGET_SETTINGS.backgroundColor);
+    await act(async () => {
+      getByTestId("widget-bg-color-input").props.onBlur({});
+    });
 
     await waitFor(() => {
       const updated = store.get(settingsAtom) as AppSettings;
@@ -171,37 +177,112 @@ describe("WidgetSettingsScreen", () => {
     });
   });
 
-  it("updates opacity and clamps to 0-100", async () => {
-    const { getByTestId, store } = await renderScreen();
-    const input = getByTestId("widget-opacity-input");
-
-    // "150" should clamp to 100
-    await fireEvent.changeText(input, "150");
-
-    await waitFor(() => {
-      const updated = store.get(settingsAtom) as AppSettings;
-      expect(updated.widgetSettings.opacity).toBe(100);
+  it("restores the previous custom color after an incomplete edit", async () => {
+    const { getByTestId, store } = await renderScreen({
+      widgetSettings: {
+        ...DEFAULT_WIDGET_SETTINGS,
+        backgroundColor: "#123456",
+      },
     });
 
-    // "-5" should clamp to 0
-    await fireEvent.changeText(input, "-5");
-
-    await waitFor(() => {
-      const updated = store.get(settingsAtom) as AppSettings;
-      expect(updated.widgetSettings.opacity).toBe(0);
+    await fireEvent.changeText(getByTestId("widget-bg-color-input"), "#123");
+    await act(async () => {
+      getByTestId("widget-bg-color-input").props.onBlur({});
     });
+
+    expect(getByTestId("widget-bg-color-input").props.value).toBe("#123456");
+    expect(
+      (store.get(settingsAtom) as AppSettings).widgetSettings.backgroundColor,
+    ).toBe("#123456");
   });
 
-  it("handles NaN opacity input", async () => {
+  it("keeps an active color draft when settings change elsewhere", async () => {
+    const { getByTestId, store } = await renderScreen();
+    const input = getByTestId("widget-bg-color-input");
+
+    fireEvent(input, "focus");
+    fireEvent.changeText(input, "#123");
+
+    await act(async () => {
+      const current = store.get(settingsAtom) as AppSettings;
+      store.set(settingsAtom, {
+        ...current,
+        widgetSettings: {
+          ...current.widgetSettings,
+          backgroundColor: "#ABCDEF",
+          textColor: "#010203",
+        },
+      });
+    });
+
+    expect(getByTestId("widget-bg-color-input").props.value).toBe("#123");
+    expect(getByTestId("widget-text-color-input").props.value).toBe("#010203");
+  });
+
+  it("commits valid opacity on blur and rejects out-of-range input", async () => {
     const { getByTestId, store } = await renderScreen();
     const input = getByTestId("widget-opacity-input");
 
-    await fireEvent.changeText(input, "abc");
+    await fireEvent.changeText(input, "50");
+    expect(
+      (store.get(settingsAtom) as AppSettings).widgetSettings.opacity,
+    ).toBe(DEFAULT_WIDGET_SETTINGS.opacity);
+    await act(async () => {
+      getByTestId("widget-opacity-input").props.onBlur({});
+    });
 
     await waitFor(() => {
       const updated = store.get(settingsAtom) as AppSettings;
-      expect(updated.widgetSettings.opacity).toBe(0);
+      expect(updated.widgetSettings.opacity).toBe(50);
     });
+
+    await fireEvent.changeText(getByTestId("widget-opacity-input"), "150");
+    await act(async () => {
+      getByTestId("widget-opacity-input").props.onBlur({});
+    });
+
+    expect(
+      (store.get(settingsAtom) as AppSettings).widgetSettings.opacity,
+    ).toBe(50);
+    expect(getByTestId("widget-opacity-input").props.value).toBe("50");
+  });
+
+  it("preserves opacity when the input is empty or invalid", async () => {
+    const { getByTestId, store } = await renderScreen();
+    const input = getByTestId("widget-opacity-input");
+
+    await fireEvent.changeText(input, "");
+    expect(
+      (store.get(settingsAtom) as AppSettings).widgetSettings.opacity,
+    ).toBe(DEFAULT_WIDGET_SETTINGS.opacity);
+    await act(async () => {
+      getByTestId("widget-opacity-input").props.onBlur({});
+    });
+
+    expect(getByTestId("widget-opacity-input").props.value).toBe(
+      String(DEFAULT_WIDGET_SETTINGS.opacity),
+    );
+  });
+
+  it("keeps an active opacity draft when settings change elsewhere", async () => {
+    const { getByTestId, store } = await renderScreen();
+    const input = getByTestId("widget-opacity-input");
+
+    fireEvent(input, "focus");
+    fireEvent.changeText(input, "5");
+
+    await act(async () => {
+      const current = store.get(settingsAtom) as AppSettings;
+      store.set(settingsAtom, {
+        ...current,
+        widgetSettings: {
+          ...current.widgetSettings,
+          opacity: 90,
+        },
+      });
+    });
+
+    expect(getByTestId("widget-opacity-input").props.value).toBe("5");
   });
 
   it("toggles border radius switch", async () => {
@@ -270,8 +351,11 @@ describe("WidgetSettingsScreen", () => {
   it("calls requestClockWidgetUpdate on changes", async () => {
     const { getByTestId } = await renderScreen();
 
-    // Change a color
     await fireEvent.changeText(getByTestId("widget-bg-color-input"), "#FF0000");
+    expect(mockWidgetUpdate).not.toHaveBeenCalled();
+    await act(async () => {
+      getByTestId("widget-bg-color-input").props.onBlur({});
+    });
 
     await waitFor(() => {
       expect(mockWidgetUpdate).toHaveBeenCalled();
@@ -292,8 +376,11 @@ describe("WidgetSettingsScreen", () => {
 
     mockWidgetUpdate.mockClear();
 
-    // Change opacity
     await fireEvent.changeText(getByTestId("widget-opacity-input"), "50");
+    expect(mockWidgetUpdate).not.toHaveBeenCalled();
+    await act(async () => {
+      getByTestId("widget-opacity-input").props.onBlur({});
+    });
 
     await waitFor(() => {
       expect(mockWidgetUpdate).toHaveBeenCalled();

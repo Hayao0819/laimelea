@@ -1,13 +1,18 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { List, Switch, TextInput } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import type { WidgetSettings } from "../../../models/Settings";
 import { DEFAULT_WIDGET_SETTINGS } from "../../../models/Settings";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
+
+type ColorField =
+  | "backgroundColor"
+  | "textColor"
+  | "secondaryTextColor"
+  | "accentColor";
 
 export function WidgetSettingsScreen() {
   const { t } = useTranslation();
@@ -15,34 +20,94 @@ export function WidgetSettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const widgetSettings = settings.widgetSettings ?? DEFAULT_WIDGET_SETTINGS;
+  const [colorDrafts, setColorDrafts] = useState<Record<ColorField, string>>(
+    () => ({
+      backgroundColor: widgetSettings.backgroundColor,
+      textColor: widgetSettings.textColor,
+      secondaryTextColor: widgetSettings.secondaryTextColor,
+      accentColor: widgetSettings.accentColor,
+    }),
+  );
+  const [opacityDraft, setOpacityDraft] = useState(() =>
+    String(widgetSettings.opacity),
+  );
+  const editingColors = useRef(new Set<ColorField>());
+  const editingOpacity = useRef(false);
+
+  useEffect(() => {
+    setColorDrafts((current) => ({
+      backgroundColor: editingColors.current.has("backgroundColor")
+        ? current.backgroundColor
+        : widgetSettings.backgroundColor,
+      textColor: editingColors.current.has("textColor")
+        ? current.textColor
+        : widgetSettings.textColor,
+      secondaryTextColor: editingColors.current.has("secondaryTextColor")
+        ? current.secondaryTextColor
+        : widgetSettings.secondaryTextColor,
+      accentColor: editingColors.current.has("accentColor")
+        ? current.accentColor
+        : widgetSettings.accentColor,
+    }));
+  }, [
+    widgetSettings.accentColor,
+    widgetSettings.backgroundColor,
+    widgetSettings.secondaryTextColor,
+    widgetSettings.textColor,
+  ]);
+
+  useEffect(() => {
+    if (!editingOpacity.current) {
+      setOpacityDraft(String(widgetSettings.opacity));
+    }
+  }, [widgetSettings.opacity]);
 
   const isValidHex = useCallback((value: string): boolean => {
     return /^#[0-9A-Fa-f]{6}$/.test(value);
   }, []);
 
   const handleColorBlur = useCallback(
-    (field: keyof WidgetSettings, value: string) => {
-      if (!isValidHex(value)) {
-        updateWidgetSettings({
-          [field]: DEFAULT_WIDGET_SETTINGS[field],
-        });
-      }
-    },
-    [isValidHex, updateWidgetSettings],
-  );
-
-  const handleOpacityChange = useCallback(
-    (text: string) => {
-      const num = parseInt(text, 10);
-      if (isNaN(num)) {
-        updateWidgetSettings({ opacity: 0 });
+    (field: ColorField) => {
+      editingColors.current.delete(field);
+      const value = colorDrafts[field].trim();
+      if (isValidHex(value)) {
+        if (value !== widgetSettings[field]) {
+          updateWidgetSettings({ [field]: value });
+        }
+        setColorDrafts((current) => ({ ...current, [field]: value }));
         return;
       }
-      const clamped = Math.max(0, Math.min(100, num));
-      updateWidgetSettings({ opacity: clamped });
+      const storedValue = widgetSettings[field];
+      const fallback = isValidHex(storedValue)
+        ? storedValue
+        : DEFAULT_WIDGET_SETTINGS[field];
+      setColorDrafts((current) => ({ ...current, [field]: fallback }));
+      if (fallback !== storedValue) updateWidgetSettings({ [field]: fallback });
     },
-    [updateWidgetSettings],
+    [colorDrafts, isValidHex, updateWidgetSettings, widgetSettings],
   );
+
+  const handleOpacityBlur = useCallback(() => {
+    editingOpacity.current = false;
+    const value = Number(opacityDraft);
+    if (
+      opacityDraft.trim() !== "" &&
+      Number.isInteger(value) &&
+      value >= 0 &&
+      value <= 100
+    ) {
+      if (value !== widgetSettings.opacity) {
+        updateWidgetSettings({ opacity: value });
+      }
+      setOpacityDraft(String(value));
+      return;
+    }
+    setOpacityDraft(String(widgetSettings.opacity));
+  }, [opacityDraft, updateWidgetSettings, widgetSettings.opacity]);
+
+  const updateColorDraft = useCallback((field: ColorField, value: string) => {
+    setColorDrafts((current) => ({ ...current, [field]: value }));
+  }, []);
 
   const renderBorderRadiusSwitch = useCallback(
     () => (
@@ -104,13 +169,10 @@ export function WidgetSettingsScreen() {
           />
           <TextInput
             label={t("settings.widgetBackgroundColor")}
-            value={widgetSettings.backgroundColor}
-            onChangeText={(text) =>
-              updateWidgetSettings({ backgroundColor: text })
-            }
-            onBlur={() =>
-              handleColorBlur("backgroundColor", widgetSettings.backgroundColor)
-            }
+            value={colorDrafts.backgroundColor}
+            onFocus={() => editingColors.current.add("backgroundColor")}
+            onChangeText={(text) => updateColorDraft("backgroundColor", text)}
+            onBlur={() => handleColorBlur("backgroundColor")}
             style={styles.colorInput}
             mode="outlined"
             testID="widget-bg-color-input"
@@ -126,11 +188,10 @@ export function WidgetSettingsScreen() {
           />
           <TextInput
             label={t("settings.widgetTextColor")}
-            value={widgetSettings.textColor}
-            onChangeText={(text) => updateWidgetSettings({ textColor: text })}
-            onBlur={() =>
-              handleColorBlur("textColor", widgetSettings.textColor)
-            }
+            value={colorDrafts.textColor}
+            onFocus={() => editingColors.current.add("textColor")}
+            onChangeText={(text) => updateColorDraft("textColor", text)}
+            onBlur={() => handleColorBlur("textColor")}
             style={styles.colorInput}
             mode="outlined"
             testID="widget-text-color-input"
@@ -146,16 +207,12 @@ export function WidgetSettingsScreen() {
           />
           <TextInput
             label={t("settings.widgetSecondaryTextColor")}
-            value={widgetSettings.secondaryTextColor}
+            value={colorDrafts.secondaryTextColor}
+            onFocus={() => editingColors.current.add("secondaryTextColor")}
             onChangeText={(text) =>
-              updateWidgetSettings({ secondaryTextColor: text })
+              updateColorDraft("secondaryTextColor", text)
             }
-            onBlur={() =>
-              handleColorBlur(
-                "secondaryTextColor",
-                widgetSettings.secondaryTextColor,
-              )
-            }
+            onBlur={() => handleColorBlur("secondaryTextColor")}
             style={styles.colorInput}
             mode="outlined"
             testID="widget-secondary-color-input"
@@ -171,11 +228,10 @@ export function WidgetSettingsScreen() {
           />
           <TextInput
             label={t("settings.widgetAccentColor")}
-            value={widgetSettings.accentColor}
-            onChangeText={(text) => updateWidgetSettings({ accentColor: text })}
-            onBlur={() =>
-              handleColorBlur("accentColor", widgetSettings.accentColor)
-            }
+            value={colorDrafts.accentColor}
+            onFocus={() => editingColors.current.add("accentColor")}
+            onChangeText={(text) => updateColorDraft("accentColor", text)}
+            onBlur={() => handleColorBlur("accentColor")}
             style={styles.colorInput}
             mode="outlined"
             testID="widget-accent-color-input"
@@ -184,8 +240,12 @@ export function WidgetSettingsScreen() {
         <View style={styles.colorRow}>
           <TextInput
             label={t("settings.widgetOpacity")}
-            value={String(widgetSettings.opacity)}
-            onChangeText={handleOpacityChange}
+            value={opacityDraft}
+            onFocus={() => {
+              editingOpacity.current = true;
+            }}
+            onChangeText={setOpacityDraft}
+            onBlur={handleOpacityBlur}
             keyboardType="numeric"
             style={styles.colorInput}
             mode="outlined"

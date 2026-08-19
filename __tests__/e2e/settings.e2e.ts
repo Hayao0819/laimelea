@@ -89,7 +89,7 @@ describe("Settings Screen", () => {
 
     it("can switch theme", async () => {
       await element(by.text("Dark")).tap();
-      await element(by.text("System")).tap();
+      await element(by.text("System")).atIndex(1).tap();
     });
 
     it("shows time format segment", async () => {
