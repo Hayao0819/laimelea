@@ -92,6 +92,24 @@ describe("resolveSettings", () => {
       }),
     ).toEqual(DEFAULT_SETTINGS);
   });
+
+  it("repairs invalid widget colors without discarding other settings", () => {
+    const resolved = resolveSettings({
+      theme: "dark",
+      widgetSettings: {
+        backgroundColor: "#12345",
+        textColor: 123,
+        accentColor: "#ABCDEF",
+      },
+    });
+
+    expect(resolved.theme).toBe("dark");
+    expect(resolved.widgetSettings).toMatchObject({
+      backgroundColor: DEFAULT_WIDGET_SETTINGS.backgroundColor,
+      textColor: DEFAULT_WIDGET_SETTINGS.textColor,
+      accentColor: "#ABCDEF",
+    });
+  });
 });
 
 describe("readStoredSettings", () => {
@@ -143,5 +161,40 @@ describe("readStoredAlarms", () => {
     mockGetItem.mockResolvedValue(JSON.stringify([null, { id: 1 }]));
 
     await expect(readStoredAlarms()).resolves.toBeNull();
+  });
+
+  it("keeps valid alarms when another record is invalid", async () => {
+    const validAlarm = makeAlarm();
+    mockGetItem.mockResolvedValue(JSON.stringify([validAlarm, { id: 1 }]));
+
+    await expect(readStoredAlarms()).resolves.toEqual([
+      expect.objectContaining(validAlarm),
+    ]);
+  });
+
+  it("drops an alarm when its persisted repeat is malformed, keeping valid siblings", async () => {
+    const validAlarm = makeAlarm();
+    const invalidRepeatAlarm = {
+      ...makeAlarm(),
+      id: "alarm-2",
+      repeat: { type: "interval", intervalMs: null },
+    };
+    mockGetItem.mockResolvedValue(
+      JSON.stringify([validAlarm, invalidRepeatAlarm]),
+    );
+
+    await expect(readStoredAlarms()).resolves.toEqual([
+      expect.objectContaining(validAlarm),
+    ]);
+  });
+
+  it("still parses an alarm with no repeat field as having no repeat", async () => {
+    const alarmWithoutRepeat: Partial<Alarm> = makeAlarm();
+    delete alarmWithoutRepeat.repeat;
+    mockGetItem.mockResolvedValue(JSON.stringify([alarmWithoutRepeat]));
+
+    await expect(readStoredAlarms()).resolves.toEqual([
+      expect.objectContaining({ ...alarmWithoutRepeat, repeat: null }),
+    ]);
   });
 });

@@ -44,6 +44,12 @@ function nullableNumber(value: unknown): number | null | undefined {
   return value == null || isFiniteNumber(value) ? value : undefined;
 }
 
+function hexColor(value: unknown, fallback: string): string {
+  return typeof value === "string" && /^#[0-9A-Fa-f]{6}$/.test(value)
+    ? value
+    : fallback;
+}
+
 export function normalizeSettings(value: unknown): AppSettings | null {
   if (!isRecord(value)) return null;
 
@@ -112,14 +118,6 @@ export function normalizeSettings(value: unknown): AppSettings | null {
       ] as const)) ||
     (alarmDefaults.mathDifficulty !== undefined &&
       !isOneOf(alarmDefaults.mathDifficulty, [1, 2, 3] as const)) ||
-    (widgetSettings.backgroundColor !== undefined &&
-      typeof widgetSettings.backgroundColor !== "string") ||
-    (widgetSettings.textColor !== undefined &&
-      typeof widgetSettings.textColor !== "string") ||
-    (widgetSettings.secondaryTextColor !== undefined &&
-      typeof widgetSettings.secondaryTextColor !== "string") ||
-    (widgetSettings.accentColor !== undefined &&
-      typeof widgetSettings.accentColor !== "string") ||
     (widgetSettings.opacity !== undefined &&
       (!isFiniteNumber(widgetSettings.opacity) ||
         widgetSettings.opacity < 0 ||
@@ -191,15 +189,22 @@ export function normalizeSettings(value: unknown): AppSettings | null {
         ? DEFAULT_SETTINGS.lastBackupTimestamp
         : (nullableNumber(value.lastBackupTimestamp) ?? null),
     widgetSettings: {
-      backgroundColor:
-        widgetSettings.backgroundColor ??
+      backgroundColor: hexColor(
+        widgetSettings.backgroundColor,
         DEFAULT_WIDGET_SETTINGS.backgroundColor,
-      textColor: widgetSettings.textColor ?? DEFAULT_WIDGET_SETTINGS.textColor,
-      secondaryTextColor:
-        widgetSettings.secondaryTextColor ??
+      ),
+      textColor: hexColor(
+        widgetSettings.textColor,
+        DEFAULT_WIDGET_SETTINGS.textColor,
+      ),
+      secondaryTextColor: hexColor(
+        widgetSettings.secondaryTextColor,
         DEFAULT_WIDGET_SETTINGS.secondaryTextColor,
-      accentColor:
-        widgetSettings.accentColor ?? DEFAULT_WIDGET_SETTINGS.accentColor,
+      ),
+      accentColor: hexColor(
+        widgetSettings.accentColor,
+        DEFAULT_WIDGET_SETTINGS.accentColor,
+      ),
       opacity: widgetSettings.opacity ?? DEFAULT_WIDGET_SETTINGS.opacity,
       borderRadius:
         widgetSettings.borderRadius ?? DEFAULT_WIDGET_SETTINGS.borderRadius,
@@ -247,7 +252,9 @@ function normalizeRepeat(value: unknown): AlarmRepeat | null | undefined {
 
 export function normalizeAlarm(value: unknown): Alarm | null {
   if (!isRecord(value)) return null;
-  const repeat = normalizeRepeat(value.repeat);
+  const repeat =
+    value.repeat === undefined ? null : normalizeRepeat(value.repeat);
+  if (repeat === undefined) return null;
   const linkedEventOffsetMs =
     value.linkedEventOffsetMs === undefined
       ? (value.linkedEventOffset ?? 0)
@@ -260,7 +267,6 @@ export function normalizeAlarm(value: unknown): Alarm | null {
     (value.recurrenceAnchorTimestampMs !== undefined &&
       nullableNumber(value.recurrenceAnchorTimestampMs) === undefined) ||
     !isOneOf(value.setInTimeSystem, ["custom", "24h"] as const) ||
-    repeat === undefined ||
     !isOneOf(value.dismissalMethod, ["simple", "shake", "math"] as const) ||
     !isNonNegativeInteger(value.gradualVolumeDurationSec) ||
     !isPositiveInteger(value.snoozeDurationMin) ||
@@ -329,6 +335,8 @@ export function normalizeAlarms(value: unknown): Alarm[] | null {
   if (!Array.isArray(value)) {
     return null;
   }
-  const alarms = value.map(normalizeAlarm);
-  return alarms.some((alarm) => alarm == null) ? null : (alarms as Alarm[]);
+  const alarms = value
+    .map(normalizeAlarm)
+    .filter((alarm): alarm is Alarm => alarm !== null);
+  return value.length > 0 && alarms.length === 0 ? null : alarms;
 }
