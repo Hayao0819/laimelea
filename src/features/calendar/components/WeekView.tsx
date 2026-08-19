@@ -5,6 +5,12 @@ import { Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import {
+  addLocalDays,
+  intersectsLocalDay,
+  startOfLocalDay,
+  weekdayOrder,
+} from "../services/localDate";
 import { CustomDayTimeline } from "./CustomDayTimeline";
 import { EventCard } from "./EventCard";
 
@@ -12,34 +18,29 @@ interface WeekViewProps {
   events: CalendarEvent[];
   selectedDate: number;
   weekStart: number;
+  firstDayOfWeek?: 0 | 1 | 6;
   onSelectDate: (dateMs: number) => void;
   onEventPress?: (event: CalendarEvent) => void;
   onCreateAlarm?: (event: CalendarEvent) => void;
 }
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DAYS_IN_WEEK = 7;
 
 const WEEKDAY_KEYS = [
+  "calendar.weekday.sun",
   "calendar.weekday.mon",
   "calendar.weekday.tue",
   "calendar.weekday.wed",
   "calendar.weekday.thu",
   "calendar.weekday.fri",
   "calendar.weekday.sat",
-  "calendar.weekday.sun",
 ] as const;
-
-function startOfDay(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
 
 export function WeekView({
   events,
   selectedDate,
   weekStart,
+  firstDayOfWeek = 1,
   onSelectDate,
   onEventPress,
   onCreateAlarm,
@@ -47,38 +48,43 @@ export function WeekView({
   const { t } = useTranslation();
   const theme = useTheme();
 
-  const today = startOfDay(Date.now());
-  const selectedDayStart = startOfDay(selectedDate);
+  const today = startOfLocalDay(Date.now());
+  const selectedDayStart = startOfLocalDay(selectedDate);
 
   const days = useMemo(() => {
     const result: number[] = [];
     for (let i = 0; i < DAYS_IN_WEEK; i++) {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + i);
-      d.setHours(0, 0, 0, 0);
-      result.push(d.getTime());
+      result.push(addLocalDays(weekStart, i));
     }
     return result;
   }, [weekStart]);
 
   const allDayEvents = useMemo(() => {
     return events.filter(
-      (e) =>
-        e.allDay &&
-        e.startTimestampMs <= selectedDayStart + MS_PER_DAY &&
-        e.endTimestampMs > selectedDayStart,
+      (event) =>
+        event.allDay &&
+        intersectsLocalDay(
+          event.startTimestampMs,
+          event.endTimestampMs,
+          selectedDayStart,
+        ),
     );
   }, [events, selectedDayStart]);
 
   const timelineEvents = useMemo(() => {
     return events.filter((e) => {
       if (e.allDay) return false;
-      return (
-        e.startTimestampMs < selectedDayStart + MS_PER_DAY &&
-        e.endTimestampMs > selectedDayStart
+      return intersectsLocalDay(
+        e.startTimestampMs,
+        e.endTimestampMs,
+        selectedDayStart,
       );
     });
   }, [events, selectedDayStart]);
+  const orderedWeekdayKeys = useMemo(
+    () => weekdayOrder(firstDayOfWeek).map((day) => WEEKDAY_KEYS[day]),
+    [firstDayOfWeek],
+  );
 
   return (
     <View style={styles.container} testID="week-view">
@@ -99,7 +105,7 @@ export function WeekView({
                 ],
               ]}
               onPress={() => onSelectDate(dayMs)}
-              accessibilityLabel={`${t(WEEKDAY_KEYS[i])} ${date.getDate()}`}
+              accessibilityLabel={`${t(orderedWeekdayKeys[i])} ${date.getDate()}`}
               accessibilityState={{ selected: isSelected }}
             >
               <Text
@@ -111,7 +117,7 @@ export function WeekView({
                   },
                 ]}
               >
-                {t(WEEKDAY_KEYS[i])}
+                {t(orderedWeekdayKeys[i])}
               </Text>
               <View
                 style={[

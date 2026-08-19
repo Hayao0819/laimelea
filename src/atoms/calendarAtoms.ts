@@ -4,8 +4,11 @@ import { atomWithStorage, unwrap } from "jotai/utils";
 import type { CalendarInfo } from "../core/platform/types";
 import { createAsyncStorage } from "../core/storage/asyncStorageAdapter";
 import { STORAGE_KEYS } from "../core/storage/keys";
+import { startOfLocalDay } from "../features/calendar/services/localDate";
 import type { CalendarEvent } from "../models/CalendarEvent";
 import { resolvedSettingsAtom } from "./settingsAtoms";
+
+export const HIDE_ALL_CALENDARS_ID = "__laimelea_hide_all_calendars__";
 
 export type CalendarViewMode = "month" | "week" | "agenda";
 export const calendarViewModeAtom = atomWithStorage<CalendarViewMode>(
@@ -38,7 +41,7 @@ export const calendarListAtom = atomWithStorage<CalendarInfo[]>(
 );
 export const calendarSyncErrorAtom = atom<string | null>(null);
 export const calendarSelectedDateAtom = atom<number>(
-  startOfDay(Date.now()).getTime(),
+  startOfLocalDay(Date.now()),
 );
 
 const syncLastSyncAtom = unwrap(calendarLastSyncAtom, (prev) => prev ?? null);
@@ -77,11 +80,6 @@ export const visibleCalendarEventsAtom = atom<CalendarEvent[]>((get) => {
   const events = get(resolvedCalendarEventsAtom);
   const { visibleCalendarIds } = get(resolvedSettingsAtom);
   if (visibleCalendarIds.length === 0) return events;
+  if (visibleCalendarIds.includes(HIDE_ALL_CALENDARS_ID)) return [];
   return events.filter((e) => visibleCalendarIds.includes(e.calendarId));
 });
-
-function startOfDay(ms: number): Date {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}

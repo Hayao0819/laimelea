@@ -5,6 +5,11 @@ import { Text, useTheme } from "react-native-paper";
 
 import { spacing } from "../../../app/spacing";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import {
+  addLocalDays,
+  intersectsLocalDay,
+  startOfLocalDay,
+} from "../services/localDate";
 import { EventCard } from "./EventCard";
 
 interface AgendaViewProps {
@@ -15,7 +20,6 @@ interface AgendaViewProps {
   onCreateAlarm?: (event: CalendarEvent) => void;
 }
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const AGENDA_RANGE_DAYS = 14;
 
 const WEEKDAY_KEYS = [
@@ -27,22 +31,6 @@ const WEEKDAY_KEYS = [
   "calendar.weekday.fri",
   "calendar.weekday.sat",
 ] as const;
-
-function startOfDay(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function isSameDay(ms1: number, ms2: number): boolean {
-  const d1 = new Date(ms1);
-  const d2 = new Date(ms2);
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  );
-}
 
 interface AgendaSection {
   dateMs: number;
@@ -62,26 +50,23 @@ export function AgendaView({
   const sectionListRef =
     useRef<SectionList<CalendarEvent, AgendaSection>>(null);
 
-  const today = startOfDay(Date.now());
-  const selectedDayStart = startOfDay(selectedDate);
+  const today = startOfLocalDay(Date.now());
+  const selectedDayStart = startOfLocalDay(selectedDate);
 
   const sections = useMemo(() => {
     const result: AgendaSection[] = [];
 
     for (let i = -AGENDA_RANGE_DAYS; i <= AGENDA_RANGE_DAYS; i++) {
-      const d = new Date(selectedDayStart);
-      d.setDate(d.getDate() + i);
-      d.setHours(0, 0, 0, 0);
-      const dayMs = d.getTime();
-      const dayEnd = dayMs + MS_PER_DAY;
+      const dayMs = addLocalDays(selectedDayStart, i);
 
       const dayEvents = events
-        .filter((e) => {
-          if (e.allDay) {
-            return e.startTimestampMs <= dayEnd && e.endTimestampMs > dayMs;
-          }
-          return isSameDay(e.startTimestampMs, dayMs);
-        })
+        .filter((event) =>
+          intersectsLocalDay(
+            event.startTimestampMs,
+            event.endTimestampMs,
+            dayMs,
+          ),
+        )
         .sort((a, b) => {
           if (a.allDay && !b.allDay) return -1;
           if (!a.allDay && b.allDay) return 1;

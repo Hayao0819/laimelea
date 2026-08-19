@@ -7,12 +7,11 @@ import { cycleConfigAtom } from "../../../atoms/settingsAtoms";
 import { realToCustom } from "../../../core/time/conversions";
 import { formatCustomTimeShort } from "../../../core/time/formatting";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import { endOfLocalDay } from "../services/localDate";
 import { NowIndicator } from "./NowIndicator";
 import { TimelineEventBlock } from "./TimelineEventBlock";
 
 const HOURS_IN_DAY = 24;
-const MS_PER_HOUR = 60 * 60 * 1000;
-const MS_PER_DAY = HOURS_IN_DAY * MS_PER_HOUR;
 const MS_PER_MINUTE = 60 * 1000;
 const MIN_HOUR_HEIGHT = 30;
 const LEFT_LABEL_WIDTH = 50;
@@ -114,8 +113,32 @@ function formatHourLabel(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+function localMinutesSinceDayStart(
+  timestampMs: number,
+  dayStartMs: number,
+): number {
+  if (timestampMs <= dayStartMs) return 0;
+  if (timestampMs >= endOfLocalDay(dayStartMs)) return HOURS_IN_DAY * 60;
+  const timestamp = new Date(timestampMs);
+  return (
+    timestamp.getHours() * 60 +
+    timestamp.getMinutes() +
+    timestamp.getSeconds() / 60 +
+    timestamp.getMilliseconds() / MS_PER_MINUTE
+  );
+}
+
+function localHourTimestamp(dayStartMs: number, hour: number): number | null {
+  const date = new Date(dayStartMs);
+  date.setHours(hour, 0, 0, 0);
+  // DST spring-forward: a nonexistent hour normalizes to the next valid
+  // instant, so getHours() no longer matches the requested hour.
+  if (date.getHours() !== hour) return null;
+  return date.getTime();
+}
+
 function clampToDay(event: CalendarEvent, dayStartMs: number): CalendarEvent {
-  const dayEndMs = dayStartMs + MS_PER_DAY;
+  const dayEndMs = endOfLocalDay(dayStartMs);
   return {
     ...event,
     startTimestampMs: Math.max(event.startTimestampMs, dayStartMs),
@@ -152,7 +175,7 @@ export function CustomDayTimeline({
 
   const nowOffset = useMemo(() => {
     if (!showNowIndicator) return 0;
-    const minutesSinceMidnight = (now - dayStartMs) / MS_PER_MINUTE;
+    const minutesSinceMidnight = localMinutesSinceDayStart(now, dayStartMs);
     return (minutesSinceMidnight / 60) * hourHeight;
   }, [now, dayStartMs, hourHeight, showNowIndicator]);
 
@@ -170,7 +193,7 @@ export function CustomDayTimeline({
   }, [showNowIndicator]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter and clamp events to this day
-  const dayEndMs = dayStartMs + MS_PER_DAY;
+  const dayEndMs = endOfLocalDay(dayStartMs);
   const dayEvents = useMemo(() => {
     return events
       .filter(
@@ -192,7 +215,8 @@ export function CustomDayTimeline({
   const hourLines = useMemo(() => {
     const lines = [];
     for (let h = 0; h < HOURS_IN_DAY; h++) {
-      const realMs = dayStartMs + h * MS_PER_HOUR;
+      const realMs = localHourTimestamp(dayStartMs, h);
+      if (realMs === null) continue;
       const customTime = realToCustom(realMs, cycleConfig);
       lines.push({
         hour: h,
@@ -215,7 +239,11 @@ export function CustomDayTimeline({
       <View style={styles.timelineContainer}>
         {/* Hour lines and labels */}
         {hourLines.map((line) => (
-          <View key={line.hour} style={[styles.hourRow, { top: line.top }]}>
+          <View
+            key={line.hour}
+            style={[styles.hourRow, { top: line.top }]}
+            testID={`timeline-hour-row-${line.hour}`}
+          >
             <Text
               variant="labelSmall"
               style={[
@@ -256,10 +284,14 @@ export function CustomDayTimeline({
             group.events.map((event) => {
               const col = group.columnAssignments.get(event.id) ?? 0;
               const widthRatio = 1 / group.columns;
-              const startMinutes =
-                (event.startTimestampMs - dayStartMs) / MS_PER_MINUTE;
-              const endMinutes =
-                (event.endTimestampMs - dayStartMs) / MS_PER_MINUTE;
+              const startMinutes = localMinutesSinceDayStart(
+                event.startTimestampMs,
+                dayStartMs,
+              );
+              const endMinutes = localMinutesSinceDayStart(
+                event.endTimestampMs,
+                dayStartMs,
+              );
               const top = (startMinutes / 60) * hourHeight;
               const blockHeight =
                 ((endMinutes - startMinutes) / 60) * hourHeight;

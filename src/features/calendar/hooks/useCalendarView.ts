@@ -1,4 +1,4 @@
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useMemo } from "react";
 
 import type { CalendarViewMode } from "../../../atoms/calendarAtoms";
@@ -6,6 +6,13 @@ import {
   calendarSelectedDateAtom,
   calendarViewModeAtom,
 } from "../../../atoms/calendarAtoms";
+import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
+import {
+  addLocalDays,
+  endOfLocalDay,
+  startOfLocalDay,
+  startOfLocalWeek,
+} from "../services/localDate";
 
 export interface CalendarViewState {
   viewMode: CalendarViewMode;
@@ -21,29 +28,6 @@ export interface CalendarViewState {
   goToNext: () => void;
 }
 
-function getStartOfDay(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function getEndOfDay(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 1);
-  return d.getTime();
-}
-
-function getMondayOfWeek(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay();
-  // ISO 8601: Monday is first day. Sunday (0) becomes 6, others shift by -1.
-  const diff = day === 0 ? 6 : day - 1;
-  d.setDate(d.getDate() - diff);
-  return d.getTime();
-}
-
 function getFirstOfMonth(ms: number): number {
   const d = new Date(ms);
   d.setHours(0, 0, 0, 0);
@@ -54,18 +38,19 @@ function getFirstOfMonth(ms: number): number {
 export function useCalendarView(): CalendarViewState {
   const [viewMode, setViewMode] = useAtom(calendarViewModeAtom);
   const [selectedDate, setSelectedDate] = useAtom(calendarSelectedDateAtom);
+  const { calendarFirstDayOfWeek } = useAtomValue(resolvedSettingsAtom);
 
   const selectedDayStart = useMemo(
-    () => getStartOfDay(selectedDate),
+    () => startOfLocalDay(selectedDate),
     [selectedDate],
   );
   const selectedDayEnd = useMemo(
-    () => getEndOfDay(selectedDate),
+    () => endOfLocalDay(selectedDate),
     [selectedDate],
   );
   const weekStart = useMemo(
-    () => getMondayOfWeek(selectedDate),
-    [selectedDate],
+    () => startOfLocalWeek(selectedDate, calendarFirstDayOfWeek),
+    [calendarFirstDayOfWeek, selectedDate],
   );
   const monthStart = useMemo(
     () => getFirstOfMonth(selectedDate),
@@ -73,7 +58,7 @@ export function useCalendarView(): CalendarViewState {
   );
 
   const goToToday = useCallback(() => {
-    setSelectedDate(getStartOfDay(Date.now()));
+    setSelectedDate(startOfLocalDay(Date.now()));
   }, [setSelectedDate]);
 
   const goToPrevious = useCallback(() => {
@@ -86,13 +71,11 @@ export function useCalendarView(): CalendarViewState {
         break;
       }
       case "week": {
-        d.setDate(d.getDate() - 7);
-        setSelectedDate(d.getTime());
+        setSelectedDate(addLocalDays(d.getTime(), -7));
         break;
       }
       case "agenda": {
-        d.setDate(d.getDate() - 1);
-        setSelectedDate(d.getTime());
+        setSelectedDate(addLocalDays(d.getTime(), -1));
         break;
       }
     }
@@ -108,13 +91,11 @@ export function useCalendarView(): CalendarViewState {
         break;
       }
       case "week": {
-        d.setDate(d.getDate() + 7);
-        setSelectedDate(d.getTime());
+        setSelectedDate(addLocalDays(d.getTime(), 7));
         break;
       }
       case "agenda": {
-        d.setDate(d.getDate() + 1);
-        setSelectedDate(d.getTime());
+        setSelectedDate(addLocalDays(d.getTime(), 1));
         break;
       }
     }

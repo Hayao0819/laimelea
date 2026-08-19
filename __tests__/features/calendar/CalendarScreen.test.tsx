@@ -64,6 +64,8 @@ jest.mock("@react-native-async-storage/async-storage", () => {
   };
 });
 
+let mockAlarmsWriteInterceptor: ((value: unknown) => void) | null = null;
+
 jest.mock("../../../src/core/storage/asyncStorageAdapter", () => ({
   createAsyncStorage: () => {
     const storage = new Map<string, unknown>();
@@ -71,6 +73,9 @@ jest.mock("../../../src/core/storage/asyncStorageAdapter", () => ({
       getItem: (key: string, initialValue: unknown) =>
         storage.has(key) ? storage.get(key) : initialValue,
       setItem: (key: string, value: unknown) => {
+        if (key === "@laimelea/alarms" && mockAlarmsWriteInterceptor) {
+          mockAlarmsWriteInterceptor(value);
+        }
         storage.set(key, value);
       },
       removeItem: (key: string) => {
@@ -214,6 +219,7 @@ async function renderWithProviders(options?: {
   isStale?: boolean;
   selectedDate?: number;
   viewMode?: "month" | "week" | "agenda";
+  calendarFirstDayOfWeek?: 0 | 1 | 6;
   initialAlarms?: Alarm[];
   hasSynced?: boolean;
 }) {
@@ -224,6 +230,7 @@ async function renderWithProviders(options?: {
     isStale = false,
     selectedDate = TODAY,
     viewMode = "agenda",
+    calendarFirstDayOfWeek = 1,
     initialAlarms = [],
     hasSynced = true,
   } = options ?? {};
@@ -240,7 +247,10 @@ async function renderWithProviders(options?: {
   mockCreatePlatformServices.mockReturnValue(currentMockServices);
 
   const store = createStore();
-  store.set(settingsAtom, DEFAULT_SETTINGS);
+  store.set(settingsAtom, {
+    ...DEFAULT_SETTINGS,
+    calendarFirstDayOfWeek,
+  });
   store.set(alarmsAtom, initialAlarms);
   store.set(calendarEventsAtom, events);
   store.set(calendarLastSyncAtom, hasSynced ? Date.now() : null);
@@ -284,6 +294,7 @@ afterEach(async () => {
 describe("CalendarScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAlarmsWriteInterceptor = null;
     mockUseCalendarSync.mockReturnValue({
       events: [],
       loading: false,
@@ -445,6 +456,19 @@ describe("CalendarScreen", () => {
     // Navigation header is part of calendar-screen
     const screen = getByTestId("calendar-screen");
     expect(screen).toBeTruthy();
+  });
+
+  it("uses the configured first day for the week navigation range", async () => {
+    const selectedDate = new Date(2026, 2, 11, 12, 0, 0, 0).getTime();
+    const { getByTestId } = await renderWithProviders({
+      viewMode: "week",
+      selectedDate,
+      calendarFirstDayOfWeek: 0,
+    });
+
+    expect(getByTestId("calendar-navigation-title").props.children).toBe(
+      "calendar.monthNames.2 8-14",
+    );
   });
 
   it("should not show sign-in banner (removed)", async () => {
@@ -734,6 +758,90 @@ describe("CalendarScreen", () => {
       ]);
     });
 
+    it("recovers an inline-persisted alarm only once when a later alarm's persistence throws", async () => {
+      const firstStart = Date.now() + 3 * 60 * 60 * 1000;
+      const secondStart = Date.now() + 4 * 60 * 60 * 1000;
+      const firstAlarm = makeAlarm({
+        id: "linked-first",
+        linkedCalendarEventId: "event-first",
+        linkedEventOffsetMs: -5 * 60 * 1000,
+        targetTimestampMs: firstStart - 30 * 60 * 1000,
+        notifeeTriggerId: "first-old-trigger",
+      });
+      const secondAlarm = makeAlarm({
+        id: "linked-second",
+        linkedCalendarEventId: "event-second",
+        linkedEventOffsetMs: -10 * 60 * 1000,
+        targetTimestampMs: secondStart - 30 * 60 * 1000,
+        notifeeTriggerId: "second-old-trigger",
+      });
+      const firstEvent = makeEvent({
+        id: "event-first",
+        startTimestampMs: firstStart,
+        endTimestampMs: firstStart + 60 * 60 * 1000,
+      });
+      const secondEvent = makeEvent({
+        id: "event-second",
+        startTimestampMs: secondStart,
+        endTimestampMs: secondStart + 60 * 60 * 1000,
+      });
+
+      let finishSecondSchedule: ((triggerId: string) => void) | undefined;
+      (scheduleAlarm as jest.Mock)
+        .mockResolvedValueOnce("first-new-trigger")
+        .mockImplementationOnce(
+          () =>
+            new Promise<string>((resolve) => {
+              finishSecondSchedule = resolve;
+            }),
+        );
+
+      mockAlarmsWriteInterceptor = (value) => {
+        if (
+          Array.isArray(value) &&
+          value.some(
+            (entry) =>
+              (entry as { id?: string; notifeeTriggerId?: string })?.id ===
+                "linked-second" &&
+              (entry as { id?: string; notifeeTriggerId?: string })
+                ?.notifeeTriggerId === "second-new-trigger",
+          )
+        ) {
+          throw new Error("storage failed");
+        }
+      };
+
+      const { store } = await renderWithProviders({
+        events: [firstEvent, secondEvent],
+        initialAlarms: [firstAlarm, secondAlarm],
+      });
+
+      await waitFor(() => {
+        expect(scheduleAlarm).toHaveBeenCalledTimes(2);
+      });
+
+      const divergedFirstAlarm = {
+        ...firstAlarm,
+        label: "Changed elsewhere",
+        updatedAt: Date.now(),
+      };
+      await act(async () => {
+        store.set(alarmsAtom, [divergedFirstAlarm, secondAlarm]);
+      });
+
+      await act(async () => {
+        finishSecondSchedule?.("second-new-trigger");
+      });
+
+      await waitFor(() => {
+        expect(
+          (recoverAlarmSchedule as jest.Mock).mock.calls.filter(
+            ([recoveredAlarm]) => recoveredAlarm.id === "linked-first",
+          ),
+        ).toHaveLength(1);
+      });
+    });
+
     it("updates a disabled linked alarm without scheduling it", async () => {
       const futureStart = Date.now() + 2 * 60 * 60 * 1000;
       const linkedAlarm = makeAlarm({
@@ -938,6 +1046,196 @@ describe("CalendarScreen", () => {
       expect(store.get(alarmsAtom)).toEqual([
         { ...editedAlarm, notifeeTriggerId: "trigger-id" },
       ]);
+    });
+
+    it("cancels the rescheduled alarm when persisting it loses to a second concurrent edit", async () => {
+      const alarm = makeAlarm({
+        id: "race-alarm",
+        linkedCalendarEventId: "missing-event",
+        targetTimestampMs: Date.now() + 60 * 60 * 1000,
+        notifeeTriggerId: "original-trigger",
+      });
+
+      let resolveCancel: (() => void) | undefined;
+      (cancelAlarm as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveCancel = () => resolve(undefined);
+          }),
+      );
+      let resolveReschedule: ((triggerId: string) => void) | undefined;
+      (scheduleAlarm as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveReschedule = resolve;
+          }),
+      );
+
+      const { store } = await renderWithProviders({
+        events: [],
+        initialAlarms: [alarm],
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledTimes(1);
+      });
+
+      const concurrentEdit = {
+        ...alarm,
+        targetTimestampMs: alarm.targetTimestampMs + 10 * 60 * 1000,
+      };
+      act(() => {
+        store.set(alarmsAtom, [concurrentEdit]);
+      });
+      await act(async () => {
+        resolveCancel?.();
+      });
+
+      await waitFor(() => {
+        expect(scheduleAlarm).toHaveBeenCalledWith(concurrentEdit);
+      });
+
+      const laterEdit = {
+        ...concurrentEdit,
+        targetTimestampMs: concurrentEdit.targetTimestampMs + 10 * 60 * 1000,
+      };
+      act(() => {
+        store.set(alarmsAtom, [laterEdit]);
+      });
+      await act(async () => {
+        resolveReschedule?.("race-trigger");
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: "race-alarm",
+            notifeeTriggerId: "race-trigger",
+          }),
+        );
+      });
+    });
+
+    it("recovers the schedule when reconciliation's own reschedule attempt throws", async () => {
+      const alarm = makeAlarm({
+        id: "race-throw-alarm",
+        linkedCalendarEventId: "missing-event-2",
+        targetTimestampMs: Date.now() + 60 * 60 * 1000,
+        notifeeTriggerId: "original-trigger",
+      });
+
+      let resolveCancel: (() => void) | undefined;
+      (cancelAlarm as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveCancel = () => resolve(undefined);
+          }),
+      );
+      (scheduleAlarm as jest.Mock).mockRejectedValueOnce(
+        new Error("schedule failed"),
+      );
+      (recoverAlarmSchedule as jest.Mock).mockImplementationOnce(
+        async (targetAlarm: Alarm) => ({
+          ...targetAlarm,
+          notifeeTriggerId: "recovered-trigger",
+        }),
+      );
+
+      const { store } = await renderWithProviders({
+        events: [],
+        initialAlarms: [alarm],
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledTimes(1);
+      });
+
+      const concurrentEdit = {
+        ...alarm,
+        targetTimestampMs: alarm.targetTimestampMs + 10 * 60 * 1000,
+      };
+      act(() => {
+        store.set(alarmsAtom, [concurrentEdit]);
+      });
+      await act(async () => {
+        resolveCancel?.();
+      });
+
+      await waitFor(() => {
+        expect(recoverAlarmSchedule).toHaveBeenCalledWith(
+          concurrentEdit,
+          expect.any(Number),
+          DEFAULT_SETTINGS.cycleConfig,
+        );
+      });
+    });
+
+    it("leaves an already-disabled alarm alone when recovering from a batch persistence failure", async () => {
+      const movedStart = Date.now() + 3 * 60 * 60 * 1000;
+      const alarmA = makeAlarm({
+        id: "throwing-alarm",
+        linkedCalendarEventId: "moved-event",
+        linkedEventOffsetMs: -5 * 60 * 1000,
+        targetTimestampMs: movedStart - 30 * 60 * 1000,
+        notifeeTriggerId: "a-old-trigger",
+      });
+      const alarmB = makeAlarm({
+        id: "disabled-orphan-alarm",
+        enabled: false,
+        linkedCalendarEventId: "missing-event-3",
+        targetTimestampMs: Date.now() + 60 * 60 * 1000,
+        notifeeTriggerId: "b-lingering-trigger",
+      });
+      const movedEvent = makeEvent({
+        id: "moved-event",
+        startTimestampMs: movedStart,
+        endTimestampMs: movedStart + 60 * 60 * 1000,
+      });
+      (scheduleAlarm as jest.Mock).mockResolvedValueOnce("a-new-trigger");
+
+      mockAlarmsWriteInterceptor = (value) => {
+        if (
+          Array.isArray(value) &&
+          value.some(
+            (entry) =>
+              (entry as { id?: string; notifeeTriggerId?: string })?.id ===
+                "throwing-alarm" &&
+              (entry as { id?: string; notifeeTriggerId?: string })
+                ?.notifeeTriggerId === "a-new-trigger",
+          )
+        ) {
+          throw new Error("storage failed");
+        }
+      };
+
+      await renderWithProviders({
+        events: [movedEvent],
+        initialAlarms: [alarmA, alarmB],
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(alarmB);
+      });
+      await waitFor(() => {
+        expect(recoverAlarmSchedule).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "throwing-alarm" }),
+          expect.any(Number),
+          DEFAULT_SETTINGS.cycleConfig,
+        );
+      });
+
+      expect(cancelAlarm).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "disabled-orphan-alarm",
+          enabled: false,
+          notifeeTriggerId: null,
+        }),
+      );
+      expect(recoverAlarmSchedule).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: "disabled-orphan-alarm" }),
+        expect.any(Number),
+        DEFAULT_SETTINGS.cycleConfig,
+      );
     });
   });
 });

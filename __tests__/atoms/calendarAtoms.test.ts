@@ -11,6 +11,7 @@ import {
   calendarLoadingAtom,
   calendarSyncErrorAtom,
   calendarViewModeAtom,
+  HIDE_ALL_CALENDARS_ID,
   visibleCalendarEventsAtom,
 } from "../../src/atoms/calendarAtoms";
 import { settingsAtom } from "../../src/atoms/settingsAtoms";
@@ -250,6 +251,17 @@ describe("calendarAtoms", () => {
       const result = store.get(visibleCalendarEventsAtom);
 
       expect(result).toHaveLength(2);
+    });
+
+    it("should return no events when all calendars are explicitly hidden", () => {
+      const store = createStore();
+      store.set(settingsAtom, {
+        ...DEFAULT_SETTINGS,
+        visibleCalendarIds: [HIDE_ALL_CALENDARS_ID],
+      });
+      store.set(calendarEventsAtom, [makeEvent({ calendarId: "cal-1" })]);
+
+      expect(store.get(visibleCalendarEventsAtom)).toEqual([]);
     });
 
     it("should return empty array when no events exist", () => {

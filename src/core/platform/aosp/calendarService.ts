@@ -4,6 +4,18 @@ import type { CalendarEvent } from "../../../models/CalendarEvent";
 import { getNativeCalendarModule } from "../native/calendarModule";
 import type { CalendarInfo, PlatformCalendarService } from "../types";
 
+// CalendarContract stores all-day BEGIN/END as UTC midnight, not local
+// midnight; reinterpret the UTC calendar date as a local-midnight timestamp
+// so local-day bucketing (intersectsLocalDay) doesn't span two days.
+function normalizeAllDayBoundary(utcMs: number): number {
+  const date = new Date(utcMs);
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+  ).getTime();
+}
+
 export function createAospCalendarService(): PlatformCalendarService {
   return {
     async isAvailable() {
@@ -34,8 +46,10 @@ export function createAospCalendarService(): PlatformCalendarService {
           source: "local",
           title: e.title,
           description: e.description,
-          startTimestampMs: e.startMs,
-          endTimestampMs: e.endMs,
+          startTimestampMs: e.allDay
+            ? normalizeAllDayBoundary(e.startMs)
+            : e.startMs,
+          endTimestampMs: e.allDay ? normalizeAllDayBoundary(e.endMs) : e.endMs,
           allDay: e.allDay,
           colorId: e.color,
           calendarName: e.calendarName,

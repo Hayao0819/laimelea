@@ -209,6 +209,41 @@ describe("AgendaView", () => {
     expect(getByText("Lunch")).toBeTruthy();
   });
 
+  it("does not show a midnight event in the preceding day section", async () => {
+    const event = makeEvent({
+      id: "midnight",
+      title: "Midnight Event",
+      allDay: true,
+      startTimestampMs: MONDAY,
+      endTimestampMs: MONDAY + MS_PER_DAY,
+    });
+
+    const { getAllByText } = await renderAgendaView({
+      events: [event],
+      selectedDate: MONDAY,
+    });
+
+    expect(getAllByText("Midnight Event")).toHaveLength(1);
+  });
+
+  it("shows a midnight-crossing timed event in both day sections it spans", async () => {
+    // Event runs Mon 23:00 - Tue 01:00; intersectsLocalDay intentionally
+    // shows it in both the Monday and Tuesday agenda sections.
+    const event = makeEvent({
+      id: "late-call",
+      title: "Late Call",
+      startTimestampMs: MONDAY + 23 * MS_PER_HOUR,
+      endTimestampMs: MONDAY + MS_PER_DAY + 1 * MS_PER_HOUR,
+    });
+
+    const { getAllByText } = await renderAgendaView({
+      events: [event],
+      selectedDate: MONDAY,
+    });
+
+    expect(getAllByText("Late Call")).toHaveLength(2);
+  });
+
   it("sorts events: all-day first, then by start time", async () => {
     const laterEvent = makeEvent({
       id: "ev-later",

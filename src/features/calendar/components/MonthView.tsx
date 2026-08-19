@@ -12,60 +12,45 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import type { CalendarEvent } from "../../../models/CalendarEvent";
+import {
+  addLocalDays,
+  intersectsLocalDay,
+  startOfLocalDay,
+  weekdayOrder,
+} from "../services/localDate";
 import { EventCard } from "./EventCard";
 
 interface MonthViewProps {
   events: CalendarEvent[];
   selectedDate: number;
   monthStart: number;
+  firstDayOfWeek?: 0 | 1 | 6;
   onSelectDate: (dateMs: number) => void;
   onEventPress?: (event: CalendarEvent) => void;
   onCreateAlarm?: (event: CalendarEvent) => void;
 }
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DAYS_IN_WEEK = 7;
 const MAX_EVENT_DOTS = 3;
 const DOT_SIZE = 6;
 
 const WEEKDAY_KEYS = [
+  "calendar.weekday.sun",
   "calendar.weekday.mon",
   "calendar.weekday.tue",
   "calendar.weekday.wed",
   "calendar.weekday.thu",
   "calendar.weekday.fri",
   "calendar.weekday.sat",
-  "calendar.weekday.sun",
 ] as const;
-
-function startOfDay(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function isSameDay(ms1: number, ms2: number): boolean {
-  const d1 = new Date(ms1);
-  const d2 = new Date(ms2);
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  );
-}
 
 function getEventsForDay(
   events: CalendarEvent[],
   dayMs: number,
 ): CalendarEvent[] {
-  return events.filter((e) => {
-    if (e.allDay) {
-      return (
-        e.startTimestampMs <= dayMs + MS_PER_DAY && e.endTimestampMs > dayMs
-      );
-    }
-    return isSameDay(e.startTimestampMs, dayMs);
-  });
+  return events.filter((event) =>
+    intersectsLocalDay(event.startTimestampMs, event.endTimestampMs, dayMs),
+  );
 }
 
 interface DayCell {
@@ -74,24 +59,23 @@ interface DayCell {
   isCurrentMonth: boolean;
 }
 
-function buildMonthGrid(monthStart: number): DayCell[][] {
+function buildMonthGrid(
+  monthStart: number,
+  firstDayOfWeek: number,
+): DayCell[][] {
   const d = new Date(monthStart);
   const year = d.getFullYear();
   const month = d.getMonth();
 
-  // Get the day of week for the 1st (ISO: Mon=0, Sun=6)
   const firstDayOfMonth = new Date(year, month, 1);
-  const dayOfWeek = firstDayOfMonth.getDay();
-  const isoDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-  // Start from the Monday before or on the 1st
-  const gridStart = new Date(year, month, 1 - isoDay);
+  const daysSinceWeekStart =
+    (firstDayOfMonth.getDay() - firstDayOfWeek + DAYS_IN_WEEK) % DAYS_IN_WEEK;
+  const gridStart = new Date(year, month, 1 - daysSinceWeekStart);
   gridStart.setHours(0, 0, 0, 0);
 
   const weeks: DayCell[][] = [];
   let current = gridStart.getTime();
 
-  // Build up to 6 weeks
   for (let w = 0; w < 6; w++) {
     const week: DayCell[] = [];
     for (let di = 0; di < DAYS_IN_WEEK; di++) {
@@ -101,10 +85,9 @@ function buildMonthGrid(monthStart: number): DayCell[][] {
         date: cellDate.getDate(),
         isCurrentMonth: cellDate.getMonth() === month,
       });
-      current += MS_PER_DAY;
+      current = addLocalDays(current, 1);
     }
     weeks.push(week);
-    // Stop if we've passed the current month and filled at least 4 weeks
     if (w >= 3) {
       const nextWeekDate = new Date(current);
       if (nextWeekDate.getMonth() !== month) break;
@@ -118,6 +101,7 @@ export function MonthView({
   events,
   selectedDate,
   monthStart,
+  firstDayOfWeek = 1,
   onSelectDate,
   onEventPress,
   onCreateAlarm,
@@ -130,10 +114,17 @@ export function MonthView({
   const cellSize = Math.floor(
     (width - insets.left - insets.right) / DAYS_IN_WEEK,
   );
-  const today = startOfDay(Date.now());
-  const selectedDayStart = startOfDay(selectedDate);
+  const today = startOfLocalDay(Date.now());
+  const selectedDayStart = startOfLocalDay(selectedDate);
 
-  const weeks = useMemo(() => buildMonthGrid(monthStart), [monthStart]);
+  const weeks = useMemo(
+    () => buildMonthGrid(monthStart, firstDayOfWeek),
+    [firstDayOfWeek, monthStart],
+  );
+  const orderedWeekdayKeys = useMemo(
+    () => weekdayOrder(firstDayOfWeek).map((day) => WEEKDAY_KEYS[day]),
+    [firstDayOfWeek],
+  );
 
   const eventsByDay = useMemo(() => {
     const map = new Map<number, CalendarEvent[]>();
@@ -159,7 +150,7 @@ export function MonthView({
   return (
     <ScrollView style={styles.container} testID="month-view">
       <View style={styles.weekdayHeader}>
-        {WEEKDAY_KEYS.map((key) => (
+        {orderedWeekdayKeys.map((key) => (
           <View key={key} style={[styles.weekdayCell, { width: cellSize }]}>
             <Text
               variant="labelSmall"

@@ -425,6 +425,62 @@ describe("MonthView", () => {
     expect(getByText("Morning Meeting")).toBeTruthy();
   });
 
+  it("displays an overnight event on the day it ends", async () => {
+    const selectedDate = new Date(2026, 7, 16, 0, 0, 0, 0).getTime();
+    const events = [
+      makeEvent({
+        id: "overnight",
+        title: "Overnight Work",
+        startTimestampMs: new Date(2026, 7, 15, 23, 0, 0, 0).getTime(),
+        endTimestampMs: new Date(2026, 7, 16, 1, 0, 0, 0).getTime(),
+      }),
+    ];
+
+    const { getByText } = await renderWithProviders(
+      <MonthView
+        events={events}
+        selectedDate={selectedDate}
+        monthStart={MONTH_START}
+        onSelectDate={jest.fn()}
+      />,
+    );
+
+    expect(getByText("Overnight Work")).toBeTruthy();
+  });
+
+  it("displays a midnight-crossing timed event on both days it spans", async () => {
+    // Event runs 23:00 Aug 15 - 01:00 Aug 16; intersectsLocalDay intentionally
+    // shows it on both local days rather than only the day it starts/ends.
+    const events = [
+      makeEvent({
+        id: "midnight-crossing",
+        title: "Late Call",
+        startTimestampMs: new Date(2026, 7, 15, 23, 0, 0, 0).getTime(),
+        endTimestampMs: new Date(2026, 7, 16, 1, 0, 0, 0).getTime(),
+      }),
+    ];
+
+    const startDay = await renderWithProviders(
+      <MonthView
+        events={events}
+        selectedDate={new Date(2026, 7, 15, 0, 0, 0, 0).getTime()}
+        monthStart={MONTH_START}
+        onSelectDate={jest.fn()}
+      />,
+    );
+    expect(startDay.getByText("Late Call")).toBeTruthy();
+
+    const endDay = await renderWithProviders(
+      <MonthView
+        events={events}
+        selectedDate={new Date(2026, 7, 16, 0, 0, 0, 0).getTime()}
+        monthStart={MONTH_START}
+        onSelectDate={jest.fn()}
+      />,
+    );
+    expect(endDay.getByText("Late Call")).toBeTruthy();
+  });
+
   it("sorts events: all-day first, then by start time", async () => {
     const laterEvent = makeEvent({
       id: "event-later",

@@ -1,3 +1,5 @@
+import { PermissionsAndroid } from "react-native";
+
 import { createAospCalendarService } from "../../../../src/core/platform/aosp/calendarService";
 import { getNativeCalendarModule } from "../../../../src/core/platform/native/calendarModule";
 
@@ -30,6 +32,49 @@ describe("createAospCalendarService", () => {
       (getNativeCalendarModule as jest.Mock).mockReturnValue(null);
       const service = createAospCalendarService();
       expect(await service.isAvailable()).toBe(false);
+    });
+  });
+
+  describe("requestPermissions", () => {
+    it("short-circuits without requesting when already granted", async () => {
+      jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(true);
+      const requestSpy = jest.spyOn(PermissionsAndroid, "request");
+
+      const service = createAospCalendarService();
+      const granted = await service.requestPermissions();
+
+      expect(granted).toBe(true);
+      expect(PermissionsAndroid.check).toHaveBeenCalledWith(
+        PermissionsAndroid.PERMISSIONS.READ_CALENDAR,
+      );
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
+    it("requests the permission and returns true when the user grants it", async () => {
+      jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(false);
+      jest
+        .spyOn(PermissionsAndroid, "request")
+        .mockResolvedValue(PermissionsAndroid.RESULTS.GRANTED);
+
+      const service = createAospCalendarService();
+      const granted = await service.requestPermissions();
+
+      expect(granted).toBe(true);
+      expect(PermissionsAndroid.request).toHaveBeenCalledWith(
+        PermissionsAndroid.PERMISSIONS.READ_CALENDAR,
+      );
+    });
+
+    it("requests the permission and returns false when the user denies it", async () => {
+      jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(false);
+      jest
+        .spyOn(PermissionsAndroid, "request")
+        .mockResolvedValue(PermissionsAndroid.RESULTS.DENIED);
+
+      const service = createAospCalendarService();
+      const granted = await service.requestPermissions();
+
+      expect(granted).toBe(false);
     });
   });
 
@@ -113,6 +158,117 @@ describe("createAospCalendarService", () => {
       await expect(service.fetchEvents(0, 1000)).rejects.toThrow(
         "ContentProvider error",
       );
+    });
+
+    describe("all-day event normalization", () => {
+      const originalTimezone = process.env.TZ;
+
+      afterEach(() => {
+        if (originalTimezone === undefined) {
+          delete process.env.TZ;
+        } else {
+          process.env.TZ = originalTimezone;
+        }
+      });
+
+      it("normalizes UTC-midnight boundaries to local midnight in UTC+9", async () => {
+        process.env.TZ = "Asia/Tokyo";
+        mockGetEventInstances.mockResolvedValue([
+          {
+            id: "10:1705276800000",
+            sourceEventId: "10",
+            calendarId: "1",
+            calendarName: "Holidays",
+            title: "Trip",
+            description: "",
+            startMs: Date.UTC(2024, 0, 15),
+            endMs: Date.UTC(2024, 0, 16),
+            allDay: true,
+            color: null,
+          },
+        ]);
+
+        const service = createAospCalendarService();
+        const [event] = await service.fetchEvents(0, 1);
+
+        expect(event.startTimestampMs).toBe(new Date(2024, 0, 15).getTime());
+        expect(event.endTimestampMs).toBe(new Date(2024, 0, 16).getTime());
+      });
+
+      it("normalizes UTC-midnight boundaries to local midnight in UTC-5", async () => {
+        process.env.TZ = "America/New_York";
+        mockGetEventInstances.mockResolvedValue([
+          {
+            id: "10:1705276800000",
+            sourceEventId: "10",
+            calendarId: "1",
+            calendarName: "Holidays",
+            title: "Trip",
+            description: "",
+            startMs: Date.UTC(2024, 0, 15),
+            endMs: Date.UTC(2024, 0, 16),
+            allDay: true,
+            color: null,
+          },
+        ]);
+
+        const service = createAospCalendarService();
+        const [event] = await service.fetchEvents(0, 1);
+
+        expect(event.startTimestampMs).toBe(new Date(2024, 0, 15).getTime());
+        expect(event.endTimestampMs).toBe(new Date(2024, 0, 16).getTime());
+      });
+
+      it("normalizes a multi-day (3-day) all-day event span to local midnight boundaries", async () => {
+        process.env.TZ = "Asia/Tokyo";
+        mockGetEventInstances.mockResolvedValue([
+          {
+            id: "12:1705276800000",
+            sourceEventId: "12",
+            calendarId: "1",
+            calendarName: "Holidays",
+            title: "Trip",
+            description: "",
+            startMs: Date.UTC(2024, 0, 15),
+            endMs: Date.UTC(2024, 0, 18),
+            allDay: true,
+            color: null,
+          },
+        ]);
+
+        const service = createAospCalendarService();
+        const [event] = await service.fetchEvents(0, 1);
+
+        expect(event.startTimestampMs).toBe(new Date(2024, 0, 15).getTime());
+        expect(event.endTimestampMs).toBe(new Date(2024, 0, 18).getTime());
+        expect(event.endTimestampMs - event.startTimestampMs).toBe(
+          3 * 24 * 60 * 60 * 1000,
+        );
+      });
+
+      it("leaves timed (non-all-day) event boundaries untouched", async () => {
+        process.env.TZ = "Asia/Tokyo";
+        mockGetEventInstances.mockResolvedValue([
+          {
+            id: "11:1700000000000",
+            sourceEventId: "11",
+            calendarId: "1",
+            calendarName: "Work",
+            title: "Meeting",
+            description: "",
+            startMs: 1700000000000,
+            endMs: 1700003600000,
+            allDay: false,
+            color: null,
+          },
+        ]);
+
+        const service = createAospCalendarService();
+        const [event] = await service.fetchEvents(0, 1);
+
+        expect(event.startTimestampMs).toBe(1700000000000);
+        expect(event.endTimestampMs).toBe(1700003600000);
+      });
     });
   });
 
