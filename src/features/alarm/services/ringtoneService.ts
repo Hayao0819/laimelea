@@ -21,6 +21,7 @@ interface RingtoneModuleSpec {
   setAlarmVolumeButtonBehavior(
     behavior: "snooze" | "dismiss" | null,
   ): Promise<void>;
+  setAlarmWindowActive(active: boolean): Promise<void>;
   stopRingtone(): Promise<void>;
   stopAlarmSound(alarmId: string): Promise<void>;
   scheduleAlarmAudio(
@@ -37,6 +38,7 @@ interface RingtoneModuleSpec {
     vibrationEnabled: boolean,
   ): Promise<void>;
   cancelAlarmAudio(alarmId: string): Promise<void>;
+  getScheduledAlarmIds(): Promise<unknown>;
   consumeAlarmDeliveries(): Promise<NativeAlarmDelivery[]>;
   acknowledgeAlarmDeliveries(deliveryIds: string[]): Promise<void>;
   getDefaultAlarmUri(): Promise<string>;
@@ -134,6 +136,12 @@ export async function setAlarmVolumeButtonBehavior(
   return mod.setAlarmVolumeButtonBehavior(behavior);
 }
 
+export async function setAlarmWindowActive(active: boolean): Promise<void> {
+  const mod = getModule();
+  if (typeof mod?.setAlarmWindowActive !== "function") return;
+  return mod.setAlarmWindowActive(active);
+}
+
 export async function scheduleAlarmAudio(
   alarmId: string,
   timestampMs: number,
@@ -174,6 +182,19 @@ export async function cancelAlarmAudio(alarmId: string): Promise<void> {
   return mod.cancelAlarmAudio(alarmId);
 }
 
+export async function getScheduledAlarmIds(): Promise<string[] | null> {
+  const mod = getModule();
+  if (typeof mod?.getScheduledAlarmIds !== "function") return null;
+  try {
+    const alarmIds = await mod.getScheduledAlarmIds();
+    return Array.isArray(alarmIds)
+      ? alarmIds.filter((id): id is string => typeof id === "string")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function consumeNativeAlarmDeliveries(): Promise<
   NativeAlarmDelivery[]
 > {
@@ -209,9 +230,11 @@ export const RingtoneService = {
   playAlarmSound,
   setAlarmVolume,
   setAlarmVolumeButtonBehavior,
+  setAlarmWindowActive,
   stopAlarmSound,
   scheduleAlarmAudio,
   cancelAlarmAudio,
+  getScheduledAlarmIds,
   consumeNativeAlarmDeliveries,
   acknowledgeNativeAlarmDeliveries,
   getDefaultAlarmUri,

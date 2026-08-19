@@ -2,15 +2,22 @@ import notifee from "@notifee/react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { BackHandler, DeviceEventEmitter, StyleSheet } from "react-native";
+import {
+  Alert,
+  BackHandler,
+  DeviceEventEmitter,
+  StyleSheet,
+} from "react-native";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { alarmsAtom } from "../../../src/atoms/alarmAtoms";
 import { settingsAtom } from "../../../src/atoms/settingsAtoms";
 import { AlarmFiringScreen } from "../../../src/features/alarm/screens/AlarmFiringScreen";
+import { enqueueAlarmMutation } from "../../../src/features/alarm/services/alarmMutationQueue";
 import {
   cancelAlarm,
+  recoverAlarmSchedule,
   scheduleAlarm,
 } from "../../../src/features/alarm/services/alarmScheduler";
 import { RingtoneService } from "../../../src/features/alarm/services/ringtoneService";
@@ -29,6 +36,8 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+const mockPersistedSet = jest.fn(() => Promise.resolve());
+
 // Use sync storage so atomWithStorage does not trigger Suspense
 jest.mock("../../../src/core/storage/asyncStorageAdapter", () => ({
   createAsyncStorage: () => {
@@ -38,6 +47,7 @@ jest.mock("../../../src/core/storage/asyncStorageAdapter", () => ({
         store.has(key) ? store.get(key) : initialValue,
       setItem: (key: string, value: unknown) => {
         store.set(key, value);
+        return mockPersistedSet();
       },
       removeItem: (key: string) => {
         store.delete(key);
@@ -56,6 +66,10 @@ jest.mock("react-i18next", () => ({
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 let mockRouteParams: Record<string, unknown> = { alarmId: "test-alarm-1" };
+
+jest.mock("../../../src/app/navigation", () => ({
+  completeAlarmFiringNavigation: () => mockGoBack(),
+}));
 
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (effect: () => void | (() => void)) => {
@@ -76,6 +90,7 @@ jest.mock("@notifee/react-native", () => ({
 
 jest.mock("../../../src/features/alarm/services/alarmScheduler", () => ({
   cancelAlarm: jest.fn(() => Promise.resolve()),
+  recoverAlarmSchedule: jest.fn((alarm: Alarm) => Promise.resolve(alarm)),
   scheduleAlarm: jest.fn(() => Promise.resolve("trigger-id")),
 }));
 
@@ -187,6 +202,7 @@ describe("AlarmFiringScreen", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockPersistedSet.mockResolvedValue(undefined);
     mockRouteParams = { alarmId: "test-alarm-1" };
     mockDismissalContainerProps = {};
     mockHardwareBackHandler = undefined;
@@ -335,6 +351,55 @@ describe("AlarmFiringScreen", () => {
     expect(cancelAlarm).toHaveBeenCalledWith(alarm);
   });
 
+  it("restores a test alarm when deleting it cannot be persisted", async () => {
+    const store = createStore();
+    const alarm = makeAlarm({ isTest: true });
+    const recovered = { ...alarm, notifeeTriggerId: "recovered-trigger" };
+    (recoverAlarmSchedule as jest.Mock).mockResolvedValueOnce(recovered);
+    const { getByTestId } = await renderWithProviders(store, [alarm]);
+    mockPersistedSet.mockRejectedValueOnce(new Error("storage failed"));
+
+    await act(async () => {
+      fireEvent.press(getByTestId("dismiss-button"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(store.get(alarmsAtom)).toEqual([recovered]);
+    });
+    expect(recoverAlarmSchedule).toHaveBeenCalledWith(
+      alarm,
+      expect.any(Number),
+      DEFAULT_SETTINGS.cycleConfig,
+    );
+  });
+
+  it("keeps a newer edit when dismissal finishes late", async () => {
+    const store = createStore();
+    const alarm = makeAlarm();
+    const newerAlarm = { ...alarm, label: "Edited elsewhere" };
+    let resolveCancellation: (() => void) | undefined;
+    (cancelAlarm as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCancellation = resolve;
+        }),
+    );
+    const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+    fireEvent.press(getByTestId("dismiss-button"));
+    await act(async () => {
+      store.set(alarmsAtom, [newerAlarm]);
+      resolveCancellation?.();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(store.get(alarmsAtom)).toEqual([newerAlarm]);
+    });
+  });
+
   it("dismisses a delivered occurrence without cancelling its next repeat", async () => {
     const store = createStore();
     const alarm = makeAlarm({
@@ -392,6 +457,27 @@ describe("AlarmFiringScreen", () => {
     expect(scheduledArg.targetTimestampMs).toBeGreaterThan(Date.now() - 1000);
     expect(scheduledArg.snoozeCount).toBe(1);
 
+    expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  it("disables the alarm when snooze scheduling fails", async () => {
+    const store = createStore();
+    const alarm = makeAlarm();
+    (scheduleAlarm as jest.Mock).mockRejectedValueOnce(
+      new Error("schedule failed"),
+    );
+    const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+    await act(async () => {
+      fireEvent.press(getByTestId("snooze-button"));
+    });
+
+    expect((await Promise.resolve(store.get(alarmsAtom)))[0]).toMatchObject({
+      id: alarm.id,
+      enabled: false,
+      notifeeTriggerId: null,
+      activeOccurrenceTimestampMs: null,
+    });
     expect(mockGoBack).toHaveBeenCalled();
   });
 
@@ -466,6 +552,133 @@ describe("AlarmFiringScreen", () => {
 
     await act(async () => {
       finishCancellation?.();
+    });
+  });
+
+  describe("stale-alarm early exit", () => {
+    it("exits dismissal without any native call when the alarm changed while queued", async () => {
+      const store = createStore();
+      const alarm = makeAlarm();
+      const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+      let releaseBlocker: (() => void) | undefined;
+      const blocker = enqueueAlarmMutation(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseBlocker = resolve;
+          }),
+      );
+
+      fireEvent.press(getByTestId("dismiss-button"));
+
+      const changedAlarm = { ...alarm, label: "Changed elsewhere" };
+      await act(async () => {
+        store.set(alarmsAtom, [changedAlarm]);
+      });
+
+      await act(async () => {
+        releaseBlocker?.();
+        await blocker;
+      });
+
+      expect(cancelAlarm).not.toHaveBeenCalled();
+      expect(scheduleAlarm).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockGoBack).toHaveBeenCalled();
+      });
+    });
+
+    it("exits snooze without any native call when the alarm changed while queued", async () => {
+      const store = createStore();
+      const alarm = makeAlarm();
+      const { getByTestId } = await renderWithProviders(store, [alarm]);
+
+      let releaseBlocker: (() => void) | undefined;
+      const blocker = enqueueAlarmMutation(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseBlocker = resolve;
+          }),
+      );
+
+      fireEvent.press(getByTestId("snooze-button"));
+
+      const changedAlarm = { ...alarm, label: "Changed elsewhere" };
+      await act(async () => {
+        store.set(alarmsAtom, [changedAlarm]);
+      });
+
+      await act(async () => {
+        releaseBlocker?.();
+        await blocker;
+      });
+
+      expect(cancelAlarm).not.toHaveBeenCalled();
+      expect(scheduleAlarm).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockGoBack).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("rollback when persistence throws after a successful native call", () => {
+    beforeEach(() => {
+      jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    });
+
+    it("cancels the newly scheduled next occurrence and recovers when dismissal cannot persist", async () => {
+      const store = createStore();
+      const alarm = makeAlarm({
+        repeat: { type: "interval", intervalMs: 60 * 60 * 1000 },
+        targetTimestampMs: Date.now() + 60 * 60 * 1000,
+      });
+      const { getByTestId } = await renderWithProviders(store, [alarm]);
+      mockPersistedSet.mockRejectedValueOnce(new Error("storage failed"));
+
+      await act(async () => {
+        fireEvent.press(getByTestId("dismiss-button"));
+      });
+
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(
+          expect.objectContaining({ notifeeTriggerId: "trigger-id" }),
+        );
+      });
+      expect(cancelAlarm).toHaveBeenCalledWith(alarm);
+      expect(recoverAlarmSchedule).toHaveBeenCalledWith(
+        alarm,
+        expect.any(Number),
+        DEFAULT_SETTINGS.cycleConfig,
+      );
+      expect(Alert.alert).toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    it("cancels the newly scheduled snooze and recovers when snoozing cannot persist", async () => {
+      const store = createStore();
+      const alarm = makeAlarm();
+      const { getByTestId } = await renderWithProviders(store, [alarm]);
+      mockPersistedSet.mockRejectedValueOnce(new Error("storage failed"));
+
+      await act(async () => {
+        fireEvent.press(getByTestId("snooze-button"));
+      });
+
+      await waitFor(() => {
+        expect(scheduleAlarm).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(cancelAlarm).toHaveBeenCalledWith(
+          expect.objectContaining({ notifeeTriggerId: "trigger-id" }),
+        );
+      });
+      expect(recoverAlarmSchedule).toHaveBeenCalledWith(
+        expect.objectContaining({ id: alarm.id }),
+        expect.any(Number),
+        DEFAULT_SETTINGS.cycleConfig,
+      );
+      expect(Alert.alert).toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
     });
   });
 

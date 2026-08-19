@@ -73,9 +73,14 @@ const mockConsumeNativeAlarmDeliveries = jest.fn().mockResolvedValue([]);
 const mockAcknowledgeNativeAlarmDeliveries = jest
   .fn()
   .mockResolvedValue(undefined);
+const mockGetScheduledAlarmIds = jest.fn().mockResolvedValue([]);
+const mockCancelAlarmAudio = jest.fn().mockResolvedValue(undefined);
 jest.mock("../../src/features/alarm/services/ringtoneService", () => ({
   consumeNativeAlarmDeliveries: mockConsumeNativeAlarmDeliveries,
   acknowledgeNativeAlarmDeliveries: mockAcknowledgeNativeAlarmDeliveries,
+  getScheduledAlarmIds: mockGetScheduledAlarmIds,
+  cancelAlarmAudio: mockCancelAlarmAudio,
+  setAlarmWindowActive: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockProcessAlarmDelivery = jest.fn().mockResolvedValue({
@@ -86,6 +91,7 @@ const mockProcessAlarmDelivery = jest.fn().mockResolvedValue({
 });
 jest.mock("../../src/features/alarm/services/alarmDeliveryService", () => ({
   processAlarmDelivery: mockProcessAlarmDelivery,
+  processAlarmDeliveryUnqueued: mockProcessAlarmDelivery,
 }));
 
 jest.mock("../../src/core/notifications/notifeeSetup", () => ({
@@ -214,6 +220,8 @@ describe("Providers", () => {
     mockCanGoBack.mockReturnValue(false);
     mockGetInitialNotification.mockResolvedValue(null);
     mockConsumeNativeAlarmDeliveries.mockResolvedValue([]);
+    mockGetScheduledAlarmIds.mockResolvedValue([]);
+    mockCancelAlarmAudio.mockResolvedValue(undefined);
     mockProcessAlarmDelivery.mockResolvedValue({
       handled: false,
       alarms: null,
@@ -242,6 +250,16 @@ describe("Providers", () => {
           alarms,
           DEFAULT_SETTINGS.cycleConfig,
         );
+      });
+    });
+
+    it("cancels a native alarm missing from persisted state", async () => {
+      mockGetScheduledAlarmIds.mockResolvedValue(["orphan-alarm"]);
+
+      await renderProviders(createStore(), []);
+
+      await waitFor(() => {
+        expect(mockCancelAlarmAudio).toHaveBeenCalledWith("orphan-alarm");
       });
     });
 
@@ -536,6 +554,54 @@ describe("Providers", () => {
         expect(
           mockProcessAlarmDelivery.mock.calls.map(([delivery]) => delivery),
         ).toEqual([first, second]);
+      });
+    });
+
+    it("keeps a newer alarm edit when a delivery state update is stale", async () => {
+      const store = createStore();
+      const alarm = makeAlarm({ id: "stale-delivery-alarm" });
+      const editedAlarm = {
+        ...alarm,
+        label: "Edited while delivering",
+        updatedAt: alarm.updatedAt + 1,
+      };
+      const deliveredAlarm = {
+        ...alarm,
+        targetTimestampMs: alarm.targetTimestampMs + 60_000,
+      };
+      const delivery = {
+        deliveryId: "delivery.stale-delivery-alarm.1234",
+        alarmId: alarm.id,
+        occurrenceTimestampMs: alarm.targetTimestampMs,
+        autoSilenceMs: 0,
+        stopped: true,
+      };
+      mockConsumeNativeAlarmDeliveries.mockResolvedValueOnce([delivery]);
+      mockProcessAlarmDelivery.mockImplementationOnce(
+        async (
+          _delivery: unknown,
+          onAlarmsUpdated: (
+            alarms: Alarm[],
+            updatedAlarm: Alarm,
+            previousAlarm: Alarm,
+          ) => Promise<void>,
+        ) => {
+          store.set(mockAlarmsAtom, [editedAlarm]);
+          await onAlarmsUpdated([deliveredAlarm], deliveredAlarm, alarm);
+          return {
+            handled: true,
+            alarms: [deliveredAlarm],
+            updatedAlarm: deliveredAlarm,
+            previousAlarm: alarm,
+            rescheduleFailed: false,
+          };
+        },
+      );
+
+      await renderProviders(store, [alarm]);
+
+      await waitFor(() => {
+        expect(store.get(mockAlarmsAtom)).toEqual([editedAlarm]);
       });
     });
 

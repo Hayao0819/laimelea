@@ -6,6 +6,8 @@ import {
   readStoredSettings,
 } from "../../../core/storage/storedAppState";
 import type { Alarm } from "../../../models/Alarm";
+import type { CycleConfig } from "../../../models/CustomTime";
+import { enqueueAlarmMutation } from "./alarmMutationQueue";
 import { scheduleNextAlarmOccurrence } from "./alarmRescheduler";
 
 export interface AlarmDeliveryData {
@@ -19,25 +21,55 @@ export interface AlarmDeliveryResult {
   handled: boolean;
   alarms: Alarm[] | null;
   updatedAlarm: Alarm | null;
+  previousAlarm?: Alarm;
   rescheduleFailed: boolean;
 }
 
-export type AlarmDeliveryUpdateHandler = (alarms: Alarm[]) => void;
-
-let deliveryQueue: Promise<void> = Promise.resolve();
-
-function enqueueDelivery<T>(task: () => Promise<T>): Promise<T> {
-  const result = deliveryQueue.then(task, task);
-  deliveryQueue = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
-}
+export type AlarmDeliveryUpdateHandler = (
+  alarms: Alarm[],
+  updatedAlarm: Alarm | null,
+  previousAlarm: Alarm,
+) => void | Promise<void>;
 
 function parseOccurrenceTimestamp(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function isExpectedOccurrence(
+  alarm: Alarm,
+  timestampMs: number,
+  cycleConfig: CycleConfig,
+): boolean {
+  if (
+    timestampMs === alarm.targetTimestampMs ||
+    timestampMs === alarm.activeOccurrenceTimestampMs
+  ) {
+    return true;
+  }
+  if (timestampMs < alarm.targetTimestampMs || alarm.repeat == null) {
+    return false;
+  }
+
+  const anchor = alarm.recurrenceAnchorTimestampMs ?? alarm.targetTimestampMs;
+  if (alarm.repeat.type === "weekdays") {
+    const occurrence = new Date(timestampMs);
+    const anchorDate = new Date(anchor);
+    return (
+      (alarm.repeat.weekdays ?? []).includes(occurrence.getDay()) &&
+      occurrence.getHours() === anchorDate.getHours() &&
+      occurrence.getMinutes() === anchorDate.getMinutes()
+    );
+  }
+  const intervalMs =
+    alarm.repeat.type === "interval"
+      ? (alarm.repeat.intervalMs ?? 0)
+      : (alarm.repeat.customCycleIntervalDays ?? 0) *
+        cycleConfig.cycleLengthMinutes *
+        60 *
+        1000;
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) return false;
+  return Number.isInteger((timestampMs - anchor) / intervalMs);
 }
 
 function clearStoppedAlarm(
@@ -114,6 +146,7 @@ async function processAlarmDeliveryInternal(
       return {
         handled: true,
         ...stoppedAlarm,
+        previousAlarm: alarm,
         rescheduleFailed: false,
       };
     }
@@ -142,6 +175,7 @@ async function processAlarmDeliveryInternal(
       return {
         handled: true,
         ...stoppedAlarm,
+        previousAlarm: alarm,
         rescheduleFailed: false,
       };
     }
@@ -154,8 +188,11 @@ async function processAlarmDeliveryInternal(
   }
   if (
     suppliedOccurrenceTimestampMs != null &&
-    suppliedOccurrenceTimestampMs !== alarm.targetTimestampMs &&
-    suppliedOccurrenceTimestampMs !== alarm.activeOccurrenceTimestampMs
+    !isExpectedOccurrence(
+      alarm,
+      suppliedOccurrenceTimestampMs,
+      settings.cycleConfig,
+    )
   ) {
     return {
       handled: false,
@@ -192,6 +229,7 @@ async function processAlarmDeliveryInternal(
       handled: true,
       alarms: updatedAlarms,
       updatedAlarm: shouldDiscard ? null : updatedTestAlarm,
+      previousAlarm: alarm,
       rescheduleFailed: false,
     };
   }
@@ -233,20 +271,33 @@ async function processAlarmDeliveryInternal(
     handled: true,
     alarms: updatedAlarms,
     updatedAlarm,
+    previousAlarm: alarm,
     rescheduleFailed,
   };
 }
 
-export async function processAlarmDelivery(
+export async function processAlarmDeliveryUnqueued(
   data: AlarmDeliveryData | undefined,
   onAlarmsUpdated?: AlarmDeliveryUpdateHandler,
   now = Date.now(),
 ): Promise<AlarmDeliveryResult> {
-  return enqueueDelivery(async () => {
-    const result = await processAlarmDeliveryInternal(data, now);
-    if (result.handled && result.alarms) {
-      onAlarmsUpdated?.(result.alarms);
-    }
-    return result;
-  });
+  const result = await processAlarmDeliveryInternal(data, now);
+  if (result.handled && result.alarms && result.previousAlarm) {
+    await onAlarmsUpdated?.(
+      result.alarms,
+      result.updatedAlarm,
+      result.previousAlarm,
+    );
+  }
+  return result;
+}
+
+export function processAlarmDelivery(
+  data: AlarmDeliveryData | undefined,
+  onAlarmsUpdated?: AlarmDeliveryUpdateHandler,
+  now = Date.now(),
+): Promise<AlarmDeliveryResult> {
+  return enqueueAlarmMutation(() =>
+    processAlarmDeliveryUnqueued(data, onAlarmsUpdated, now),
+  );
 }

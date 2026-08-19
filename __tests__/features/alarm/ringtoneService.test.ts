@@ -6,6 +6,7 @@ import {
   consumeNativeAlarmDeliveries,
   getAlarmRingtones,
   getDefaultAlarmUri,
+  getScheduledAlarmIds,
   playAlarmSound,
   playRingtone,
   scheduleAlarmAudio,
@@ -29,6 +30,7 @@ describe("ringtoneService", () => {
     stopRingtone: jest.fn(),
     stopAlarmSound: jest.fn(),
     getDefaultAlarmUri: jest.fn(),
+    getScheduledAlarmIds: jest.fn(),
   };
 
   describe("with NativeModule available", () => {
@@ -162,6 +164,15 @@ describe("ringtoneService", () => {
       expect(mockModule.cancelAlarmAudio).toHaveBeenCalledWith("alarm-1");
     });
 
+    it("lists alarm identifiers retained by native scheduling", async () => {
+      mockModule.getScheduledAlarmIds.mockResolvedValue(["alarm-1", "alarm-2"]);
+
+      await expect(getScheduledAlarmIds()).resolves.toEqual([
+        "alarm-1",
+        "alarm-2",
+      ]);
+    });
+
     it("keeps native deliveries until JavaScript acknowledges them", async () => {
       const deliveries = [
         {
@@ -222,6 +233,10 @@ describe("ringtoneService", () => {
       await expect(
         acknowledgeNativeAlarmDeliveries(["delivery.alarm-1.1234"]),
       ).resolves.toBeUndefined();
+    });
+
+    it("cannot list schedules without a native module", async () => {
+      await expect(getScheduledAlarmIds()).resolves.toBeNull();
     });
 
     it("alarm playback and volume updates resolve without a native module", async () => {

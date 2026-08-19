@@ -102,6 +102,80 @@ describe("processAlarmDelivery", () => {
     );
   });
 
+  it("accepts the latest missed occurrence of a repeating alarm", async () => {
+    const alarm = makeAlarm();
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      { alarmId: alarm.id, occurrenceTimestampMs: 1_120_000 },
+      undefined,
+      1_120_100,
+    );
+
+    expect(result.handled).toBe(true);
+    expect(scheduleNextAlarmOccurrence).toHaveBeenCalledWith(
+      expect.objectContaining({ targetTimestampMs: 1_120_000 }),
+      DEFAULT_SETTINGS.cycleConfig,
+      1_120_100,
+    );
+  });
+
+  it("rejects a timestamp outside the repeating alarm sequence", async () => {
+    const alarm = makeAlarm();
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      { alarmId: alarm.id, occurrenceTimestampMs: 1_130_000 },
+      undefined,
+      1_130_100,
+    );
+
+    expect(result.handled).toBe(false);
+    expect(scheduleNextAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
+  it("accepts a matching weekday and time for a weekdays repeat", async () => {
+    const target = new Date(2024, 0, 1, 7, 30).getTime(); // Monday
+    const occurrence = new Date(2024, 0, 3, 7, 30).getTime(); // Wednesday
+    const alarm = makeAlarm({
+      targetTimestampMs: target,
+      repeat: { type: "weekdays", weekdays: [1, 3] },
+    });
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      { alarmId: alarm.id, occurrenceTimestampMs: occurrence },
+      undefined,
+      occurrence + 100,
+    );
+
+    expect(result.handled).toBe(true);
+    expect(scheduleNextAlarmOccurrence).toHaveBeenCalledWith(
+      expect.objectContaining({ targetTimestampMs: occurrence }),
+      DEFAULT_SETTINGS.cycleConfig,
+      occurrence + 100,
+    );
+  });
+
+  it("rejects a weekday that is not part of the weekdays repeat", async () => {
+    const target = new Date(2024, 0, 1, 7, 30).getTime(); // Monday
+    const occurrence = new Date(2024, 0, 2, 7, 30).getTime(); // Tuesday, not configured
+    const alarm = makeAlarm({
+      targetTimestampMs: target,
+      repeat: { type: "weekdays", weekdays: [1, 3] },
+    });
+    storeAlarms([alarm]);
+
+    const result = await processAlarmDelivery(
+      { alarmId: alarm.id, occurrenceTimestampMs: occurrence },
+      undefined,
+      occurrence + 100,
+    );
+
+    expect(result.handled).toBe(false);
+    expect(scheduleNextAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
   it("uses persisted cycle settings", async () => {
     const alarm = makeAlarm({
       repeat: { type: "customCycleInterval", customCycleIntervalDays: 2 },
@@ -338,12 +412,34 @@ describe("processAlarmDelivery", () => {
       1_000_100,
     );
 
-    expect(onAlarmsUpdated).toHaveBeenCalledWith([
+    expect(onAlarmsUpdated).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: alarm.id,
+          activeOccurrenceTimestampMs: 1_000_000,
+        }),
+      ],
+      expect.objectContaining({ id: alarm.id }),
       expect.objectContaining({
         id: alarm.id,
-        activeOccurrenceTimestampMs: 1_000_000,
+        targetTimestampMs: alarm.targetTimestampMs,
       }),
-    ]);
+    );
+  });
+
+  it("propagates a foreground state update failure after persisting delivery state", async () => {
+    const alarm = makeAlarm();
+    storeAlarms([alarm]);
+
+    await expect(
+      processAlarmDelivery(
+        { alarmId: alarm.id, occurrenceTimestampMs: "1000000" },
+        () => Promise.reject(new Error("state write failed")),
+        1_000_100,
+      ),
+    ).rejects.toThrow("state write failed");
+
+    expect(mockStorage.get(STORAGE_KEYS.ALARMS)).toContain("next-trigger");
   });
 
   it("persists a disabled occurrence when scheduling the next one fails", async () => {

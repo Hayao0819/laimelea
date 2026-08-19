@@ -20,6 +20,7 @@ import {
 import { Button, Chip, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { completeAlarmFiringNavigation } from "../../../app/navigation";
 import { spacing } from "../../../app/spacing";
 import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { resolvedSettingsAtom } from "../../../atoms/settingsAtoms";
@@ -31,8 +32,14 @@ import type {
   RootStackParamList,
 } from "../../../navigation/types";
 import { DismissalContainer } from "../components/dismissal/DismissalContainer";
+import { enqueueAlarmMutation } from "../services/alarmMutationQueue";
 import { scheduleNextAlarmOccurrence } from "../services/alarmRescheduler";
-import { cancelAlarm, scheduleAlarm } from "../services/alarmScheduler";
+import {
+  cancelAlarm,
+  recoverAlarmSchedule,
+  scheduleAlarm,
+} from "../services/alarmScheduler";
+import { isSameAlarmState } from "../services/alarmStateVersion";
 import { RingtoneService } from "../services/ringtoneService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AlarmFiring">;
@@ -59,6 +66,8 @@ export function AlarmFiringScreen() {
   const [alarms, setAlarms] = useAtom(alarmsAtom);
   const settings = useAtomValue(resolvedSettingsAtom);
   const actionInProgress = useRef(false);
+  const alarmsRef = useRef(alarms);
+  alarmsRef.current = alarms;
 
   const isPreview = isPreviewParams(route.params);
 
@@ -72,6 +81,104 @@ export function AlarmFiringScreen() {
   }, [isPreview, route.params, alarms]);
 
   const activeAlarmId = isPreview ? null : alarm?.id;
+  const routeAlarmId = isPreview
+    ? null
+    : (route.params as { alarmId: string }).alarmId;
+
+  const closeFiringScreen = useCallback(() => {
+    if (isPreview || routeAlarmId === null) {
+      navigation.goBack();
+      return;
+    }
+    completeAlarmFiringNavigation(routeAlarmId);
+  }, [isPreview, navigation, routeAlarmId]);
+
+  const persistAlarmChange = useCallback(
+    async (expectedAlarm: Alarm, nextAlarm: Alarm | null) => {
+      let applied = false;
+      try {
+        await setAlarms((currentAlarms) =>
+          updateStoredAlarms(currentAlarms, (storedAlarms) => {
+            const currentAlarm = storedAlarms.find(
+              (storedAlarm) => storedAlarm.id === expectedAlarm.id,
+            );
+            if (
+              currentAlarm == null ||
+              !isSameAlarmState(currentAlarm, expectedAlarm)
+            ) {
+              return storedAlarms;
+            }
+            applied = true;
+            return nextAlarm
+              ? storedAlarms.map((storedAlarm) =>
+                  storedAlarm.id === expectedAlarm.id ? nextAlarm : storedAlarm,
+                )
+              : storedAlarms.filter(
+                  (storedAlarm) => storedAlarm.id !== expectedAlarm.id,
+                );
+          }),
+        );
+      } catch (error) {
+        try {
+          await setAlarms((currentAlarms) =>
+            updateStoredAlarms(currentAlarms, (storedAlarms) => {
+              const currentAlarm = storedAlarms.find(
+                (storedAlarm) => storedAlarm.id === expectedAlarm.id,
+              );
+              if (
+                nextAlarm &&
+                currentAlarm != null &&
+                isSameAlarmState(currentAlarm, nextAlarm)
+              ) {
+                return storedAlarms.map((storedAlarm) =>
+                  storedAlarm.id === expectedAlarm.id
+                    ? expectedAlarm
+                    : storedAlarm,
+                );
+              }
+              if (!nextAlarm && currentAlarm == null) {
+                return [...storedAlarms, expectedAlarm];
+              }
+              return storedAlarms;
+            }),
+          );
+        } catch {}
+        throw error;
+      }
+      if (applied) {
+        alarmsRef.current = nextAlarm
+          ? alarmsRef.current.map((storedAlarm) =>
+              storedAlarm.id === expectedAlarm.id ? nextAlarm : storedAlarm,
+            )
+          : alarmsRef.current.filter(
+              (storedAlarm) => storedAlarm.id !== expectedAlarm.id,
+            );
+      }
+      return applied;
+    },
+    [setAlarms],
+  );
+
+  const recoverCurrentAlarm = useCallback(
+    async (staleAlarm: Alarm, force = false) => {
+      const currentAlarm = alarmsRef.current.find(
+        (storedAlarm) => storedAlarm.id === staleAlarm.id,
+      );
+      if (
+        !currentAlarm?.enabled ||
+        (!force && isSameAlarmState(currentAlarm, staleAlarm))
+      ) {
+        return;
+      }
+      const recoveredAlarm = await recoverAlarmSchedule(
+        currentAlarm,
+        Date.now(),
+        settings.cycleConfig,
+      );
+      await persistAlarmChange(currentAlarm, recoveredAlarm);
+    },
+    [persistAlarmChange, settings.cycleConfig],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -88,6 +195,7 @@ export function AlarmFiringScreen() {
     if (!activeAlarmId) return;
     return () => {
       RingtoneService.stopAlarmSound(activeAlarmId).catch(() => {});
+      completeAlarmFiringNavigation(activeAlarmId);
     };
   }, [activeAlarmId]);
 
@@ -104,150 +212,193 @@ export function AlarmFiringScreen() {
   const handleDismiss = useCallback(async () => {
     if (!alarm) return;
     if (isPreview) {
-      navigation.goBack();
+      closeFiringScreen();
       return;
     }
     if (actionInProgress.current) return;
     actionInProgress.current = true;
-    if (alarm.isTest) {
-      try {
-        await cancelAlarm(alarm);
-      } catch {
-        actionInProgress.current = false;
-        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
-        return;
-      }
-      setAlarms((currentAlarms) =>
-        updateStoredAlarms(currentAlarms, (storedAlarms) =>
-          storedAlarms.filter((storedAlarm) => storedAlarm.id !== alarm.id),
-        ),
-      );
-      navigation.goBack();
-      return;
-    }
-    const now = Date.now();
-    let updatedAlarm: Alarm;
-    const deliveredOccurrenceWasAdvanced =
-      alarm.activeOccurrenceTimestampMs != null &&
-      alarm.lastDeliveredOccurrenceTimestampMs ===
-        alarm.activeOccurrenceTimestampMs;
-    if (deliveredOccurrenceWasAdvanced) {
-      try {
-        await Promise.all([
-          RingtoneService.stopAlarmSound(alarm.id),
-          notifee.cancelDisplayedNotification(alarm.id),
-        ]);
-      } catch {
-        actionInProgress.current = false;
-        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
-        return;
-      }
-      updatedAlarm = {
-        ...alarm,
-        activeOccurrenceTimestampMs: null,
-        snoozeCount: 0,
-        updatedAt: now,
-      };
-    } else {
-      try {
-        await cancelAlarm(alarm);
-      } catch {
-        actionInProgress.current = false;
-        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
-        return;
-      }
-      try {
-        updatedAlarm = await scheduleNextAlarmOccurrence(
-          alarm,
-          settings.cycleConfig,
-          now,
+    try {
+      await enqueueAlarmMutation(async () => {
+        const currentAlarm = alarmsRef.current.find(
+          (storedAlarm) => storedAlarm.id === alarm.id,
         );
-      } catch {
-        updatedAlarm = {
-          ...alarm,
-          enabled: false,
-          notifeeTriggerId: null,
-          updatedAt: now,
-        };
-        Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
-      }
-      updatedAlarm.snoozeCount = 0;
+        if (!currentAlarm || !isSameAlarmState(currentAlarm, alarm)) {
+          closeFiringScreen();
+          return;
+        }
+        if (alarm.isTest) {
+          await cancelAlarm(alarm);
+          try {
+            const persisted = await persistAlarmChange(alarm, null);
+            if (!persisted) {
+              await recoverCurrentAlarm(alarm, true);
+            }
+          } catch (error) {
+            const recoveredAlarm = await recoverAlarmSchedule(
+              alarm,
+              Date.now(),
+              settings.cycleConfig,
+            );
+            await persistAlarmChange(alarm, recoveredAlarm).catch(() => {});
+            throw error;
+          }
+          closeFiringScreen();
+          return;
+        }
+
+        const now = Date.now();
+        const deliveredOccurrenceWasAdvanced =
+          alarm.activeOccurrenceTimestampMs != null &&
+          alarm.lastDeliveredOccurrenceTimestampMs ===
+            alarm.activeOccurrenceTimestampMs;
+        let updatedAlarm: Alarm;
+        if (deliveredOccurrenceWasAdvanced) {
+          await Promise.all([
+            RingtoneService.stopAlarmSound(alarm.id),
+            notifee.cancelDisplayedNotification(alarm.id),
+          ]);
+          updatedAlarm = {
+            ...alarm,
+            activeOccurrenceTimestampMs: null,
+            snoozeCount: 0,
+            updatedAt: now,
+          };
+        } else {
+          await cancelAlarm(alarm);
+          try {
+            updatedAlarm = await scheduleNextAlarmOccurrence(
+              alarm,
+              settings.cycleConfig,
+              now,
+            );
+          } catch {
+            updatedAlarm = {
+              ...alarm,
+              enabled: false,
+              notifeeTriggerId: null,
+              updatedAt: now,
+            };
+            Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+          }
+          updatedAlarm.snoozeCount = 0;
+        }
+        updatedAlarm.lastFiredAt = now;
+        let persisted: boolean;
+        try {
+          persisted = await persistAlarmChange(alarm, updatedAlarm);
+        } catch (error) {
+          if (!deliveredOccurrenceWasAdvanced && updatedAlarm.enabled) {
+            await cancelAlarm(updatedAlarm).catch(() => {});
+          }
+          await recoverCurrentAlarm(alarm, true).catch(() => {});
+          throw error;
+        }
+        if (!persisted) {
+          if (!deliveredOccurrenceWasAdvanced && updatedAlarm.enabled) {
+            await cancelAlarm(updatedAlarm).catch(() => {});
+          }
+          await recoverCurrentAlarm(alarm, true);
+          closeFiringScreen();
+          return;
+        }
+        closeFiringScreen();
+      });
+    } catch {
+      Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+      actionInProgress.current = false;
     }
-    updatedAlarm.lastFiredAt = now;
-    setAlarms((currentAlarms) =>
-      updateStoredAlarms(currentAlarms, (storedAlarms) =>
-        storedAlarms.map((storedAlarm) =>
-          storedAlarm.id === alarm.id ? updatedAlarm : storedAlarm,
-        ),
-      ),
-    );
-    navigation.goBack();
-  }, [alarm, isPreview, setAlarms, navigation, settings.cycleConfig, t]);
+  }, [
+    alarm,
+    closeFiringScreen,
+    isPreview,
+    persistAlarmChange,
+    recoverCurrentAlarm,
+    settings.cycleConfig,
+    t,
+  ]);
 
   const handleSnooze = useCallback(async () => {
     if (!alarm) return;
     if (isPreview) {
-      navigation.goBack();
+      closeFiringScreen();
       return;
     }
     if (actionInProgress.current) return;
     actionInProgress.current = true;
     try {
-      await cancelAlarm(alarm);
+      await enqueueAlarmMutation(async () => {
+        const currentAlarm = alarmsRef.current.find(
+          (storedAlarm) => storedAlarm.id === alarm.id,
+        );
+        if (!currentAlarm || !isSameAlarmState(currentAlarm, alarm)) {
+          closeFiringScreen();
+          return;
+        }
+        await cancelAlarm(alarm);
+        const now = Date.now();
+        const snoozedAlarm: Alarm = {
+          ...alarm,
+          enabled: true,
+          targetTimestampMs: now + alarm.snoozeDurationMin * 60 * 1000,
+          recurrenceAnchorTimestampMs: alarm.repeat
+            ? (alarm.activeOccurrenceTimestampMs ??
+              alarm.recurrenceAnchorTimestampMs ??
+              alarm.targetTimestampMs)
+            : null,
+          activeOccurrenceTimestampMs: null,
+          snoozeCount: alarm.snoozeCount + 1,
+          updatedAt: now,
+        };
+
+        try {
+          snoozedAlarm.notifeeTriggerId = await scheduleAlarm(snoozedAlarm);
+        } catch {
+          const disabledAlarm = {
+            ...alarm,
+            enabled: false,
+            notifeeTriggerId: null,
+            activeOccurrenceTimestampMs: null,
+            updatedAt: now,
+          };
+          try {
+            const persisted = await persistAlarmChange(alarm, disabledAlarm);
+            if (!persisted) {
+              await recoverCurrentAlarm(alarm, true);
+            }
+          } catch (error) {
+            await recoverCurrentAlarm(alarm, true).catch(() => {});
+            throw error;
+          }
+          Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
+          closeFiringScreen();
+          return;
+        }
+
+        try {
+          const persisted = await persistAlarmChange(alarm, snoozedAlarm);
+          if (!persisted) {
+            await cancelAlarm(snoozedAlarm);
+            await recoverCurrentAlarm(alarm, true);
+          }
+        } catch (error) {
+          await cancelAlarm(snoozedAlarm).catch(() => {});
+          await recoverCurrentAlarm(alarm, true).catch(() => {});
+          throw error;
+        }
+        closeFiringScreen();
+      });
     } catch {
+      Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
       actionInProgress.current = false;
-      Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
-      return;
     }
-
-    const now = Date.now();
-    const snoozeMs = alarm.snoozeDurationMin * 60 * 1000;
-    const snoozedAlarm: Alarm = {
-      ...alarm,
-      enabled: true,
-      targetTimestampMs: now + snoozeMs,
-      recurrenceAnchorTimestampMs: alarm.repeat
-        ? (alarm.activeOccurrenceTimestampMs ??
-          alarm.recurrenceAnchorTimestampMs ??
-          alarm.targetTimestampMs)
-        : null,
-      activeOccurrenceTimestampMs: null,
-      snoozeCount: alarm.snoozeCount + 1,
-      updatedAt: now,
-    };
-
-    try {
-      const triggerId = await scheduleAlarm(snoozedAlarm);
-      snoozedAlarm.notifeeTriggerId = triggerId;
-    } catch {
-      const disabledAlarm = {
-        ...alarm,
-        enabled: false,
-        notifeeTriggerId: null,
-        activeOccurrenceTimestampMs: null,
-        updatedAt: now,
-      };
-      setAlarms((currentAlarms) =>
-        updateStoredAlarms(currentAlarms, (storedAlarms) =>
-          storedAlarms.map((storedAlarm) =>
-            storedAlarm.id === alarm.id ? disabledAlarm : storedAlarm,
-          ),
-        ),
-      );
-      Alert.alert(t("alarm.title"), t("alarm.scheduleFailed"));
-      navigation.goBack();
-      return;
-    }
-
-    setAlarms((currentAlarms) =>
-      updateStoredAlarms(currentAlarms, (storedAlarms) =>
-        storedAlarms.map((storedAlarm) =>
-          storedAlarm.id === alarm.id ? snoozedAlarm : storedAlarm,
-        ),
-      ),
-    );
-    navigation.goBack();
-  }, [alarm, isPreview, setAlarms, navigation, t]);
+  }, [
+    alarm,
+    closeFiringScreen,
+    isPreview,
+    persistAlarmChange,
+    recoverCurrentAlarm,
+    t,
+  ]);
 
   const canSnooze = alarm ? alarm.snoozeCount < alarm.snoozeMaxCount : false;
 
