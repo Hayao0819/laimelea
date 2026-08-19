@@ -14,10 +14,40 @@ import type { PlatformServices } from "../../../../src/core/platform/types";
 import { game2048StoreAtom } from "../../../../src/features/game2048/atoms/game2048Atoms";
 import { createDefaultStore } from "../../../../src/features/game2048/logic/gameEngine";
 import { BackupScreen } from "../../../../src/features/settings/screens/BackupScreen";
+import type { Alarm } from "../../../../src/models/Alarm";
 import {
   type AppSettings,
   DEFAULT_SETTINGS,
 } from "../../../../src/models/Settings";
+
+function makeAlarm(overrides: Partial<Alarm> = {}): Alarm {
+  const now = Date.now();
+  return {
+    id: `alarm-${now}-${Math.random()}`,
+    label: "Test Alarm",
+    enabled: true,
+    targetTimestampMs: now,
+    setInTimeSystem: "24h",
+    repeat: null,
+    dismissalMethod: "simple",
+    gradualVolumeDurationSec: 30,
+    snoozeDurationMin: 5,
+    snoozeMaxCount: 3,
+    snoozeCount: 0,
+    autoSilenceMin: 10,
+    soundUri: null,
+    vibrationEnabled: true,
+    notifeeTriggerId: null,
+    skipNextOccurrence: false,
+    linkedCalendarEventId: null,
+    linkedEventOffsetMs: 0,
+    mathDifficulty: 1,
+    lastFiredAt: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
 
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
@@ -430,6 +460,51 @@ describe("BackupScreen", () => {
 
     expect(store.get(resolvedSettingsAtom)).toEqual(DEFAULT_SETTINGS);
     expect(store.get(alarmsAtom)).toEqual([]);
+  });
+
+  it("blocks backup and shows a specific error when there are too many alarms to include", async () => {
+    const { getByTestId, getByText, store } = await renderWithProviders();
+    await act(async () => {
+      store.set(
+        alarmsAtom,
+        Array.from({ length: 1001 }, (_, index) =>
+          makeAlarm({ id: `alarm-${index}` }),
+        ),
+      );
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId("backup-now-button"));
+    });
+
+    expect(mockServices.backup.backup).not.toHaveBeenCalled();
+    expect(getByText("settings.backupTooManyAlarms")).toBeTruthy();
+  });
+
+  it("shows a distinct message when a restored backup exceeds the size limit", async () => {
+    const { getByTestId, getByText } = await renderWithProviders();
+    (mockServices.backup.restore as jest.Mock).mockResolvedValue(
+      "x".repeat(11 * 1024 * 1024),
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId("restore-button"));
+    });
+
+    expect(getByText("settings.restoreTooLarge")).toBeTruthy();
+  });
+
+  it("still shows the version-mismatch message for a malformed (non-size) restore failure", async () => {
+    const { getByTestId, getByText } = await renderWithProviders();
+    (mockServices.backup.restore as jest.Mock).mockResolvedValue(
+      JSON.stringify({ version: 1, timestamp: Date.now(), settings: {} }),
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId("restore-button"));
+    });
+
+    expect(getByText("settings.backupVersionError")).toBeTruthy();
   });
 
   it("should not update lastBackupTimestamp when backup fails", async () => {

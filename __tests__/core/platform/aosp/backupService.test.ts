@@ -40,7 +40,7 @@ describe("createAospBackupService", () => {
   });
 
   describe("backup", () => {
-    it("should save data and timestamp to AsyncStorage", async () => {
+    it("should save the snapshot with data and timestamp", async () => {
       const service = createAospBackupService();
       const data = JSON.stringify({ alarms: [1, 2, 3] });
 
@@ -48,17 +48,25 @@ describe("createAospBackupService", () => {
       await service.backup(data);
       const after = Date.now();
 
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEYS.BACKUP_DATA,
-        data,
-      );
-      expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2);
+      const snapshot = JSON.parse(mockStore[STORAGE_KEYS.BACKUP_SNAPSHOT]);
+      expect(snapshot.data).toBe(data);
+      expect(snapshot.timestamp).toBeGreaterThanOrEqual(before);
+      expect(snapshot.timestamp).toBeLessThanOrEqual(after);
+    });
 
+    it("also writes the legacy keys so a downgraded build still finds a backup", async () => {
+      const service = createAospBackupService();
+      const data = JSON.stringify({ alarms: [1, 2, 3] });
+
+      const before = Date.now();
+      await service.backup(data);
+      const after = Date.now();
+
+      expect(AsyncStorage.setItem).toHaveBeenCalledTimes(3);
       expect(mockStore[STORAGE_KEYS.BACKUP_DATA]).toBe(data);
-
-      const timestamp = Number(mockStore[STORAGE_KEYS.BACKUP_TIMESTAMP]);
-      expect(timestamp).toBeGreaterThanOrEqual(before);
-      expect(timestamp).toBeLessThanOrEqual(after);
+      const legacyTimestamp = Number(mockStore[STORAGE_KEYS.BACKUP_TIMESTAMP]);
+      expect(legacyTimestamp).toBeGreaterThanOrEqual(before);
+      expect(legacyTimestamp).toBeLessThanOrEqual(after);
     });
   });
 
@@ -73,6 +81,16 @@ describe("createAospBackupService", () => {
       expect(AsyncStorage.getItem).toHaveBeenCalledWith(
         STORAGE_KEYS.BACKUP_DATA,
       );
+    });
+
+    it("should return data from the atomic snapshot", async () => {
+      const service = createAospBackupService();
+      mockStore[STORAGE_KEYS.BACKUP_SNAPSHOT] = JSON.stringify({
+        data: "snapshot-data",
+        timestamp: 1700000000000,
+      });
+
+      await expect(service.restore()).resolves.toBe("snapshot-data");
     });
 
     it("should return null when no backup", async () => {
@@ -95,10 +113,27 @@ describe("createAospBackupService", () => {
       );
     });
 
+    it("should return timestamp from the atomic snapshot", async () => {
+      const service = createAospBackupService();
+      mockStore[STORAGE_KEYS.BACKUP_SNAPSHOT] = JSON.stringify({
+        data: "snapshot-data",
+        timestamp: 1700000000000,
+      });
+
+      await expect(service.getLastBackupTime()).resolves.toBe(1700000000000);
+    });
+
     it("should return null when no timestamp", async () => {
       const service = createAospBackupService();
       const result = await service.getLastBackupTime();
       expect(result).toBeNull();
+    });
+
+    it("should return null when the legacy timestamp is malformed", async () => {
+      const service = createAospBackupService();
+      mockStore[STORAGE_KEYS.BACKUP_TIMESTAMP] = "not-a-timestamp";
+
+      await expect(service.getLastBackupTime()).resolves.toBeNull();
     });
   });
 });

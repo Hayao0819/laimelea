@@ -2,7 +2,11 @@ import {
   createDefaultStore,
   createNewGame,
 } from "../../../../src/features/game2048/logic/gameEngine";
-import { parseBackupData } from "../../../../src/features/settings/services/backupData";
+import {
+  createBackupData,
+  parseBackupData,
+  parseBackupDataResult,
+} from "../../../../src/features/settings/services/backupData";
 import type { Alarm } from "../../../../src/models/Alarm";
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 import type { SleepSession } from "../../../../src/models/SleepSession";
@@ -315,5 +319,114 @@ describe("parseBackupData", () => {
     mutate(raw);
 
     expect(parseBackupData(JSON.stringify(raw))).toBeNull();
+  });
+});
+
+describe("createBackupData", () => {
+  it("creates a valid backup payload under the caps", () => {
+    const result = createBackupData({
+      timestamp: 1,
+      settings: DEFAULT_SETTINGS,
+      alarms: [createAlarm("alarm")],
+      sleepSessions: [],
+      game2048: createDefaultStore(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.raw);
+      expect(parsed.version).toBe(1);
+      expect(parsed.alarms).toHaveLength(1);
+    }
+  });
+
+  it("rejects a backup with too many alarms before it is ever written", () => {
+    const alarms = Array.from({ length: 1001 }, (_, index) =>
+      createAlarm(`alarm-${index}`),
+    );
+
+    expect(
+      createBackupData({
+        timestamp: 1,
+        settings: DEFAULT_SETTINGS,
+        alarms,
+        sleepSessions: [],
+        game2048: createDefaultStore(),
+      }),
+    ).toEqual({ ok: false, error: "too_many_alarms" });
+  });
+
+  it("rejects a backup with too many sleep sessions before it is ever written", () => {
+    const sleepSessions = Array.from({ length: 10_001 }, (_, index) =>
+      createSleepSession(`session-${index}`),
+    );
+
+    expect(
+      createBackupData({
+        timestamp: 1,
+        settings: DEFAULT_SETTINGS,
+        alarms: [],
+        sleepSessions,
+        game2048: createDefaultStore(),
+      }),
+    ).toEqual({ ok: false, error: "too_many_sleep_sessions" });
+  });
+
+  it("rejects a backup that would be too large to restore", () => {
+    const oversizedAlarm = createAlarm("alarm");
+    oversizedAlarm.label = "x".repeat(11 * 1024 * 1024);
+
+    expect(
+      createBackupData({
+        timestamp: 1,
+        settings: DEFAULT_SETTINGS,
+        alarms: [oversizedAlarm],
+        sleepSessions: [],
+        game2048: createDefaultStore(),
+      }),
+    ).toEqual({ ok: false, error: "too_large" });
+  });
+});
+
+describe("parseBackupDataResult", () => {
+  it("distinguishes a size-limit failure from a generic version/format error", () => {
+    expect(parseBackupDataResult("not json")).toEqual({
+      ok: false,
+      error: "invalid",
+    });
+    expect(parseBackupDataResult("x".repeat(11 * 1024 * 1024))).toEqual({
+      ok: false,
+      error: "too_large",
+    });
+  });
+
+  it("reports too_many_alarms distinctly from a generic invalid payload", () => {
+    const raw = JSON.parse(createBackup([createAlarm("alarm")])) as any;
+    raw.alarms = Array.from({ length: 1001 }, (_, index) =>
+      createAlarm(`alarm-${index}`),
+    );
+
+    expect(parseBackupDataResult(JSON.stringify(raw))).toEqual({
+      ok: false,
+      error: "too_many_alarms",
+    });
+  });
+
+  it("reports too_many_sleep_sessions distinctly from a generic invalid payload", () => {
+    const raw = JSON.parse(createBackup([createAlarm("alarm")])) as any;
+    raw.sleepSessions = Array.from({ length: 10_001 }, (_, index) =>
+      createSleepSession(`session-${index}`),
+    );
+
+    expect(parseBackupDataResult(JSON.stringify(raw))).toEqual({
+      ok: false,
+      error: "too_many_sleep_sessions",
+    });
+  });
+
+  it("returns the parsed data on success", () => {
+    const result = parseBackupDataResult(createBackup([createAlarm("alarm")]));
+
+    expect(result.ok).toBe(true);
   });
 });

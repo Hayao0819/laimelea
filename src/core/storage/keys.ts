@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   TIMER_COMPLETIONS: "@laimelea/timer_completions",
   BACKUP_DATA: "@laimelea/backup_data",
   BACKUP_TIMESTAMP: "@laimelea/backup_timestamp",
+  BACKUP_SNAPSHOT: "@laimelea/backup_snapshot",
   PENDING_BACKUP_RESTORE: "@laimelea/pending_backup_restore",
   HMS_AUTH_STATE: "@laimelea/hms_auth_state",
   GAME_2048: "@laimelea/game_2048",

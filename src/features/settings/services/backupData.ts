@@ -329,30 +329,44 @@ function hasDuplicateIds(items: { id: string }[]): boolean {
   return new Set(items.map((item) => item.id)).size !== items.length;
 }
 
-export function parseBackupData(raw: string): BackupData | null {
-  if (raw.length > MAX_BACKUP_BYTES) return null;
+export type BackupParseError =
+  | "too_large"
+  | "too_many_alarms"
+  | "too_many_sleep_sessions"
+  | "invalid";
+
+export type BackupParseResult =
+  | { ok: true; data: BackupData }
+  | { ok: false; error: BackupParseError };
+
+export function parseBackupDataResult(raw: string): BackupParseResult {
+  if (raw.length > MAX_BACKUP_BYTES) return { ok: false, error: "too_large" };
   let value: unknown;
   try {
     value = JSON.parse(raw);
   } catch {
-    return null;
+    return { ok: false, error: "invalid" };
   }
   if (
     !isRecord(value) ||
     value.version !== 1 ||
     !isFiniteNumber(value.timestamp)
   ) {
-    return null;
+    return { ok: false, error: "invalid" };
   }
   const settings = normalizeSettings(value.settings);
   if (
     !settings ||
     !Array.isArray(value.alarms) ||
-    !Array.isArray(value.sleepSessions) ||
-    value.alarms.length > MAX_ALARMS ||
-    value.sleepSessions.length > MAX_SLEEP_SESSIONS
+    !Array.isArray(value.sleepSessions)
   ) {
-    return null;
+    return { ok: false, error: "invalid" };
+  }
+  if (value.alarms.length > MAX_ALARMS) {
+    return { ok: false, error: "too_many_alarms" };
+  }
+  if (value.sleepSessions.length > MAX_SLEEP_SESSIONS) {
+    return { ok: false, error: "too_many_sleep_sessions" };
   }
   const alarms = value.alarms.map(normalizeAlarm);
   const sleepSessions = value.sleepSessions.map(normalizeSleepSession);
@@ -364,14 +378,55 @@ export function parseBackupData(raw: string): BackupData | null {
     hasDuplicateIds(sleepSessions as SleepSession[]) ||
     !game2048
   ) {
-    return null;
+    return { ok: false, error: "invalid" };
   }
   return {
-    version: 1,
-    timestamp: value.timestamp,
-    settings,
-    alarms: alarms as Alarm[],
-    sleepSessions: sleepSessions as SleepSession[],
-    game2048,
+    ok: true,
+    data: {
+      version: 1,
+      timestamp: value.timestamp,
+      settings,
+      alarms: alarms as Alarm[],
+      sleepSessions: sleepSessions as SleepSession[],
+      game2048,
+    },
   };
+}
+
+export function parseBackupData(raw: string): BackupData | null {
+  const result = parseBackupDataResult(raw);
+  return result.ok ? result.data : null;
+}
+
+export type BackupCreateError =
+  | "too_large"
+  | "too_many_alarms"
+  | "too_many_sleep_sessions";
+
+export interface BackupPayloadInput {
+  timestamp: number;
+  settings: AppSettings;
+  alarms: Alarm[];
+  sleepSessions: SleepSession[];
+  game2048: Game2048Store;
+}
+
+export type BackupCreateResult =
+  | { ok: true; raw: string }
+  | { ok: false; error: BackupCreateError };
+
+export function createBackupData(
+  input: BackupPayloadInput,
+): BackupCreateResult {
+  if (input.alarms.length > MAX_ALARMS) {
+    return { ok: false, error: "too_many_alarms" };
+  }
+  if (input.sleepSessions.length > MAX_SLEEP_SESSIONS) {
+    return { ok: false, error: "too_many_sleep_sessions" };
+  }
+  const raw = JSON.stringify({ version: 1, ...input });
+  if (raw.length > MAX_BACKUP_BYTES) {
+    return { ok: false, error: "too_large" };
+  }
+  return { ok: true, raw };
 }

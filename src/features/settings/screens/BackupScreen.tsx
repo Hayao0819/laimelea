@@ -11,17 +11,47 @@ import { alarmsAtom } from "../../../atoms/alarmAtoms";
 import { platformServicesAtom } from "../../../atoms/platformAtoms";
 import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
 import {
+  game2048HydratedAtom,
   game2048StoreAtom,
   resolvedStoreAtom,
 } from "../../game2048/atoms/game2048Atoms";
 import { useSettingsUpdate } from "../hooks/useSettingsUpdate";
 import { useSnackbar } from "../hooks/useSnackbar";
-import { parseBackupData } from "../services/backupData";
+import {
+  type BackupCreateError,
+  type BackupParseError,
+  createBackupData,
+  parseBackupDataResult,
+} from "../services/backupData";
 import {
   restoreBackupTransaction,
   type RestoreSnapshot,
   waitForRestoreWrites,
 } from "../services/restoreTransaction";
+
+function backupCreateErrorKey(error: BackupCreateError): string {
+  switch (error) {
+    case "too_large":
+      return "settings.backupTooLarge";
+    case "too_many_alarms":
+      return "settings.backupTooManyAlarms";
+    case "too_many_sleep_sessions":
+      return "settings.backupTooManySleepSessions";
+  }
+}
+
+function restoreParseErrorKey(error: BackupParseError): string {
+  switch (error) {
+    case "too_large":
+      return "settings.restoreTooLarge";
+    case "too_many_alarms":
+      return "settings.restoreTooManyAlarms";
+    case "too_many_sleep_sessions":
+      return "settings.restoreTooManySleepSessions";
+    case "invalid":
+      return "settings.backupVersionError";
+  }
+}
 
 export function BackupScreen() {
   const { t } = useTranslation();
@@ -32,6 +62,7 @@ export function BackupScreen() {
   const sleepSessions = useAtomValue(sleepSessionsAtom);
   const setSleepSessions = useSetAtom(sleepSessionsAtom);
   const game2048Store = useAtomValue(resolvedStoreAtom);
+  const game2048Hydrated = useAtomValue(game2048HydratedAtom);
   const setGame2048Store = useSetAtom(game2048StoreAtom);
   const platformServices = useAtomValue(platformServicesAtom);
   const [remoteBackupTimestamp, setRemoteBackupTimestamp] = useState<
@@ -154,6 +185,7 @@ export function BackupScreen() {
 
   const handleBackup = useCallback(async () => {
     if (operationInFlight.current) return;
+    if (!game2048Hydrated) return;
     if (!isLocalSnapshot && !cloudBackupReady) {
       showSnackbar(t("settings.backupRequiresSignIn"));
       return;
@@ -161,15 +193,18 @@ export function BackupScreen() {
     operationInFlight.current = true;
     setOperation("backup");
     try {
-      const data = JSON.stringify({
-        version: 1,
+      const payload = createBackupData({
         timestamp: Date.now(),
         settings,
         alarms,
         sleepSessions,
         game2048: game2048Store,
       });
-      await platformServices.backup.backup(data);
+      if (!payload.ok) {
+        showSnackbar(t(backupCreateErrorKey(payload.error)));
+        return;
+      }
+      await platformServices.backup.backup(payload.raw);
       const now = Date.now();
       update({ lastBackupTimestamp: now });
       setRemoteBackupTimestamp(now);
@@ -185,6 +220,7 @@ export function BackupScreen() {
     alarms,
     sleepSessions,
     game2048Store,
+    game2048Hydrated,
     cloudBackupReady,
     isLocalSnapshot,
     platformServices.backup,
@@ -195,6 +231,7 @@ export function BackupScreen() {
 
   const handleRestore = useCallback(async () => {
     if (operationInFlight.current) return;
+    if (!game2048Hydrated) return;
     if (!isLocalSnapshot && !cloudBackupReady) {
       showSnackbar(t("settings.backupRequiresSignIn"));
       return;
@@ -207,11 +244,12 @@ export function BackupScreen() {
         showSnackbar(t("settings.noBackupFound"));
         return;
       }
-      const data = parseBackupData(raw);
-      if (data == null) {
-        showSnackbar(t("settings.backupVersionError"));
+      const parsed = parseBackupDataResult(raw);
+      if (!parsed.ok) {
+        showSnackbar(t(restoreParseErrorKey(parsed.error)));
         return;
       }
+      const data = parsed.data;
       const currentSnapshot: RestoreSnapshot = {
         settings,
         alarms,
@@ -249,6 +287,7 @@ export function BackupScreen() {
     settings,
     sleepSessions,
     game2048Store,
+    game2048Hydrated,
     cloudBackupReady,
     isLocalSnapshot,
     setSettings,
@@ -309,7 +348,9 @@ export function BackupScreen() {
               mode="contained"
               onPress={handleBackup}
               disabled={
-                operation !== null || (!isLocalSnapshot && !cloudBackupReady)
+                !game2048Hydrated ||
+                operation !== null ||
+                (!isLocalSnapshot && !cloudBackupReady)
               }
               style={styles.backupButton}
               testID="backup-now-button"
@@ -322,7 +363,9 @@ export function BackupScreen() {
               mode="outlined"
               onPress={handleRestore}
               disabled={
-                operation !== null || (!isLocalSnapshot && !cloudBackupReady)
+                !game2048Hydrated ||
+                operation !== null ||
+                (!isLocalSnapshot && !cloudBackupReady)
               }
               style={styles.backupButton}
               testID="restore-button"

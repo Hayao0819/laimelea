@@ -1,3 +1,7 @@
+import {
+  DRIVE_TRANSFER_TIMEOUT_MS,
+  fetchWithTimeout,
+} from "./fetchWithTimeout";
 import { createMultipartBody } from "./multipart";
 
 export class DriveAuthExpiredError extends Error {
@@ -65,7 +69,7 @@ export async function findBackupFile(
     } else {
       url.searchParams.delete("cursor");
     }
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithTimeout(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -95,14 +99,18 @@ export async function uploadBackup(
 ): Promise<string> {
   if (existingFileId) {
     const url = `${DRIVE_UPLOAD_BASE}/files/${existingFileId}/content?uploadType=content`;
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+    const response = await fetchWithTimeout(
+      url,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: data,
       },
-      body: data,
-    });
+      DRIVE_TRANSFER_TIMEOUT_MS,
+    );
 
     checkResponseStatus(response.status);
     if (!response.ok) {
@@ -123,14 +131,18 @@ export async function uploadBackup(
   );
 
   const url = `${DRIVE_UPLOAD_BASE}/files?uploadType=multipart`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": `multipart/related; boundary=${boundary}`,
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
     },
-    body,
-  });
+    DRIVE_TRANSFER_TIMEOUT_MS,
+  );
 
   checkResponseStatus(response.status);
   if (!response.ok) {
@@ -146,9 +158,13 @@ export async function downloadBackup(
   fileId: string,
 ): Promise<string | null> {
   const url = `${DRIVE_API_BASE}/files/${fileId}?form=content`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const response = await fetchWithTimeout(
+    url,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+    DRIVE_TRANSFER_TIMEOUT_MS,
+  );
 
   if (response.status === 404) {
     return null;
@@ -167,7 +183,7 @@ export async function getFileMetadata(
   fileId: string,
 ): Promise<DriveFileResource | null> {
   const url = `${DRIVE_API_BASE}/files/${fileId}?fields=id,fileName,editedTime`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
