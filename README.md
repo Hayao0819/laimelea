@@ -75,7 +75,7 @@ Google Drive経由のクラウドバックアップ。設定、アラーム、�
 
 ### GMS不要設計
 
-Laimelea は **Google Mobile Services (GMS) がなくても完全に動作**します。AOSP AlarmManager、OAuth2 PKCE (Chrome Custom Tabs)、CalendarContract による GMS 非依存アーキテクチャを採用。GMS 搭載端末では追加機能（Google Sign-In、Health Connect、Google Drive バックアップ）が利用可能です。
+Laimelea の時計、アラーム、カレンダー、手動睡眠記録は GMS がなくても動作します。AOSP 端末ではバックアップを端末内に保存し、GMS 搭載端末では Google Sign-In、Health Connect、Google Drive バックアップも利用できます。
 
 ## Getting Started
 
@@ -93,6 +93,8 @@ nix develop
 pnpm install
 pnpm android
 ```
+
+GMS端末でGoogle Driveバックアップを使う場合は、`cp .env.example .env`を実行して`GOOGLE_WEB_CLIENT_ID`を設定してください。設定手順は[Google Cloudセットアップ](docs/setup/gcp-setup.md)にあります。
 
 詳しい開発環境の構築手順は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 

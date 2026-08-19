@@ -1,8 +1,10 @@
 package com.hayao0819.laimelea
 
 import android.os.Bundle
+import android.os.Build
 import android.content.Intent
 import android.view.KeyEvent
+import android.view.WindowManager
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -17,6 +19,12 @@ class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     installSplashScreen()
+    if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O) {
+      window.addFlags(
+          WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+              WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+      )
+    }
     super.onCreate(savedInstanceState)
     HealthConnectPermissionDelegate.setPermissionDelegate(this)
   }

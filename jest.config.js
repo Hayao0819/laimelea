@@ -9,6 +9,14 @@ module.exports = {
     "!src/**/__tests__/**",
   ],
   coverageReporters: ["lcov", "text-summary"],
+  coverageThreshold: {
+    global: {
+      branches: 85,
+      functions: 88,
+      lines: 91,
+      statements: 90,
+    },
+  },
   transformIgnorePatterns: [
     "node_modules/(?!(\\.pnpm|((jest-)?react-native(-.*)?|@react-native(-community|-vector-icons)?|@react-navigation|react-native-reanimated|react-native-worklets))/)",
   ],

@@ -76,14 +76,12 @@ describe("Timezone Picker", () => {
       await waitFor(element(by.id("timezone-picker-modal")))
         .not.toBeVisible()
         .withTimeout(5000);
-      // Primary timezone should still be Asia/Tokyo
       await expect(element(by.text("Asia/Tokyo"))).toBeVisible();
     });
   });
 
   describe("Search reset after close", () => {
     it("clears search query when picker reopens", async () => {
-      // Open picker, search, then close without selecting
       await element(by.id("timezone-item")).tap();
       await waitVisible("timezone-picker-modal");
       await element(by.id("timezone-searchbar")).replaceText("xyz");
@@ -92,13 +90,11 @@ describe("Timezone Picker", () => {
         .not.toBeVisible()
         .withTimeout(5000);
 
-      // Reopen — all timezones should be visible (search was cleared)
       await element(by.id("timezone-item")).tap();
       await waitVisible("timezone-picker-modal");
+      await expect(element(by.id("timezone-searchbar"))).toHaveText("");
       await waitVisible("tz-item-Asia/Tokyo");
-      await waitVisible("tz-item-Europe/London");
 
-      // Close
       await device.pressBack();
       await waitFor(element(by.id("timezone-picker-modal")))
         .not.toBeVisible()

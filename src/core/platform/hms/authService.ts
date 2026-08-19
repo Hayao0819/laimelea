@@ -1,8 +1,8 @@
 import { SECURE_STORAGE_SERVICES, STORAGE_KEYS } from "../../storage/keys";
-import { extractEmailFromIdToken } from "../aosp/tokenUtils";
 import { createOidcAuthService } from "../oidcAuthService";
 import type { PlatformAuthService } from "../types";
 import { HMS_AUTH_CONFIG, isHmsAuthConfigured } from "./authConfig";
+import { extractEmailFromIdToken } from "./tokenUtils";
 
 function createUnavailableHmsAuthService(): PlatformAuthService {
   const unavailable = () =>

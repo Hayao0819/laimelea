@@ -96,7 +96,6 @@ Terraform applyが完了したら、以下の手動設定を行います。`terr
 取得したClient IDを `.env` ファイルに設定:
 
 ```env
-GOOGLE_OAUTH_CLIENT_ID=xxxx.apps.googleusercontent.com
 GOOGLE_WEB_CLIENT_ID=xxxx.apps.googleusercontent.com
 ```
 

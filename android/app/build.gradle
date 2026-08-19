@@ -17,6 +17,7 @@ def releaseSigningEnvironment = [
 def missingReleaseSigningEnvironment = releaseSigningEnvironment.findAll { key, value ->
     value == null || value.trim().isEmpty()
 }.keySet()
+def googleWebClientId = project.env.get("GOOGLE_WEB_CLIENT_ID") ?: ""
 
 def validateReleaseSigning = tasks.register('validateReleaseSigning') {
     doLast {
@@ -31,9 +32,21 @@ def validateReleaseSigning = tasks.register('validateReleaseSigning') {
     }
 }
 
+def validateReleaseGmsAuth = tasks.register('validateReleaseGmsAuth') {
+    doLast {
+        if (googleWebClientId.trim().isEmpty()) {
+            throw new GradleException('Release builds require GOOGLE_WEB_CLIENT_ID')
+        }
+        if (!googleWebClientId.endsWith('.apps.googleusercontent.com')) {
+            throw new GradleException('GOOGLE_WEB_CLIENT_ID must be a Google web OAuth client ID')
+        }
+    }
+}
+
 tasks.configureEach { task ->
     if (task.name == 'preReleaseBuild') {
         task.dependsOn(validateReleaseSigning)
+        task.dependsOn(validateReleaseGmsAuth)
     }
 }
 
@@ -55,9 +68,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode = 1
         versionName = "0.1.0"
-        def oauthClientId = project.env.get("GOOGLE_OAUTH_CLIENT_ID") ?: ""
-        def oauthClientGuid = oauthClientId.replace(".apps.googleusercontent.com", "")
-        manifestPlaceholders = [appAuthRedirectScheme: "com.googleusercontent.apps." + oauthClientGuid]
+        manifestPlaceholders = [appAuthRedirectScheme: "com.hayao0819.laimelea"]
         testBuildType = System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
     }

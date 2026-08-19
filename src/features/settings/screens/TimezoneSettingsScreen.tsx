@@ -24,9 +24,9 @@ export function TimezoneSettingsScreen() {
   }, []);
 
   const handleTzSelect = useCallback(
-    (tz: string) => {
+    (tz: string | null) => {
       if (tzPickerTarget === "primary") {
-        update({ timezone: tz });
+        update({ timezone: tz ?? "auto" });
       } else {
         update({ secondaryTimezone: tz });
       }
@@ -96,6 +96,19 @@ export function TimezoneSettingsScreen() {
           tzPickerTarget === "primary"
             ? settings.timezone
             : settings.secondaryTimezone
+        }
+        resetOption={
+          tzPickerTarget === "primary"
+            ? {
+                label: t("settings.timezoneAuto"),
+                testID: "timezone-auto-item",
+                value: "auto",
+              }
+            : {
+                label: t("settings.secondaryTimezoneNone"),
+                testID: "secondary-timezone-none-item",
+                value: null,
+              }
         }
       />
     </>

@@ -149,14 +149,12 @@
               '';
             };
 
-          # macOS: iOS development shell
-          # Uses mkShellNoCC to avoid Nix clang conflicting with Xcode's toolchain.
-          # Xcode, xcodebuild, xcrun, and CocoaPods come from the host system.
+          # macOS shell for JavaScript checks and infrastructure tools.
           darwinShell = pkgs.mkShellNoCC {
             packages = commonPackages;
 
             shellHook = ''
-              echo "Laimelea dev environment loaded (macOS/iOS)"
+              echo "Laimelea dev environment loaded (macOS, Android build unavailable)"
               echo "  Node.js: $(node --version)"
               echo "  pnpm:    $(pnpm --version)"
               echo "  Terraform: $(terraform version | head -1 | awk '{print $2}')"

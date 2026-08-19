@@ -53,11 +53,15 @@ describe("createPlatformServices", () => {
     expect(services.sleep).toBeDefined();
   });
 
-  it("should return different auth implementations for aosp vs hms", async () => {
+  it("keeps cloud authentication unavailable on AOSP", async () => {
     const aosp = createPlatformServices("aosp");
     const hms = createPlatformServices("hms");
 
-    // Both use react-native-app-auth but are separate service instances
+    await expect(aosp.auth.isAvailable()).resolves.toBe(false);
+    await expect(aosp.auth.getAccessToken()).resolves.toBeNull();
+    await expect(aosp.auth.signIn()).rejects.toThrow(
+      "Cloud authentication is unavailable on AOSP devices",
+    );
     expect(aosp.auth.signIn).not.toBe(hms.auth.signIn);
   });
 
@@ -65,7 +69,6 @@ describe("createPlatformServices", () => {
     const aosp = createPlatformServices("aosp");
     const hms = createPlatformServices("hms");
 
-    // HMS uses Huawei Drive backup, AOSP uses local backup
     expect(aosp.backup.backup).not.toBe(hms.backup.backup);
   });
 
@@ -73,11 +76,7 @@ describe("createPlatformServices", () => {
     const aosp = createPlatformServices("aosp");
     const gms = createPlatformServices("gms");
 
-    // AOSP auth is available (uses react-native-app-auth)
-    await expect(aosp.auth.isAvailable()).resolves.toBe(true);
-
-    // GMS auth delegates to GoogleSignin.hasPlayServices (mocked above)
-    // The fact they return different results proves they are different implementations
+    await expect(aosp.auth.isAvailable()).resolves.toBe(false);
     expect(aosp.auth.signIn).not.toBe(gms.auth.signIn);
   });
 });

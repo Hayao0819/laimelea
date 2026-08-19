@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
@@ -295,7 +296,7 @@ describe("useStopwatch", () => {
       });
 
       const atomState = store.get(stopwatchAtom);
-      expect(atomState.startedAt).toBe(5000);
+      expect(atomState.startedAt).toBe(3000);
       expect(atomState.isRunning).toBe(true);
     });
 
@@ -325,6 +326,100 @@ describe("useStopwatch", () => {
       });
 
       expect(result.current.elapsedMs).toBe(7000);
+    });
+
+    it("counts time elapsed while the process was not running", async () => {
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 5000,
+        isRunning: true,
+        startedAt: 1000,
+        laps: [],
+      });
+      (Date.now as jest.Mock).mockReturnValue(11000);
+
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      expect(result.current.elapsedMs).toBe(10000);
+    });
+
+    it("restores a running stopwatch after delayed storage hydration", async () => {
+      let resolveStorage: ((value: string | null) => void) | undefined;
+      (AsyncStorage.getItem as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise<string | null>((resolve) => {
+            resolveStorage = resolve;
+          }),
+      );
+      const store = createStore();
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+
+      expect(result.current.isRunning).toBe(false);
+      resolveStorage?.(
+        JSON.stringify({
+          elapsedMs: 5000,
+          isRunning: true,
+          startedAt: -5000,
+          laps: [2000],
+        }),
+      );
+      await act(async () => {});
+
+      expect(result.current).toMatchObject({
+        elapsedMs: 5000,
+        isRunning: true,
+        laps: [2000],
+      });
+
+      (Date.now as jest.Mock).mockReturnValue(2000);
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      expect(result.current.elapsedMs).toBe(7000);
+    });
+
+    it("does not persist display ticks", async () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+      await act(async () => {});
+
+      act(() => {
+        result.current.start();
+      });
+      jest.clearAllMocks();
+
+      (Date.now as jest.Mock).mockReturnValue(5000);
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    });
+
+    it("persists the exact elapsed time when paused", async () => {
+      const store = createStore();
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), {
+        wrapper: Wrapper,
+      });
+      await act(async () => {});
+
+      act(() => {
+        result.current.start();
+      });
+      (Date.now as jest.Mock).mockReturnValue(2025);
+      act(() => {
+        result.current.pause();
+      });
+
+      expect(store.get(stopwatchAtom).elapsedMs).toBe(2025);
     });
 
     it("should restore a paused stopwatch with correct elapsed", async () => {

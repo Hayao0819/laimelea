@@ -58,10 +58,16 @@ export async function getAlarmRingtones(): Promise<RingtoneInfo[]> {
 }
 
 async function canReadExternalAudio(): Promise<boolean> {
-  if (Platform.OS !== "android" || Number(Platform.Version) < 33) {
+  if (Platform.OS !== "android") {
     return true;
   }
-  const permission = PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO;
+  const permission =
+    Number(Platform.Version) >= 33
+      ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO
+      : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+  if (!permission) {
+    return false;
+  }
   const granted = await PermissionsAndroid.check(permission);
   if (granted) {
     return true;

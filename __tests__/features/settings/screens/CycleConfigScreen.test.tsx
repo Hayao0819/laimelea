@@ -83,45 +83,52 @@ describe("CycleConfigScreen", () => {
     expect(minutesInput.props.value).toBe("0");
   });
 
-  it("updates cycle hours", async () => {
+  it("keeps edited cycle hours local until saved", async () => {
     const { getByTestId, store } = await renderScreen();
     const hoursInput = getByTestId("cycle-hours-input");
 
     await fireEvent.changeText(hoursInput, "28");
 
-    await waitFor(() => {
-      const updated = store.get(settingsAtom) as AppSettings;
-      // 28 * 60 + 0 = 1680
-      expect(updated.cycleConfig.cycleLengthMinutes).toBe(1680);
-    });
-    expect(mockWidgetUpdate).toHaveBeenCalled();
+    expect(
+      (store.get(settingsAtom) as AppSettings).cycleConfig.cycleLengthMinutes,
+    ).toBe(1560);
+    expect(mockWidgetUpdate).not.toHaveBeenCalled();
   });
 
-  it("updates cycle minutes", async () => {
-    const { getByTestId, store } = await renderScreen();
-    const minutesInput = getByTestId("cycle-minutes-input");
-
-    await fireEvent.changeText(minutesInput, "30");
-
-    await waitFor(() => {
-      const updated = store.get(settingsAtom) as AppSettings;
-      // 26 * 60 + 30 = 1590
-      expect(updated.cycleConfig.cycleLengthMinutes).toBe(1590);
-    });
-    expect(mockWidgetUpdate).toHaveBeenCalled();
-  });
-
-  it("handles non-numeric input gracefully", async () => {
+  it("saves a valid cycle length once", async () => {
     const { getByTestId, store } = await renderScreen();
     const hoursInput = getByTestId("cycle-hours-input");
+    const minutesInput = getByTestId("cycle-minutes-input");
 
-    await fireEvent.changeText(hoursInput, "abc");
+    await fireEvent.changeText(hoursInput, "28");
+    await fireEvent.changeText(minutesInput, "30");
+    await fireEvent.press(getByTestId("save-cycle-length-button"));
 
     await waitFor(() => {
       const updated = store.get(settingsAtom) as AppSettings;
-      // parseInt("abc", 10) || 0 => 0; 0 * 60 + 0 = 0
-      expect(updated.cycleConfig.cycleLengthMinutes).toBe(0);
+      expect(updated.cycleConfig.cycleLengthMinutes).toBe(1710);
     });
+    expect(mockWidgetUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not persist incomplete or invalid cycle lengths", async () => {
+    const { getByTestId, getByText, store } = await renderScreen();
+    const hoursInput = getByTestId("cycle-hours-input");
+    const minutesInput = getByTestId("cycle-minutes-input");
+
+    await fireEvent.changeText(hoursInput, "");
+
+    expect(getByText("settings.invalidCycleLength")).toBeTruthy();
+    await fireEvent.press(getByTestId("save-cycle-length-button"));
+
+    await fireEvent.changeText(hoursInput, "abc");
+    await fireEvent.changeText(minutesInput, "60");
+
+    await fireEvent.press(getByTestId("save-cycle-length-button"));
+    expect(
+      (store.get(settingsAtom) as AppSettings).cycleConfig.cycleLengthMinutes,
+    ).toBe(1560);
+    expect(mockWidgetUpdate).not.toHaveBeenCalled();
   });
 
   it("displays base time when set", async () => {

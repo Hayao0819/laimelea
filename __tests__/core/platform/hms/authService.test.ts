@@ -52,7 +52,7 @@ jest.mock("react-native-app-auth", () => ({
 
 const mockExtractEmailFromIdToken = jest.fn();
 
-jest.mock("../../../../src/core/platform/aosp/tokenUtils", () => ({
+jest.mock("../../../../src/core/platform/hms/tokenUtils", () => ({
   extractEmailFromIdToken: (...args: unknown[]) =>
     mockExtractEmailFromIdToken(...args),
 }));

@@ -18,7 +18,7 @@ Googleカレンダー連携、カスタム時間でのアラーム、カレン�
 | @react-navigation/bottom-tabs v7                      | Bottom Tab Navigator。`BottomNavigation.Bar`(Paper)をtabBarに指定してMD3スタイル適用                                         |
 | @react-navigation/native-stack v7                     | Stack Navigator                                                                                                              |
 | @notifee/react-native v9                              | AlarmManager連携（**GMS不要、AOSP API**）、フルスクリーン通知                                                                |
-| react-native-app-auth v8                              | OAuth2 PKCE認証（**GMS不要**、Chrome Custom Tabs使用）。AOSP端末でのバックアップ用Google Drive認証に使用                     |
+| react-native-app-auth v8                              | HMS端末のHuawei OAuth2 PKCE認証に使用                                                                                        |
 | @react-native-google-signin/google-signin v16         | GMS環境でのGoogle認証（RN 0.84対応。v13は非互換）                                                                            |
 | @react-native-async-storage/async-storage v3          | Jotaiの永続化バックエンド。v3でscoped storage導入、default exportは互換維持                                                  |
 | カスタムTurbo Module (CalendarContract)               | Android CalendarContract経由のローカルカレンダー読取（**GMS不要**）。react-native-calendar-eventsは5年間未更新のため自前実装 |
@@ -81,30 +81,30 @@ devDependencies:
 
 ## 実装進捗
 
-| Phase | 内容                           | 状態     | 備考                                                                  |
-| ----- | ------------------------------ | -------- | --------------------------------------------------------------------- |
-| 1     | プロジェクトスキャフォールド   | **完了** | RN 0.84, pnpm, dir構造, theme, Providers, i18n, models, atoms         |
-| 2     | カスタム時間エンジン           | **完了** | conversions.ts + formatting.ts + 32テスト全パス                       |
-| -     | ライブラリバージョン監査       | **完了** | reanimated v4, google-signin v16, eslint v9, prettier v3等            |
-| 3     | ストレージ・状態管理           | **完了** | Jotai永続化, SetupScreen, settingsAtom                                |
-| 4     | ナビゲーションシェル           | **完了** | Phase 1で実装済み（Bottom Tabs + Stack）                              |
-| 5     | 時計機能                       | **完了** | AnalogClock(SVG), DigitalClock, TimeToggle, useCurrentTime, 51テスト  |
-| 6     | アラーム基本機能               | **完了** | Notifeeスケジューラ, AlarmList/Edit/Firing画面, 73テスト              |
-| 7     | アラーム解除システム           | **完了** | Strategy Pattern + Registry、Shake/Math/Simple解除                    |
-| 8     | 一括アラーム作成               | **完了** | BulkAlarmForm、BulkAlarmScreen、プレビュー付き                        |
-| 9     | タイマー機能                   | **完了** | CountdownTimer + Stopwatch、ドリフト補正、完了通知                    |
-| 10    | プラットフォーム抽象化レイヤー | **完了** | GMS/HMS/AOSP実装、CalendarContract Turbo Module自前実装               |
-| 11    | カレンダー連携                 | **完了** | CalendarContract、月/週/アジェンダ表示、EventDetailScreen             |
-| 12    | カレンダー予定連動アラーム     | **完了** | calendarAlarmSync、EventCardアラームボタン                            |
-| 13    | 設定画面                       | **完了** | 全設定1画面、バックアップ/復元（JSON serialize）                      |
-| 14    | 睡眠ログ・周期自動検出         | **完了** | cycleDetector、Health Connect、手動入力、SleepLogScreen               |
-| 15    | ホーム画面ウィジェット         | **完了** | ClockWidget、WidgetTaskHandler、設定/アラーム変更時更新               |
-| 16    | テスト・仕上げ                 | **完了** | Jest、Detox、Android instrumented test、a11y対応                      |
-| 17    | カレンダーデザイン改善         | **完了** | MonthView/WeekView/AgendaView、CustomDayTimeline、NowIndicator        |
-| 18    | Terraform GCPプロジェクト管理  | **完了** | infra/ディレクトリ、react-native-config、.env管理                     |
-| -     | Google Drive Backup            | **完了** | GMS Drive appDataFolder API、drive.appdataスコープ                    |
-| -     | アプリアイコン/スプラッシュ    | **完了** | Adaptive Icon、Android 12+ SplashScreen API                           |
-| -     | デスククロック                 | **完了** | DeskClockScreen、FullscreenModule（keep-awake + immersive）           |
+| Phase | 内容                           | 状態     | 備考                                                                 |
+| ----- | ------------------------------ | -------- | -------------------------------------------------------------------- |
+| 1     | プロジェクトスキャフォールド   | **完了** | RN 0.84, pnpm, dir構造, theme, Providers, i18n, models, atoms        |
+| 2     | カスタム時間エンジン           | **完了** | conversions.ts + formatting.ts + 32テスト全パス                      |
+| -     | ライブラリバージョン監査       | **完了** | reanimated v4, google-signin v16, eslint v9, prettier v3等           |
+| 3     | ストレージ・状態管理           | **完了** | Jotai永続化, SetupScreen, settingsAtom                               |
+| 4     | ナビゲーションシェル           | **完了** | Phase 1で実装済み（Bottom Tabs + Stack）                             |
+| 5     | 時計機能                       | **完了** | AnalogClock(SVG), DigitalClock, TimeToggle, useCurrentTime, 51テスト |
+| 6     | アラーム基本機能               | **完了** | Notifeeスケジューラ, AlarmList/Edit/Firing画面, 73テスト             |
+| 7     | アラーム解除システム           | **完了** | Strategy Pattern + Registry、Shake/Math/Simple解除                   |
+| 8     | 一括アラーム作成               | **完了** | BulkAlarmForm、BulkAlarmScreen、プレビュー付き                       |
+| 9     | タイマー機能                   | **完了** | CountdownTimer + Stopwatch、ドリフト補正、完了通知                   |
+| 10    | プラットフォーム抽象化レイヤー | **完了** | GMS/HMS/AOSP実装、CalendarContract Turbo Module自前実装              |
+| 11    | カレンダー連携                 | **完了** | CalendarContract、月/週/アジェンダ表示、EventDetailScreen            |
+| 12    | カレンダー予定連動アラーム     | **完了** | calendarAlarmSync、EventCardアラームボタン                           |
+| 13    | 設定画面                       | **完了** | 全設定1画面、バックアップ/復元（JSON serialize）                     |
+| 14    | 睡眠ログ・周期自動検出         | **完了** | cycleDetector、Health Connect、手動入力、SleepLogScreen              |
+| 15    | ホーム画面ウィジェット         | **完了** | ClockWidget、WidgetTaskHandler、設定/アラーム変更時更新              |
+| 16    | テスト・仕上げ                 | **完了** | Jest、Detox、Android instrumented test、a11y対応                     |
+| 17    | カレンダーデザイン改善         | **完了** | MonthView/WeekView/AgendaView、CustomDayTimeline、NowIndicator       |
+| 18    | Terraform GCPプロジェクト管理  | **完了** | infra/ディレクトリ、react-native-config、.env管理                    |
+| -     | Google Drive Backup            | **完了** | GMS Drive appDataFolder API、drive.appdataスコープ                   |
+| -     | アプリアイコン/スプラッシュ    | **完了** | Adaptive Icon、Android 12+ SplashScreen API                          |
+| -     | デスククロック                 | **完了** | DeskClockScreen、FullscreenModule（keep-awake + immersive）          |
 
 ### Phase 1で作成済みのファイル
 
@@ -252,7 +252,7 @@ laimelea/
 │   │   │   │   ├── HuaweiAuthService.ts
 │   │   │   │   └── HuaweiCalendarService.ts
 │   │   │   └── aosp/                 # GMS/HMS不要のフォールバック実装
-│   │   │       ├── AppAuthService.ts       # react-native-app-auth (Chrome Custom Tabs + PKCE)
+│   │   │       ├── authService.ts          # クラウド認証を利用不可として返す
 │   │   │       ├── LocalCalendarService.ts # カスタムTurbo Module経由のCalendarContract読取
 │   │   │       ├── LocalBackupService.ts   # ファイルエクスポート/インポート
 │   │   │       └── ManualSleepService.ts   # 手動睡眠ログ（GMS不要）
@@ -720,16 +720,16 @@ react-native-paper v5の`List.Section`、`List.Item`、`Switch`、`RadioButton`�
 
 ### UIコンポーネント対応表
 
-| 設定             | 使用するPaperコンポーネント                                          |
-| ---------------- | -------------------------------------------------------------------- |
-| セクション見出し | `List.Section`                                                       |
-| 各設定項目       | `List.Item`                                                          |
-| ON/OFF切替       | `Switch` (List.Itemのright prop)                                     |
-| 2〜3択選択       | `SegmentedButtons`                                                   |
-| タイムゾーン選択 | `BottomSheet` + `Searchbar` + `List`                                 |
-| 数値入力         | `TextInput` (mode="outlined", keyboardType="numeric")                |
-| Googleアカウント | `List.Item` + `Button`                                               |
-| チェックリスト   | `Checkbox.Item`                                                      |
+| 設定             | 使用するPaperコンポーネント                           |
+| ---------------- | ----------------------------------------------------- |
+| セクション見出し | `List.Section`                                        |
+| 各設定項目       | `List.Item`                                           |
+| ON/OFF切替       | `Switch` (List.Itemのright prop)                      |
+| 2〜3択選択       | `SegmentedButtons`                                    |
+| タイムゾーン選択 | `BottomSheet` + `Searchbar` + `List`                  |
+| 数値入力         | `TextInput` (mode="outlined", keyboardType="numeric") |
+| Googleアカウント | `List.Item` + `Button`                                |
+| チェックリスト   | `Checkbox.Item`                                       |
 
 ### 画面数の削減結果
 
@@ -828,12 +828,12 @@ async function detectPlatform(): Promise<PlatformType> {
 
 ### 各実装の概要
 
-|                  | GMS実装                                         | HMS実装（将来）                     | AOSP実装（フォールバック）                          |
-| ---------------- | ----------------------------------------------- | ----------------------------------- | --------------------------------------------------- |
-| **認証**         | `@react-native-google-signin/google-signin` v16 | `@hmscore/react-native-hms-account` | `react-native-app-auth` (Chrome Custom Tabs + PKCE) |
-| **カレンダー**   | CalendarContract (AOSP と同一)                  | CalendarContract (AOSP)             | CalendarContract (AOSP) via カスタムTurbo Module    |
-| **バックアップ** | Google Drive appDataFolder API                  | Huawei Drive / ローカル             | ファイルエクスポート/インポート                     |
-| **睡眠データ**   | Health Connect (`react-native-health-connect`)  | 手動入力                            | 手動入力                                            |
+|                  | GMS実装                                         | HMS実装（将来）                | AOSP実装（フォールバック）                       |
+| ---------------- | ----------------------------------------------- | ------------------------------ | ------------------------------------------------ |
+| **認証**         | `@react-native-google-signin/google-signin` v16 | `react-native-app-auth` + PKCE | 利用不可                                         |
+| **カレンダー**   | CalendarContract (AOSP と同一)                  | CalendarContract (AOSP)        | CalendarContract (AOSP) via カスタムTurbo Module |
+| **バックアップ** | Google Drive appDataFolder API                  | Huawei Drive / ローカル        | ファイルエクスポート/インポート                  |
+| **睡眠データ**   | Health Connect (`react-native-health-connect`)  | 手動入力                       | 手動入力                                         |
 
 ### GMS不要の機能（変更なし）
 
@@ -908,14 +908,13 @@ READ_CALENDAR                    <!-- AOSP CalendarContract経由のカレンダ
 
 プラットフォーム抽象化レイヤー経由で動作。カレンダーソースは自動検出:
 
-| 環境     | 認証方式                     | カレンダーソース                                    |
-| -------- | ---------------------------- | --------------------------------------------------- |
-| GMS端末  | Google Sign-In               | Google Calendar REST API v3                         |
-| HMS端末  | Huawei Account Kit（将来）   | CalendarContract (AOSP)                             |
-| AOSP端末 | AppAuth (Chrome Custom Tabs) | Google Calendar REST API v3 または CalendarContract |
+| 環境     | 認証方式 | カレンダーソース |
+| -------- | -------- | ---------------- |
+| GMS端末  | 不要     | CalendarContract |
+| HMS端末  | 不要     | CalendarContract |
+| AOSP端末 | 不要     | CalendarContract |
 
-- **API**: Google Calendar REST API v3 を`fetch`で直接呼び出し（WebView不使用、GMS不要）
-- **ローカルフォールバック**: CalendarContract (AOSP) 経由でデバイス上のカレンダーを読取。DAVx5等でGoogleカレンダーと同期可能
+- **API**: CalendarContract 経由でデバイス上のカレンダーを読み取る。DAVx5等で同期した予定も対象
 - **同期戦略**: アプリフォアグラウンド時に前後2週間分を取得、5分間キャッシュ、プルトゥリフレッシュ
 - **同期のmutex**: カレンダー同期処理は排他ロックで保護し、同時実行による競合を防止
 
@@ -1020,14 +1019,14 @@ RootNavigator (NativeStack)
 - `PlatformAuthService`, `PlatformCalendarService`, `PlatformBackupService` インターフェース定義（Phase 1で型のみ作成済み）
 - プラットフォーム検出ロジック
 - GMS実装（Google Sign-In v16 + Drive backup）
-- AOSP実装（AppAuth + **カスタムTurbo Module for CalendarContract** + ファイルエクスポート）
+- AOSP実装（**カスタムTurbo Module for CalendarContract** + ローカルバックアップ）
   - `react-native-calendar-events`は5年間未更新でNew Architecture非対応のため、CalendarContract読取はKotlin Turbo Moduleとして自前実装
 - ファクトリ + Jotai atomでサービスインスタンス管理
 
 ### Phase 11: カレンダー連携 ✅ 完了
 
 - CalendarContract Turbo Module で全プラットフォーム統一のカレンダー読取
-- OAuth認証フロー（GMS: GoogleSignin / AOSP: AppAuth + PKCE）— バックアップ用
+- OAuth認証フロー（GMS: GoogleSignin）— Google Driveバックアップ用
 - CalendarScreen（月/週/アジェンダ表示 + EventCard + EventDetailScreen）
 - CalendarContract Turbo Module（Kotlin、AOSP向け）
 - キャッシュレイヤー + 同期mutex (`useCalendarSync`)
@@ -1158,7 +1157,7 @@ src/atoms/
 
 ### Phase 18: Terraform GCPプロジェクト管理 ✅ 完了
 
-Google Cloud上のプロジェクトをTerraformでIaC管理し、アプリのOAuth2認証を動作可能にする。現在のauthConfigにはプレースホルダ（`__GOOGLE_OAUTH_CLIENT_ID__`, `__GOOGLE_WEB_CLIENT_ID__`）が入っており、実際のGoogle Cloudプロジェクトが未設定。
+Google Cloud上のプロジェクトをTerraformで管理し、GMS端末のGoogle Driveバックアップ用OAuth設定を用意する。Web Client IDは`.env`またはCIのrepository variableからビルド時に渡す。
 
 #### Terraformの管理範囲と制約
 
@@ -1276,18 +1275,13 @@ output "manual_setup_instructions" {
        - Application Type: Web application
        - Name: Laimelea Web Client
 
-    3. iOS Client ID を作成（AOSP端末バックアップ用 react-native-app-auth、Android上でも使用）:
-       - Application Type: iOS
-       - Bundle ID: com.hayao0819.laimelea
-       ※ Web ClientではカスタムURIスキームリダイレクトが許可されないためiOSタイプが必要
-
-    4. Android Client ID を作成:
+    3. Android Client ID を作成:
        - Application Type: Android
        - Package name: com.hayao0819.laimelea
        - SHA-1: (keytoolで取得した値)
 
-    5. 取得したClient IDを以下に設定:
-       - .env → GOOGLE_OAUTH_CLIENT_ID (iOS Client ID), GOOGLE_WEB_CLIENT_ID (Web Client ID)
+    4. 取得したWeb Client IDを以下に設定:
+       - .env → GOOGLE_WEB_CLIENT_ID
   EOT
 }
 ```
@@ -1299,22 +1293,11 @@ output "manual_setup_instructions" {
 - `react-native-config`パッケージで`.env`を読み込み
 - authConfig.tsのプレースホルダを環境変数参照に変更
 
-```typescript
-// authConfig.ts
-import Config from "react-native-config";
-
-export const AOSP_AUTH_CONFIG: AuthConfiguration = {
-  issuer: "https://accounts.google.com",
-  clientId: Config.GOOGLE_OAUTH_CLIENT_ID ?? "",
-  // ...
-};
-```
+`src/core/platform/gms/authConfig.ts`が`GOOGLE_WEB_CLIENT_ID`を読み込む。releaseビルドでは値が未設定の場合にGradleを失敗させる。
 
 `.env.example`をリポジトリに含め、実際の`.env`は`.gitignore`対象:
 
 ```env
-# iOS Client ID — react-native-app-auth (PKCE + custom URI scheme, AOSP backup)
-GOOGLE_OAUTH_CLIENT_ID=xxxx.apps.googleusercontent.com
 # Web Client ID — @react-native-google-signin (GMS)
 GOOGLE_WEB_CLIENT_ID=yyyy.apps.googleusercontent.com
 ```
@@ -1351,7 +1334,6 @@ flake.nix                               # terraform + google-cloud-sdk 追加
 treefmt.nix                             # infra/ を prettier 除外に追加
 .gitignore                              # Terraform + .env 追加
 .env.example                            # Client ID テンプレート
-src/core/platform/aosp/authConfig.ts    # react-native-config 参照に変更
 src/core/platform/gms/authConfig.ts     # react-native-config 参照に変更
 ```
 

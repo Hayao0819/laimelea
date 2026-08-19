@@ -8,10 +8,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
 import {
+  acknowledgeWinAtom,
   bestScoresAtom,
   canUndoAtom,
   currentGameAtom,
-  game2048StoreAtom,
+  deleteSnapshotAtom,
   loadSnapshotAtom,
   milestoneAutoSaveAtom,
   newGameAtom,
@@ -26,11 +27,7 @@ import { GameHeader } from "../components/GameHeader";
 import { GameOverlay } from "../components/GameOverlay";
 import { SaveSlotList } from "../components/SaveSlotList";
 import { move } from "../logic/gameEngine";
-import type {
-  Direction,
-  Game2048Store,
-  GameSnapshot,
-} from "../logic/gameTypes";
+import type { Direction, GameSnapshot } from "../logic/gameTypes";
 
 export function Game2048Screen() {
   const { t } = useTranslation();
@@ -45,7 +42,8 @@ export function Game2048Screen() {
   const pushHistory = useSetAtom(pushHistoryAtom);
   const undo = useSetAtom(undoAtom);
   const startNewGame = useSetAtom(newGameAtom);
-  const setStore = useSetAtom(game2048StoreAtom);
+  const acknowledgeWin = useSetAtom(acknowledgeWinAtom);
+  const deleteSnapshot = useSetAtom(deleteSnapshotAtom);
   const saveSnapshot = useSetAtom(saveSnapshotAtom);
   const loadSnapshot = useSetAtom(loadSnapshotAtom);
   const milestoneAutoSave = useSetAtom(milestoneAutoSaveAtom);
@@ -90,11 +88,8 @@ export function Game2048Screen() {
   }, [game.boardSize, startNewGame]);
 
   const handleKeepGoing = useCallback(() => {
-    setStore((prev) => {
-      const s = prev as Game2048Store;
-      return { ...s, currentGame: { ...s.currentGame, wonAcknowledged: true } };
-    });
-  }, [setStore]);
+    acknowledgeWin();
+  }, [acknowledgeWin]);
 
   const handleTryAgain = useCallback(() => {
     handleNewGame();
@@ -115,15 +110,9 @@ export function Game2048Screen() {
 
   const handleDeleteSnapshot = useCallback(
     (snapshotId: string) => {
-      setStore((prev) => {
-        const s = prev as Game2048Store;
-        return {
-          ...s,
-          snapshots: s.snapshots.filter((sn) => sn.id !== snapshotId),
-        };
-      });
+      deleteSnapshot(snapshotId);
     },
-    [setStore],
+    [deleteSnapshot],
   );
 
   return (

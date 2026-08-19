@@ -1,3 +1,4 @@
+import { differenceInCalendarDays } from "date-fns";
 import React, { useMemo } from "react";
 import { Dimensions, StyleSheet, View } from "react-native";
 import { useTheme } from "react-native-paper";
@@ -14,7 +15,6 @@ const PADDING_TOP = 16;
 const PADDING_BOTTOM = 24;
 const DOT_RADIUS = 4;
 const MINUTES_IN_DAY = 24 * 60;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const Y_LABELS = [
   { label: "0:00", minutes: 0 },
@@ -42,11 +42,13 @@ export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
     const sorted = [...sessions].sort(
       (a, b) => a.startTimestampMs - b.startTimestampMs,
     );
-    const firstDay = startOfDay(sorted[0].startTimestampMs);
+    const firstDay = sorted[0].startTimestampMs;
 
     return sorted.map((session) => {
-      const dayOffset =
-        (startOfDay(session.startTimestampMs) - firstDay) / MS_PER_DAY;
+      const dayOffset = getCalendarDayOffset(
+        session.startTimestampMs,
+        firstDay,
+      );
       const d = new Date(session.startTimestampMs);
       const minuteOfDay = d.getHours() * 60 + d.getMinutes();
       return { dayOffset, minuteOfDay };
@@ -66,7 +68,6 @@ export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
   return (
     <View style={styles.container} testID="sleep-drift-chart">
       <Svg width={chartWidth} height={CHART_HEIGHT}>
-        {/* Y-axis gridlines and labels */}
         {Y_LABELS.map(({ label, minutes }) => (
           <React.Fragment key={label}>
             <Line
@@ -91,7 +92,6 @@ export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
           </React.Fragment>
         ))}
 
-        {/* X-axis baseline */}
         <Line
           x1={PADDING_LEFT}
           y1={CHART_HEIGHT - PADDING_BOTTOM}
@@ -101,7 +101,6 @@ export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
           strokeWidth={1}
         />
 
-        {/* Y-axis */}
         <Line
           x1={PADDING_LEFT}
           y1={PADDING_TOP}
@@ -111,7 +110,6 @@ export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
           strokeWidth={1}
         />
 
-        {/* Data points */}
         {dataPoints.map((point, i) => (
           <Circle
             key={i}
@@ -127,12 +125,6 @@ export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
   );
 }
 
-function startOfDay(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
@@ -140,3 +132,10 @@ const styles = StyleSheet.create({
     marginVertical: spacing.sm,
   },
 });
+
+export function getCalendarDayOffset(
+  timestampMs: number,
+  firstTimestampMs: number,
+): number {
+  return differenceInCalendarDays(timestampMs, firstTimestampMs);
+}

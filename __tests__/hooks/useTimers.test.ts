@@ -1,4 +1,5 @@
 import notifee from "@notifee/react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
@@ -93,6 +94,30 @@ describe("useTimers", () => {
     });
 
     expect(result.current.timers[0].remainingMs).toBe(7000);
+  });
+
+  it("does not persist display ticks before a timer completes", async () => {
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useTimers(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await result.current.addTimer(10000);
+    });
+    jest.clearAllMocks();
+
+    (Date.now as jest.Mock).mockReturnValue(3000);
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+
+    (Date.now as jest.Mock).mockReturnValue(11000);
+    act(() => {
+      jest.advanceTimersByTime(8000);
+    });
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
   });
 
   it("should support multiple timers running independently", async () => {

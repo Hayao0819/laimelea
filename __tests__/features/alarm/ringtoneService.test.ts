@@ -1,4 +1,4 @@
-import { NativeModules } from "react-native";
+import { NativeModules, PermissionsAndroid, Platform } from "react-native";
 
 import {
   acknowledgeNativeAlarmDeliveries,
@@ -236,6 +236,87 @@ describe("ringtoneService", () => {
         scheduleAlarmAudio("alarm-1", 1234, null, 0, 0),
       ).rejects.toThrow("Alarm audio module is unavailable");
       await expect(cancelAlarmAudio("alarm-1")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("shared audio permissions", () => {
+    const originalOS = Platform.OS;
+    const originalVersion = Platform.Version;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      NativeModules.RingtoneModule = mockModule;
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+      delete NativeModules.RingtoneModule;
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: originalOS,
+      });
+      Object.defineProperty(Platform, "Version", {
+        configurable: true,
+        value: originalVersion,
+      });
+    });
+
+    it("requests READ_EXTERNAL_STORAGE on Android 8 through 12", async () => {
+      Object.defineProperty(Platform, "Version", {
+        configurable: true,
+        value: 32,
+      });
+      jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(false);
+      jest
+        .spyOn(PermissionsAndroid, "request")
+        .mockResolvedValue(PermissionsAndroid.RESULTS.GRANTED);
+      mockModule.getAlarmRingtones.mockResolvedValue([]);
+
+      await getAlarmRingtones();
+
+      expect(PermissionsAndroid.check).toHaveBeenCalledWith(
+        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+      );
+      expect(PermissionsAndroid.request).toHaveBeenCalledWith(
+        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+      );
+      expect(mockModule.getAlarmRingtones).toHaveBeenCalledTimes(1);
+    });
+
+    it("requests READ_MEDIA_AUDIO on Android 13 and newer", async () => {
+      Object.defineProperty(Platform, "Version", {
+        configurable: true,
+        value: 33,
+      });
+      jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(true);
+      jest.spyOn(PermissionsAndroid, "request");
+      mockModule.getAlarmRingtones.mockResolvedValue([]);
+
+      await getAlarmRingtones();
+
+      expect(PermissionsAndroid.check).toHaveBeenCalledWith(
+        PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
+      );
+      expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+      expect(mockModule.getAlarmRingtones).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not query ringtones when the user denies media access", async () => {
+      Object.defineProperty(Platform, "Version", {
+        configurable: true,
+        value: 32,
+      });
+      jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(false);
+      jest
+        .spyOn(PermissionsAndroid, "request")
+        .mockResolvedValue(PermissionsAndroid.RESULTS.DENIED);
+
+      await expect(getAlarmRingtones()).resolves.toEqual([]);
+      expect(mockModule.getAlarmRingtones).not.toHaveBeenCalled();
     });
   });
 });

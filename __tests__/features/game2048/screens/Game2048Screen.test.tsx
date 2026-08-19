@@ -15,7 +15,10 @@ import {
   createNewGame,
   move,
 } from "../../../../src/features/game2048/logic/gameEngine";
-import type { Game2048Store } from "../../../../src/features/game2048/logic/gameTypes";
+import type {
+  Game2048Store,
+  GameSnapshot,
+} from "../../../../src/features/game2048/logic/gameTypes";
 import { Game2048Screen } from "../../../../src/features/game2048/screens/Game2048Screen";
 import { DEFAULT_SETTINGS } from "../../../../src/models/Settings";
 
@@ -81,6 +84,17 @@ function createGameOverStore() {
       moveCount: 50,
     },
   });
+}
+
+function createSnapshot(id: string, score: number): GameSnapshot {
+  const state = createNewGame(4);
+  return {
+    id,
+    name: `Save ${id}`,
+    state: { ...state, score },
+    timestamp: 1700000000000,
+    parentSnapshotId: null,
+  };
 }
 
 async function renderWithProviders(store = createInitializedStore()) {
@@ -265,6 +279,30 @@ describe("Game2048Screen", () => {
       const snapshots = store.get(resolvedStoreAtom).snapshots;
       expect(snapshots).toHaveLength(1);
       expect(snapshots[0].name).toMatch(/^Save/);
+    });
+
+    it("loads a selected snapshot", async () => {
+      const snapshot = createSnapshot("saved-game", 250);
+      const store = createInitializedStore({ snapshots: [snapshot] });
+      const { getByTestId } = await renderWithProviders(store);
+
+      await fireEvent.press(getByTestId("open-saves-button"));
+      await fireEvent.press(getByTestId("load-saved-game"));
+
+      const loaded = store.get(resolvedStoreAtom);
+      expect(loaded.currentGame).toEqual(snapshot.state);
+      expect(loaded.activeSnapshotId).toBe(snapshot.id);
+    });
+
+    it("deletes a snapshot from the save list", async () => {
+      const snapshot = createSnapshot("remove-me", 500);
+      const store = createInitializedStore({ snapshots: [snapshot] });
+      const { getByTestId } = await renderWithProviders(store);
+
+      await fireEvent.press(getByTestId("open-saves-button"));
+      await fireEvent.press(getByTestId("delete-remove-me"));
+
+      expect(store.get(resolvedStoreAtom).snapshots).toEqual([]);
     });
   });
 

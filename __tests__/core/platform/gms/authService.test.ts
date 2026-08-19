@@ -1,3 +1,5 @@
+import Config from "react-native-config";
+
 import { createGmsAuthService } from "../../../../src/core/platform/gms/authService";
 
 const mockHasPlayServices = jest.fn();
@@ -22,6 +24,7 @@ describe("createGmsAuthService", () => {
     mockSignIn.mockReset();
     mockSignOut.mockReset();
     mockGetTokens.mockReset();
+    mockConfigure.mockReset();
   });
 
   describe("signIn", () => {
@@ -116,5 +119,46 @@ describe("createGmsAuthService", () => {
 
       expect(available).toBe(false);
     });
+  });
+
+  it("requests Drive access without a server authorization code", () => {
+    createGmsAuthService();
+
+    expect(mockConfigure).toHaveBeenCalledWith({
+      webClientId: "test-web-client-id.apps.googleusercontent.com",
+      scopes: ["https://www.googleapis.com/auth/drive.appdata"],
+      offlineAccess: false,
+    });
+  });
+
+  it("does not throw when Google Sign-In configuration fails", async () => {
+    mockConfigure.mockImplementation(() => {
+      throw new Error("invalid configuration");
+    });
+
+    const auth = createGmsAuthService();
+
+    await expect(auth.isAvailable()).resolves.toBe(false);
+    await expect(auth.getAccessToken()).resolves.toBeNull();
+    await expect(auth.signIn()).rejects.toThrow("web client ID");
+  });
+});
+
+describe("createGmsAuthService without a web client ID", () => {
+  it("reports that Google backup cannot be used", async () => {
+    const originalClientId = Config.GOOGLE_WEB_CLIENT_ID;
+    Config.GOOGLE_WEB_CLIENT_ID = "";
+    mockConfigure.mockClear();
+
+    try {
+      const auth = createGmsAuthService();
+
+      await expect(auth.isAvailable()).resolves.toBe(false);
+      await expect(auth.getAccessToken()).resolves.toBeNull();
+      await expect(auth.signIn()).rejects.toThrow("web client ID");
+      expect(mockConfigure).not.toHaveBeenCalled();
+    } finally {
+      Config.GOOGLE_WEB_CLIENT_ID = originalClientId;
+    }
   });
 });

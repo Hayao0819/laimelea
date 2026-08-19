@@ -16,7 +16,7 @@ output "manual_setup_instructions" {
     1. OAuth同意画面を設定:
        https://console.cloud.google.com/apis/credentials/consent?project=${google_project.laimelea.project_id}
 
-    2. Web Client ID を作成（AOSP用 + GMS用）:
+    2. Web Client ID を作成（GMS用）:
        https://console.cloud.google.com/apis/credentials/oauthclient?project=${google_project.laimelea.project_id}
        - Application Type: Web application
        - Name: Laimelea Web Client
@@ -26,8 +26,8 @@ output "manual_setup_instructions" {
        - Package name: com.hayao0819.laimelea
        - SHA-1: (keytoolで取得した値)
 
-    4. 取得したClient IDを以下に設定:
-       - .env → GOOGLE_OAUTH_CLIENT_ID, GOOGLE_WEB_CLIENT_ID
+    4. 取得したWeb Client IDを以下に設定:
+       - .env → GOOGLE_WEB_CLIENT_ID
   EOT
 }
 

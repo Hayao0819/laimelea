@@ -11,13 +11,11 @@ export const STORAGE_KEYS = {
   BACKUP_DATA: "@laimelea/backup_data",
   BACKUP_TIMESTAMP: "@laimelea/backup_timestamp",
   PENDING_BACKUP_RESTORE: "@laimelea/pending_backup_restore",
-  AOSP_AUTH_STATE: "@laimelea/aosp_auth_state",
   HMS_AUTH_STATE: "@laimelea/hms_auth_state",
   GAME_2048: "@laimelea/game_2048",
   STOPWATCH_STATE: "@laimelea/stopwatch_state",
 } as const;
 
 export const SECURE_STORAGE_SERVICES = {
-  AOSP_AUTH_STATE: "com.hayao0819.laimelea.auth.aosp",
   HMS_AUTH_STATE: "com.hayao0819.laimelea.auth.hms",
 } as const;

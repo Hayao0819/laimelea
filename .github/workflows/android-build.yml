@@ -91,6 +91,17 @@ jobs:
           echo "::error::Release signing credentials are missing or invalid"
           exit 1
 
+      - name: Require Google Sign-In configuration
+        if: matrix.variant == 'release' && github.event_name != 'pull_request' && steps.decode-keystore.outputs.verified == 'true'
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "::error::GOOGLE_WEB_CLIENT_ID is required for release builds"
+            exit 1
+          fi
+          printf 'GOOGLE_WEB_CLIENT_ID=%s\n' "$GOOGLE_WEB_CLIENT_ID" > .env.release
+
       - name: Build APK
         id: build
         if: matrix.variant == 'debug' || (github.event_name != 'pull_request' && steps.decode-keystore.outputs.verified == 'true')
@@ -99,6 +110,7 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ vars.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          ENVFILE: ${{ matrix.variant == 'release' && '.env.release' || '.env' }}
         run: nix develop -c bash -c 'cd android && ./gradlew ${{ matrix.gradle-task }} ${{ matrix.gradle-flags }}'
 
       - name: Verify release APK signature

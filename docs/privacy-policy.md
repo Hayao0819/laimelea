@@ -77,7 +77,7 @@ You may revoke any of these permissions at any time through your [Google Account
 ### Platform Variants
 
 - **GMS devices** (with Google Play Services): Authentication uses Google Sign-In natively. Calendar events are read from the local Android CalendarProvider. Backups use Google Drive. Sleep data can be read from Health Connect.
-- **AOSP devices** (without Google Play Services): Authentication uses OAuth2 with PKCE through Chrome Custom Tabs. Calendar events are read from the local Android CalendarProvider. Backups are stored locally. Sleep data is entered manually.
+- **AOSP devices** (without Google Play Services): Google authentication is disabled. Calendar events are read from the local Android CalendarProvider. Backups are stored locally. Sleep data is entered manually.
 
 ## Data Sharing
 

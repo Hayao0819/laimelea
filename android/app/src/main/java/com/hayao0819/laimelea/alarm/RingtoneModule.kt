@@ -767,11 +767,7 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun getAlarmRingtones(promise: Promise) {
         try {
-            if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_MEDIA_AUDIO) !=
-                    PackageManager.PERMISSION_GRANTED
-            ) {
+            if (!canReadExternalAudio()) {
                 promise.resolve(Arguments.createArray())
                 return
             }
@@ -1081,6 +1077,15 @@ class RingtoneModule(reactContext: ReactApplicationContext) :
             runCatching { player.release() }
         }
         currentPlayer = null
+    }
+
+    private fun canReadExternalAudio(): Boolean {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            android.Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        return reactApplicationContext.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun legacyAlarmAudioPendingIntent(alarmId: String): PendingIntent {

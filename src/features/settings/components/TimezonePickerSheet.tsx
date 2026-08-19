@@ -66,11 +66,44 @@ function TimezoneItem({
   );
 }
 
+interface TimezoneResetOption {
+  label: string;
+  testID: string;
+  value: string | null;
+}
+
+function TimezoneResetItem({
+  option,
+  selected,
+  onPress,
+}: {
+  option: TimezoneResetOption;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const renderIcon = useCallback(
+    (props: { color: string; style: object }) => (
+      <List.Icon {...props} icon={selected ? "check" : "clock-outline"} />
+    ),
+    [selected],
+  );
+
+  return (
+    <List.Item
+      title={option.label}
+      onPress={onPress}
+      left={renderIcon}
+      testID={option.testID}
+    />
+  );
+}
+
 interface Props {
   visible: boolean;
   onDismiss: () => void;
-  onSelect: (tz: string) => void;
+  onSelect: (tz: string | null) => void;
   selectedTz: string | null;
+  resetOption: TimezoneResetOption;
 }
 
 export function TimezonePickerSheet({
@@ -78,6 +111,7 @@ export function TimezonePickerSheet({
   onDismiss,
   onSelect,
   selectedTz,
+  resetOption,
 }: Props) {
   const theme = useTheme();
   const [query, setQuery] = useState("");
@@ -102,6 +136,11 @@ export function TimezonePickerSheet({
     [onSelect, selectedTz],
   );
 
+  const selectResetOption = useCallback(() => {
+    onSelect(resetOption.value);
+    setQuery("");
+  }, [onSelect, resetOption.value]);
+
   return (
     <Portal>
       <Modal
@@ -123,6 +162,11 @@ export function TimezonePickerSheet({
           style={styles.searchbar}
           testID="timezone-searchbar"
         />
+        <TimezoneResetItem
+          option={resetOption}
+          selected={selectedTz === resetOption.value}
+          onPress={selectResetOption}
+        />
         <FlatList
           data={filtered}
           renderItem={renderItem}
@@ -139,7 +183,6 @@ const styles = StyleSheet.create({
     margin: spacing.lg,
     borderRadius: radius.lg,
     maxHeight: "80%",
-    overflow: "hidden",
   },
   searchbar: {
     margin: spacing.md,

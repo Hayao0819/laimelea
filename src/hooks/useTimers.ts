@@ -1,5 +1,5 @@
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
 import { timersAtom } from "../atoms/timerAtoms";
@@ -30,7 +30,9 @@ function generateId(): string {
 
 export function useTimers(): UseTimersReturn {
   const [timers, setTimers] = useAtom(timersAtom);
+  const [displayTimers, setDisplayTimers] = useState(timers);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timersRef = useRef(timers);
 
   const clearTick = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -40,27 +42,42 @@ export function useTimers(): UseTimersReturn {
   }, []);
 
   const tick = useCallback(() => {
-    setTimers((prev) => {
-      const now = Date.now();
-      let changed = false;
-      const next = prev.map((t) => {
-        if (!t.isRunning || t.startedAt === null) return t;
-        const elapsed = now - t.startedAt + t.pausedElapsedMs;
-        const remaining = Math.max(0, t.durationMs - elapsed);
-        changed = true;
-        if (remaining <= 0) {
-          return { ...t, remainingMs: 0, isRunning: false };
-        }
-        return { ...t, remainingMs: remaining };
-      });
-      return changed ? next : prev;
+    const now = Date.now();
+    const completedIds: string[] = [];
+    const nextTimers = timersRef.current.map((timer) => {
+      if (!timer.isRunning || timer.startedAt === null) return timer;
+      const elapsed = now - timer.startedAt + timer.pausedElapsedMs;
+      const remainingMs = Math.max(0, timer.durationMs - elapsed);
+      if (remainingMs <= 0) {
+        completedIds.push(timer.id);
+        return { ...timer, remainingMs: 0, isRunning: false };
+      }
+      return { ...timer, remainingMs };
     });
+
+    timersRef.current = nextTimers;
+    setDisplayTimers(nextTimers);
+
+    if (completedIds.length > 0) {
+      setTimers((previousTimers) =>
+        previousTimers.map((timer) =>
+          completedIds.includes(timer.id)
+            ? { ...timer, remainingMs: 0, isRunning: false }
+            : timer,
+        ),
+      );
+    }
   }, [setTimers]);
 
   const startTick = useCallback(() => {
     if (intervalRef.current !== null) return;
     intervalRef.current = setInterval(tick, TICK_INTERVAL);
   }, [tick]);
+
+  useEffect(() => {
+    timersRef.current = timers;
+    setDisplayTimers(timers);
+  }, [timers]);
 
   useEffect(() => {
     const hasRunning = timers.some((t) => t.isRunning);
@@ -200,7 +217,7 @@ export function useTimers(): UseTimersReturn {
   );
 
   return {
-    timers,
+    timers: displayTimers,
     addTimer,
     deleteTimer,
     pauseTimer,

@@ -1,10 +1,34 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 import type { PlatformAuthService } from "../types";
-import { GMS_AUTH_CONFIG } from "./authConfig";
+import { GMS_AUTH_CONFIG, isGmsAuthConfigured } from "./authConfig";
+
+function createUnavailableGmsAuthService(): PlatformAuthService {
+  const unavailable = () =>
+    Promise.reject(
+      new Error(
+        "Google backup is unavailable because its web client ID is not configured",
+      ),
+    );
+
+  return {
+    isAvailable: async () => false,
+    signIn: unavailable,
+    signOut: async () => undefined,
+    getAccessToken: async () => null,
+  };
+}
 
 export function createGmsAuthService(): PlatformAuthService {
-  GoogleSignin.configure(GMS_AUTH_CONFIG);
+  if (!isGmsAuthConfigured()) {
+    return createUnavailableGmsAuthService();
+  }
+
+  try {
+    GoogleSignin.configure(GMS_AUTH_CONFIG);
+  } catch {
+    return createUnavailableGmsAuthService();
+  }
 
   return {
     async isAvailable() {

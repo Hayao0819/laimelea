@@ -39,7 +39,6 @@ export const resolvedStoreAtom = atom<Game2048Store>((get) => {
   return { ...DEFAULT_STORE, ...stored };
 });
 
-// Derived read atoms
 export const currentGameAtom = atom(
   (get) => get(resolvedStoreAtom).currentGame,
 );
@@ -59,7 +58,6 @@ export const activeSnapshotIdAtom = atom(
   (get) => get(resolvedStoreAtom).activeSnapshotId,
 );
 
-// Write atoms for game actions
 export const pushHistoryAtom = atom(null, (get, set, newState: GameState) => {
   const store = get(resolvedStoreAtom);
   const history = [...store.history, store.currentGame].slice(
@@ -185,6 +183,22 @@ export const loadSnapshotAtom = atom(
     });
   },
 );
+
+export const acknowledgeWinAtom = atom(null, (get, set) => {
+  const store = get(resolvedStoreAtom);
+  set(game2048StoreAtom, {
+    ...store,
+    currentGame: { ...store.currentGame, wonAcknowledged: true },
+  });
+});
+
+export const deleteSnapshotAtom = atom(null, (get, set, snapshotId: string) => {
+  const store = get(resolvedStoreAtom);
+  set(game2048StoreAtom, {
+    ...store,
+    snapshots: store.snapshots.filter((snapshot) => snapshot.id !== snapshotId),
+  });
+});
 
 export const milestoneAutoSaveAtom = atom(
   null,

@@ -1,8 +1,8 @@
-import { useAtom } from "jotai";
-import { useCallback, useEffect, useRef } from "react";
+import { useAtom, useAtomValue } from "jotai";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
-import { stopwatchAtom } from "../atoms/timerAtoms";
+import { stopwatchAtom, stopwatchHydratedAtom } from "../atoms/timerAtoms";
 
 const TICK_INTERVAL = 50;
 
@@ -19,10 +19,13 @@ export interface UseStopwatchReturn {
 
 export function useStopwatch(): UseStopwatchReturn {
   const [stopwatch, setStopwatch] = useAtom(stopwatchAtom);
+  const isHydrated = useAtomValue(stopwatchHydratedAtom);
+  const [elapsedMs, setElapsedMs] = useState(stopwatch.elapsedMs);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number>(0);
-  const previousElapsedRef = useRef<number>(0);
-  const restoredRef = useRef(false);
+  const elapsedMsRef = useRef(stopwatch.elapsedMs);
+  const isRunningRef = useRef(false);
+  const hasLocalActionRef = useRef(false);
 
   const clearTick = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -32,35 +35,43 @@ export function useStopwatch(): UseStopwatchReturn {
   }, []);
 
   const tick = useCallback(() => {
-    const elapsed =
-      Date.now() - startedAtRef.current + previousElapsedRef.current;
-    setStopwatch((prev) => ({ ...prev, elapsedMs: elapsed }));
-  }, [setStopwatch]);
+    if (!isRunningRef.current) return;
+    const elapsed = Math.max(0, Date.now() - startedAtRef.current);
+    elapsedMsRef.current = elapsed;
+    setElapsedMs(elapsed);
+  }, []);
 
   const startTick = useCallback(() => {
     clearTick();
     intervalRef.current = setInterval(tick, TICK_INTERVAL);
   }, [clearTick, tick]);
 
-  // Restore refs from persisted atom state on mount
   useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
+    if (!isHydrated || hasLocalActionRef.current) return;
 
     if (stopwatch.isRunning && stopwatch.startedAt !== null) {
-      // Derive startedAtRef so that elapsed computes correctly from now:
-      // elapsed = Date.now() - startedAtRef + 0 should equal real elapsed
-      // Real elapsed = Date.now() - original_startedAt + accumulated_before
-      // Since atom.startedAt is the original, and accumulated pauses are
-      // implicitly encoded in elapsedMs, we use:
-      // startedAtRef = Date.now() - elapsedMs (so the first tick is correct)
-      startedAtRef.current = Date.now() - stopwatch.elapsedMs;
-      previousElapsedRef.current = 0;
+      const elapsed = Math.max(
+        stopwatch.elapsedMs,
+        Date.now() - stopwatch.startedAt,
+      );
+      startedAtRef.current = Date.now() - elapsed;
+      elapsedMsRef.current = elapsed;
+      isRunningRef.current = true;
+      setElapsedMs(elapsed);
       startTick();
-    } else if (!stopwatch.isRunning && stopwatch.elapsedMs > 0) {
-      previousElapsedRef.current = stopwatch.elapsedMs;
-    } else if (stopwatch.isRunning && stopwatch.startedAt === null) {
-      // Abnormal state: running but no startedAt — reset
+    } else if (!stopwatch.isRunning) {
+      clearTick();
+      startedAtRef.current = 0;
+      elapsedMsRef.current = stopwatch.elapsedMs;
+      isRunningRef.current = false;
+      setElapsedMs(stopwatch.elapsedMs);
+    } else {
+      hasLocalActionRef.current = true;
+      clearTick();
+      startedAtRef.current = 0;
+      elapsedMsRef.current = 0;
+      isRunningRef.current = false;
+      setElapsedMs(0);
       setStopwatch({
         elapsedMs: 0,
         isRunning: false,
@@ -68,13 +79,12 @@ export function useStopwatch(): UseStopwatchReturn {
         laps: [],
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clearTick, isHydrated, setStopwatch, startTick, stopwatch]);
 
   // Re-sync on AppState foreground resume
   useEffect(() => {
     const handleAppState = (state: AppStateStatus) => {
-      if (state === "active" && startedAtRef.current > 0) {
+      if (state === "active" && isRunningRef.current) {
         tick();
       }
     };
@@ -83,9 +93,12 @@ export function useStopwatch(): UseStopwatchReturn {
   }, [tick]);
 
   const start = useCallback(() => {
+    hasLocalActionRef.current = true;
     const now = Date.now();
     startedAtRef.current = now;
-    previousElapsedRef.current = 0;
+    elapsedMsRef.current = 0;
+    isRunningRef.current = true;
+    setElapsedMs(0);
     setStopwatch({
       elapsedMs: 0,
       isRunning: true,
@@ -96,28 +109,43 @@ export function useStopwatch(): UseStopwatchReturn {
   }, [setStopwatch, startTick]);
 
   const pause = useCallback(() => {
-    if (!stopwatch.isRunning) return;
-    previousElapsedRef.current += Date.now() - startedAtRef.current;
+    if (!isRunningRef.current) return;
+    hasLocalActionRef.current = true;
+    const elapsed = Math.max(0, Date.now() - startedAtRef.current);
+    elapsedMsRef.current = elapsed;
+    isRunningRef.current = false;
     clearTick();
     setStopwatch((prev) => ({
       ...prev,
+      elapsedMs: elapsed,
       isRunning: false,
       startedAt: null,
     }));
-  }, [stopwatch.isRunning, clearTick, setStopwatch]);
+    setElapsedMs(elapsed);
+  }, [clearTick, setStopwatch]);
 
   const resume = useCallback(() => {
-    if (stopwatch.isRunning) return;
+    if (isRunningRef.current) return;
+    hasLocalActionRef.current = true;
     const now = Date.now();
-    startedAtRef.current = now;
-    setStopwatch((prev) => ({ ...prev, isRunning: true, startedAt: now }));
+    startedAtRef.current = now - elapsedMsRef.current;
+    isRunningRef.current = true;
+    setStopwatch((prev) => ({
+      ...prev,
+      elapsedMs: elapsedMsRef.current,
+      isRunning: true,
+      startedAt: startedAtRef.current,
+    }));
     startTick();
-  }, [stopwatch.isRunning, setStopwatch, startTick]);
+  }, [setStopwatch, startTick]);
 
   const reset = useCallback(() => {
+    hasLocalActionRef.current = true;
     clearTick();
     startedAtRef.current = 0;
-    previousElapsedRef.current = 0;
+    elapsedMsRef.current = 0;
+    isRunningRef.current = false;
+    setElapsedMs(0);
     setStopwatch({
       elapsedMs: 0,
       isRunning: false,
@@ -127,19 +155,24 @@ export function useStopwatch(): UseStopwatchReturn {
   }, [clearTick, setStopwatch]);
 
   const lap = useCallback(() => {
-    if (!stopwatch.isRunning) return;
+    if (!isRunningRef.current) return;
+    hasLocalActionRef.current = true;
+    const elapsed = Math.max(0, Date.now() - startedAtRef.current);
+    elapsedMsRef.current = elapsed;
+    setElapsedMs(elapsed);
     setStopwatch((prev) => ({
       ...prev,
-      laps: [...prev.laps, prev.elapsedMs],
+      elapsedMs: elapsed,
+      laps: [...prev.laps, elapsed],
     }));
-  }, [stopwatch.isRunning, setStopwatch]);
+  }, [setStopwatch]);
 
   useEffect(() => {
     return clearTick;
   }, [clearTick]);
 
   return {
-    elapsedMs: stopwatch.elapsedMs,
+    elapsedMs,
     isRunning: stopwatch.isRunning,
     laps: stopwatch.laps,
     start,

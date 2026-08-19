@@ -1,5 +1,4 @@
 import { atom } from "jotai";
-import { atomWithStorage, unwrap } from "jotai/utils";
 
 import { createAsyncStorage } from "../core/storage/asyncStorageAdapter";
 import { STORAGE_KEYS } from "../core/storage/keys";
@@ -12,56 +11,75 @@ const DEFAULT_STOPWATCH: StopwatchState = {
   laps: [],
 };
 
-// Base storage atoms — persisted to AsyncStorage
-const timersStorageAtom = atomWithStorage<TimerState[]>(
+interface PersistedValue<T> {
+  value: T;
+  hydrated: boolean;
+  hasLocalWrite: boolean;
+}
+
+function createPersistedAtom<T>(key: string, initialValue: T) {
+  const storage = createAsyncStorage<T>();
+  const stateAtom = atom<PersistedValue<T>>({
+    value: initialValue,
+    hydrated: false,
+    hasLocalWrite: false,
+  });
+
+  stateAtom.onMount = (setState) => {
+    let mounted = true;
+
+    Promise.resolve(storage.getItem(key, initialValue))
+      .then((storedValue) => {
+        if (!mounted) return;
+        setState((previous) => ({
+          ...previous,
+          value: previous.hasLocalWrite ? previous.value : storedValue,
+          hydrated: true,
+        }));
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setState((previous) => ({ ...previous, hydrated: true }));
+      });
+
+    return () => {
+      mounted = false;
+    };
+  };
+
+  const valueAtom = atom(
+    (get) => get(stateAtom).value,
+    (get, set, update: T | ((previous: T) => T)) => {
+      const current = get(stateAtom).value;
+      const nextValue =
+        typeof update === "function"
+          ? (update as (previous: T) => T)(current)
+          : update;
+
+      set(stateAtom, {
+        value: nextValue,
+        hydrated: true,
+        hasLocalWrite: true,
+      });
+      return storage.setItem(key, nextValue);
+    },
+  );
+
+  return {
+    valueAtom,
+    hydratedAtom: atom((get) => get(stateAtom).hydrated),
+  };
+}
+
+const timerPersistence = createPersistedAtom<TimerState[]>(
   STORAGE_KEYS.TIMER_STATE,
   [],
-  createAsyncStorage<TimerState[]>(),
-  { getOnInit: true },
 );
-
-const stopwatchStorageAtom = atomWithStorage<StopwatchState>(
+const stopwatchPersistence = createPersistedAtom<StopwatchState>(
   STORAGE_KEYS.STOPWATCH_STATE,
   DEFAULT_STOPWATCH,
-  createAsyncStorage<StopwatchState>(),
-  { getOnInit: true },
 );
 
-// Unwrapped sync read atoms — resolve Promise to sync value with fallback
-const syncTimersAtom = unwrap(timersStorageAtom, (prev) => prev ?? []);
-const syncStopwatchAtom = unwrap(
-  stopwatchStorageAtom,
-  (prev) => prev ?? DEFAULT_STOPWATCH,
-);
-
-// Public read/write atoms — sync read, persisted write
-// Write handlers resolve the current value via the sync (unwrapped) atom
-// before calling function updaters, because atomWithStorage's baseAtom
-// may hold a Promise before async storage resolves.
-export const timersAtom = atom(
-  (get) => get(syncTimersAtom) ?? [],
-  (get, set, update: TimerState[] | ((prev: TimerState[]) => TimerState[])) => {
-    if (typeof update === "function") {
-      const current = get(syncTimersAtom) ?? [];
-      set(timersStorageAtom, update(current));
-    } else {
-      set(timersStorageAtom, update);
-    }
-  },
-);
-
-export const stopwatchAtom = atom(
-  (get) => get(syncStopwatchAtom) ?? DEFAULT_STOPWATCH,
-  (
-    get,
-    set,
-    update: StopwatchState | ((prev: StopwatchState) => StopwatchState),
-  ) => {
-    if (typeof update === "function") {
-      const current = get(syncStopwatchAtom) ?? DEFAULT_STOPWATCH;
-      set(stopwatchStorageAtom, update(current));
-    } else {
-      set(stopwatchStorageAtom, update);
-    }
-  },
-);
+export const timersAtom = timerPersistence.valueAtom;
+export const stopwatchAtom = stopwatchPersistence.valueAtom;
+export const stopwatchHydratedAtom = stopwatchPersistence.hydratedAtom;

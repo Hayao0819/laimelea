@@ -259,22 +259,6 @@ GMS 端末での `@react-native-google-signin` に使用する。
 
 作成後に表示されるクライアント IDをメモ → `.env` の `GOOGLE_WEB_CLIENT_ID` に設定。
 
-### 5-2b. iOS Client ID を作成
-
-AOSP 端末での `react-native-app-auth`（PKCE + Chrome Custom Tabs）によるバックアップ用認証に使用する（Android 上でも必要）。
-
-> **Web クライアントではカスタム URI スキームリダイレクトが許可されない**。`react-native-app-auth` は `com.googleusercontent.apps.{GUID}:/oauth2redirect/google` 形式のカスタムスキームを使うため、このスキームをサポートする **iOS クライアント**が必要。
-
-「認証情報を作成」→「OAuth クライアント ID」を選択。
-
-| 項目                   | 値                       |
-| ---------------------- | ------------------------ |
-| アプリケーションの種類 | iOS                      |
-| 名前                   | `Laimelea OAuth Client`  |
-| バンドル ID            | `com.hayao0819.laimelea` |
-
-作成後に表示されるクライアント IDをメモ → `.env` の `GOOGLE_OAUTH_CLIENT_ID` に設定。
-
 ### 5-3. Android Client ID を作成
 
 GMS 端末（Google Play Services 搭載端末）で `@react-native-google-signin` を使う場合に必要。
@@ -321,11 +305,10 @@ keytool -list -v \
 
 ### 5-4. Client ID の使い分け
 
-| Client ID                | 用途                                                              |
-| ------------------------ | ----------------------------------------------------------------- |
-| `GOOGLE_OAUTH_CLIENT_ID` | AOSP 端末でのバックアップ認証（`react-native-app-auth` + PKCE）   |
-| `GOOGLE_WEB_CLIENT_ID`   | GMS 端末でのバックアップ認証（`@react-native-google-signin`）     |
-| Android Client ID        | GMS 端末で `@react-native-google-signin` の ID トークン検証に必要 |
+| Client ID              | 用途                                                              |
+| ---------------------- | ----------------------------------------------------------------- |
+| `GOOGLE_WEB_CLIENT_ID` | GMS 端末でのバックアップ認証（`@react-native-google-signin`）     |
+| Android Client ID      | GMS 端末で `@react-native-google-signin` の ID トークン検証に必要 |
 
 カレンダー読取は Android CalendarProvider（`READ_CALENDAR` パーミッション）を使用するため、OAuth 認証は不要。
 
@@ -341,16 +324,12 @@ cp .env.example .env
 `.env` を編集:
 
 ```env
-GOOGLE_OAUTH_CLIENT_ID=111111111-yyyyyyyyy.apps.googleusercontent.com
 GOOGLE_WEB_CLIENT_ID=123456789-xxxxxxxxx.apps.googleusercontent.com
 ```
 
-| 変数名                   | 使用先                               | 値のソース                |
-| ------------------------ | ------------------------------------ | ------------------------- |
-| `GOOGLE_OAUTH_CLIENT_ID` | `react-native-app-auth`（PKCE）      | iOS Client ID (Step 5-2b) |
-| `GOOGLE_WEB_CLIENT_ID`   | `@react-native-google-signin`（GMS） | Web Client ID (Step 5-2)  |
-
-> **2つの Client ID は異なる値にする必要がある**。`GOOGLE_OAUTH_CLIENT_ID` にはカスタム URI スキームリダイレクトをサポートする iOS Client ID を設定すること。
+| 変数名                 | 使用先                               | 値のソース               |
+| ---------------------- | ------------------------------------ | ------------------------ |
+| `GOOGLE_WEB_CLIENT_ID` | `@react-native-google-signin`（GMS） | Web Client ID (Step 5-2) |
 
 ## Step 7: ビルドと認証テスト
 
@@ -383,9 +362,9 @@ pnpm react-native run-android
 
 1. **カレンダー**: アプリ起動後、カレンダータブで端末のカレンダーアプリに登録された予定が表示されることを確認（サインイン不要）
 2. **バックアップ**: Settings → バックアップ → サインインをタップ
-3. GMS 端末: ネイティブ Google サインインダイアログが表示される。AOSP 端末: Chrome Custom Tabs で Google ログイン画面が開く
-4. テストユーザーとしてログイン、Drive アプリデータへのアクセスを承認
-5. バックアップの作成・復元が動作することを確認
+3. GMS 端末ではネイティブ Google サインインダイアログが表示される。AOSP 端末ではローカルバックアップ画面が表示される
+4. GMS 端末ではテストユーザーとしてログインし、Drive アプリデータへのアクセスを承認する
+5. それぞれの端末でバックアップの作成・復元が動作することを確認
 
 ## トラブルシューティング
 
@@ -405,29 +384,11 @@ Error: Error setting billing account: ... PERMISSION_DENIED
 
 → `gcloud billing accounts list` で正しい Account ID を確認。Billing Account のオーナーまたは Billing Account User ロールが必要。
 
-### OAuth ログインで `redirect_uri_mismatch`
-
-```txt
-Error 400: redirect_uri_mismatch
-```
-
-→ `GOOGLE_OAUTH_CLIENT_ID` に正しい iOS Client ID が設定されているか確認する。`build.gradle` の `appAuthRedirectScheme` はこの Client ID の GUID から自動生成される:
-
-```groovy
-// android/app/build.gradle — 自動設定、手動変更不要
-def oauthClientGuid = oauthClientId.replace(".apps.googleusercontent.com", "")
-manifestPlaceholders = [appAuthRedirectScheme: "com.googleusercontent.apps." + oauthClientGuid]
-```
-
-### OAuth ログインで「カスタムスキームは許可されない」
-
-→ `GOOGLE_OAUTH_CLIENT_ID` に **Web Client ID** を設定している可能性がある。Web クライアントはカスタム URI スキームリダイレクトをサポートしない。Step 5-2b で作成した **iOS Client ID** を使用すること。
-
 ### OAuth ログインで `access_denied`
 
 → OAuth 同意画面でテストユーザーとして追加されているか確認。公開ステータスが「テスト」の場合、テストユーザーのみがログインできる。
 
-### `Config.GOOGLE_OAUTH_CLIENT_ID` が空文字になる
+### `Config.GOOGLE_WEB_CLIENT_ID` が空文字になる
 
 → `.env` ファイルがプロジェクトルートに存在するか確認。また、`.env` を変更した後はクリーンビルドが必要:
 
@@ -460,7 +421,6 @@ laimelea/
 │   ├── terraform.tfvars.example  # テンプレート
 │   └── README.md                 # infra 固有の説明
 └── src/core/platform/
-    ├── aosp/authConfig.ts        # Config.GOOGLE_OAUTH_CLIENT_ID を参照
     └── gms/authConfig.ts         # Config.GOOGLE_WEB_CLIENT_ID を参照
 ```
 
@@ -479,8 +439,6 @@ laimelea/
 ## 参考リンク
 
 - [Google Cloud Console](https://console.cloud.google.com/)
-- [OAuth 2.0 for Mobile & Desktop Apps](https://developers.google.com/identity/protocols/oauth2/native-app)
-- [react-native-app-auth ドキュメント](https://github.com/FormidableLabs/react-native-app-auth)
 - [@react-native-google-signin ドキュメント](https://react-native-google-signin.github.io/docs/setting-up/get-config-file)
 - [react-native-config ドキュメント](https://github.com/luggit/react-native-config)
 - [Terraform Google Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
