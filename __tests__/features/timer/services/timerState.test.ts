@@ -20,7 +20,13 @@ describe("completeTimers", () => {
     const other = makeTimer({ id: "timer-2" });
 
     expect(completeTimers([running, other], [running.id])).toEqual([
-      { ...running, remainingMs: 0, isRunning: false, startedAt: null },
+      {
+        ...running,
+        remainingMs: 0,
+        isRunning: false,
+        startedAt: null,
+        pausedElapsedMs: running.durationMs,
+      },
       other,
     ]);
   });

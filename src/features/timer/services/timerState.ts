@@ -7,7 +7,13 @@ export function completeTimers(
   const completedIds = new Set(completedTimerIds);
   return timers.map((timer) =>
     completedIds.has(timer.id) && timer.isRunning
-      ? { ...timer, remainingMs: 0, isRunning: false, startedAt: null }
+      ? {
+          ...timer,
+          remainingMs: 0,
+          isRunning: false,
+          startedAt: null,
+          pausedElapsedMs: timer.durationMs,
+        }
       : timer,
   );
 }

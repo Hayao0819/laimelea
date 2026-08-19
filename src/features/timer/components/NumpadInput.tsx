@@ -8,6 +8,7 @@ import { spacing } from "../../../app/spacing";
 
 interface Props {
   onStart: (durationMs: number) => void;
+  disabled?: boolean;
 }
 
 const PRESETS = [1, 5, 10, 30];
@@ -28,7 +29,7 @@ function digitsToMs(digits: string): number {
   );
 }
 
-export function NumpadInput({ onStart }: Props) {
+export function NumpadInput({ onStart, disabled = false }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { width: screenWidth } = useWindowDimensions();
@@ -136,7 +137,7 @@ export function NumpadInput({ onStart }: Props) {
                     style={btnStyle}
                     contentStyle={btnContentStyle}
                     labelStyle={styles.numpadLabel}
-                    disabled={digits.length === 0}
+                    disabled={disabled || digits.length === 0}
                     testID="numpad-backspace"
                     accessibilityLabel={t("timer.backspace")}
                   >
@@ -152,7 +153,7 @@ export function NumpadInput({ onStart }: Props) {
                   style={btnStyle}
                   contentStyle={btnContentStyle}
                   labelStyle={styles.numpadLabel}
-                  disabled={digits.length >= 6}
+                  disabled={disabled || digits.length >= 6}
                   testID={`numpad-${key}`}
                   accessibilityLabel={key}
                 >
@@ -170,6 +171,7 @@ export function NumpadInput({ onStart }: Props) {
             key={min}
             mode="outlined"
             onPress={() => handlePreset(min)}
+            disabled={disabled}
             style={styles.presetButton}
             testID={`preset-${min}`}
             accessibilityLabel={t("timer.presetMin", { min })}
@@ -182,7 +184,7 @@ export function NumpadInput({ onStart }: Props) {
       <Button
         mode="contained"
         onPress={handleStart}
-        disabled={totalMs <= 0}
+        disabled={disabled || totalMs <= 0}
         style={styles.startButton}
         testID="numpad-start"
         accessibilityLabel={t("timer.start")}

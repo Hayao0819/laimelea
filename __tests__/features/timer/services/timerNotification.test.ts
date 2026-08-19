@@ -1,16 +1,26 @@
 import notifee from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
+import { getDefaultStore } from "jotai";
+import { NativeModules, Platform } from "react-native";
 
+import { timersAtom } from "../../../../src/atoms/timerAtoms";
+import { getAlarmDeliveryStatus } from "../../../../src/core/notifications/notifeeSetup";
 import { STORAGE_KEYS } from "../../../../src/core/storage/keys";
 import {
   ANDROID_TIMER_TRIGGER_LIMIT,
   cancelTimerTrigger,
   completeTimerFromNotification,
+  consumeCompletedTimerIds,
   scheduleTimerTrigger,
   showTimerCompleteNotification,
+  TimerNotificationsDisabledError,
   TimerTriggerLimitError,
 } from "../../../../src/features/timer/services/timerNotification";
+
+jest.mock("../../../../src/core/notifications/notifeeSetup", () => ({
+  getAlarmDeliveryStatus: jest.fn(),
+  TIMER_CHANNEL_ID: "timer",
+}));
 
 jest.mock("@notifee/react-native", () => ({
   __esModule: true,
@@ -19,6 +29,7 @@ jest.mock("@notifee/react-native", () => ({
     createChannel: jest.fn().mockResolvedValue("timer"),
     createTriggerNotification: jest.fn().mockResolvedValue("trigger-id"),
     cancelTriggerNotification: jest.fn().mockResolvedValue(undefined),
+    cancelNotification: jest.fn().mockResolvedValue(undefined),
     getTriggerNotificationIds: jest.fn().mockResolvedValue([]),
   },
   AndroidImportance: { DEFAULT: 3 },
@@ -35,18 +46,28 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
       storage[key] = value;
       return Promise.resolve();
     }),
+    removeItem: jest.fn((key: string) => {
+      delete storage[key];
+      return Promise.resolve();
+    }),
   },
 }));
 
 describe("showTimerCompleteNotification", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(getAlarmDeliveryStatus).mockResolvedValue({
+      notificationsEnabled: true,
+      exactAlarmsEnabled: true,
+      fullScreenIntentEnabled: true,
+    });
     (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue([]);
     Object.defineProperty(Platform, "OS", {
       configurable: true,
       value: "android",
     });
     for (const key of Object.keys(storage)) delete storage[key];
+    delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
   });
 
   it("should display notification with given label", async () => {
@@ -111,6 +132,11 @@ describe("showTimerCompleteNotification", () => {
 describe("scheduleTimerTrigger", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(getAlarmDeliveryStatus).mockResolvedValue({
+      notificationsEnabled: true,
+      exactAlarmsEnabled: true,
+      fullScreenIntentEnabled: true,
+    });
     (notifee.getTriggerNotificationIds as jest.Mock).mockResolvedValue([]);
     Object.defineProperty(Platform, "OS", {
       configurable: true,
@@ -121,6 +147,7 @@ describe("scheduleTimerTrigger", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
   });
 
   it("should schedule a trigger notification with correct timestamp", async () => {
@@ -145,6 +172,88 @@ describe("scheduleTimerTrigger", () => {
         alarmManager: { allowWhileIdle: true },
       }),
     );
+  });
+
+  it("uses Android elapsed-time scheduling when the native module is available", async () => {
+    const scheduleTimer = jest.fn().mockResolvedValue(undefined);
+    (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+      scheduleTimer,
+      cancelTimer: jest.fn(),
+      consumeCompletedTimers: jest.fn(),
+    };
+
+    await scheduleTimerTrigger({
+      id: "elapsed-timer",
+      label: "Elapsed",
+      durationMs: 10_000,
+      startedAt: -100_000,
+      pausedElapsedMs: 2_000,
+    });
+
+    expect(scheduleTimer).toHaveBeenCalledWith(
+      "elapsed-timer",
+      "Elapsed",
+      8_000,
+    );
+    expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+  });
+
+  it("schedules native Android delivery even when notifications are disabled", async () => {
+    const scheduleTimer = jest.fn().mockResolvedValue(undefined);
+    (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+      scheduleTimer,
+      cancelTimer: jest.fn(),
+      consumeCompletedTimers: jest.fn(),
+    };
+    jest.mocked(getAlarmDeliveryStatus).mockResolvedValue({
+      notificationsEnabled: false,
+      exactAlarmsEnabled: true,
+      fullScreenIntentEnabled: true,
+    });
+
+    await scheduleTimerTrigger({
+      id: "disabled-notifications",
+      label: "Timer",
+      durationMs: 10_000,
+      startedAt: 1_000,
+      pausedElapsedMs: 0,
+    });
+
+    expect(scheduleTimer).toHaveBeenCalledWith(
+      "disabled-notifications",
+      "Timer",
+      10_000,
+    );
+    expect(getAlarmDeliveryStatus).not.toHaveBeenCalled();
+  });
+
+  it("rejects the notification fallback when notifications are disabled", async () => {
+    jest.mocked(getAlarmDeliveryStatus).mockResolvedValue({
+      notificationsEnabled: false,
+      exactAlarmsEnabled: true,
+      fullScreenIntentEnabled: true,
+    });
+
+    await expect(
+      scheduleTimerTrigger({
+        id: "disabled-notifications-fallback",
+        label: "Timer",
+        durationMs: 10_000,
+        startedAt: 1_000,
+        pausedElapsedMs: 0,
+      }),
+    ).rejects.toBeInstanceOf(TimerNotificationsDisabledError);
+    expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+  });
+
+  it("includes completions recorded by native timer delivery", async () => {
+    (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+      scheduleTimer: jest.fn(),
+      cancelTimer: jest.fn(),
+      consumeCompletedTimers: jest.fn().mockResolvedValue(["native-timer"]),
+    };
+
+    await expect(consumeCompletedTimerIds()).resolves.toEqual(["native-timer"]);
   });
 
   it("should account for pausedElapsedMs in completion time", async () => {
@@ -318,8 +427,9 @@ describe("scheduleTimerTrigger", () => {
       pausedElapsedMs: 0,
     });
 
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let index = 0; index < 8 && finishFirst === undefined; index++) {
+      await Promise.resolve();
+    }
     expect(notifee.getTriggerNotificationIds).toHaveBeenCalledTimes(1);
 
     finishFirst?.();
@@ -329,14 +439,66 @@ describe("scheduleTimerTrigger", () => {
   });
 });
 
-describe("completeTimerFromNotification", () => {
+describe("consumeCompletedTimerIds", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     for (const key of Object.keys(storage)) delete storage[key];
+    delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "android",
+    });
+  });
+
+  afterEach(() => {
+    delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
+  });
+
+  it("dedups native-completed ids with ids persisted by background delivery", async () => {
+    (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+      scheduleTimer: jest.fn(),
+      cancelTimer: jest.fn(),
+      consumeCompletedTimers: jest
+        .fn()
+        .mockResolvedValue(["timer-a", "timer-b"]),
+    };
+    storage[STORAGE_KEYS.TIMER_COMPLETIONS] = JSON.stringify([
+      "timer-b",
+      "timer-c",
+    ]);
+
+    await expect(consumeCompletedTimerIds()).resolves.toEqual([
+      "timer-a",
+      "timer-b",
+      "timer-c",
+    ]);
+    expect(storage[STORAGE_KEYS.TIMER_COMPLETIONS]).toBeUndefined();
+  });
+
+  it("falls back to native ids when the persisted completions are corrupted JSON", async () => {
+    (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+      scheduleTimer: jest.fn(),
+      cancelTimer: jest.fn(),
+      consumeCompletedTimers: jest.fn().mockResolvedValue(["timer-a"]),
+    };
+    storage[STORAGE_KEYS.TIMER_COMPLETIONS] = "{not-json";
+
+    await expect(consumeCompletedTimerIds()).resolves.toEqual(["timer-a"]);
+  });
+});
+
+describe("completeTimerFromNotification", () => {
+  const store = getDefaultStore();
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    for (const key of Object.keys(storage)) delete storage[key];
+    await store.set(timersAtom, []);
+    jest.clearAllMocks();
   });
 
   it("completes only the delivered timer in persisted state", async () => {
-    storage[STORAGE_KEYS.TIMER_STATE] = JSON.stringify([
+    await store.set(timersAtom, [
       {
         id: "timer-1",
         label: "First",
@@ -359,7 +521,7 @@ describe("completeTimerFromNotification", () => {
 
     await completeTimerFromNotification("timer-1");
 
-    expect(JSON.parse(storage[STORAGE_KEYS.TIMER_STATE])).toEqual([
+    expect(store.get(timersAtom)).toEqual([
       expect.objectContaining({
         id: "timer-1",
         remainingMs: 0,
@@ -368,13 +530,16 @@ describe("completeTimerFromNotification", () => {
       }),
       expect.objectContaining({ id: "timer-2", remainingMs: 500 }),
     ]);
+    expect(JSON.parse(storage[STORAGE_KEYS.TIMER_STATE])).toEqual(
+      store.get(timersAtom),
+    );
     expect(JSON.parse(storage[STORAGE_KEYS.TIMER_COMPLETIONS])).toEqual([
       "timer-1",
     ]);
   });
 
   it("serializes simultaneous timer completions", async () => {
-    storage[STORAGE_KEYS.TIMER_STATE] = JSON.stringify([
+    await store.set(timersAtom, [
       {
         id: "timer-1",
         label: "First",
@@ -400,7 +565,7 @@ describe("completeTimerFromNotification", () => {
       completeTimerFromNotification("timer-2"),
     ]);
 
-    expect(JSON.parse(storage[STORAGE_KEYS.TIMER_STATE])).toEqual([
+    expect(store.get(timersAtom)).toEqual([
       expect.objectContaining({ id: "timer-1", isRunning: false }),
       expect.objectContaining({ id: "timer-2", isRunning: false }),
     ]);
@@ -411,7 +576,7 @@ describe("completeTimerFromNotification", () => {
   });
 
   it("is idempotent after a timer has already been completed", async () => {
-    storage[STORAGE_KEYS.TIMER_STATE] = JSON.stringify([
+    await store.set(timersAtom, [
       {
         id: "timer-1",
         label: "First",
@@ -422,19 +587,35 @@ describe("completeTimerFromNotification", () => {
         pausedElapsedMs: 0,
       },
     ]);
+    jest.clearAllMocks();
 
     await completeTimerFromNotification("timer-1");
 
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
   });
 
-  it("ignores corrupted timer state without rejecting the background handler", async () => {
-    storage[STORAGE_KEYS.TIMER_STATE] = "not-json";
+  it("does not resurrect a timer deleted concurrently by the UI", async () => {
+    await store.set(timersAtom, [
+      {
+        id: "timer-1",
+        label: "First",
+        durationMs: 1000,
+        remainingMs: 200,
+        isRunning: true,
+        startedAt: 10,
+        pausedElapsedMs: 0,
+      },
+    ]);
 
-    await expect(
+    await Promise.all([
       completeTimerFromNotification("timer-1"),
-    ).resolves.toBeUndefined();
-    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      store.set(timersAtom, (timers) =>
+        timers.filter((timer) => timer.id !== "timer-1"),
+      ),
+    ]);
+
+    expect(store.get(timersAtom)).toEqual([]);
+    expect(JSON.parse(storage[STORAGE_KEYS.TIMER_STATE])).toEqual([]);
   });
 });
 
@@ -450,6 +631,7 @@ describe("cancelTimerTrigger", () => {
     expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith(
       "timer-timer-1",
     );
+    expect(notifee.cancelNotification).toHaveBeenCalledWith("timer-timer-1");
   });
 
   it("rejects when cancellation fails", async () => {
@@ -481,8 +663,9 @@ describe("cancelTimerTrigger", () => {
     const cancel = cancelTimerTrigger("racing-timer");
 
     expect(notifee.cancelTriggerNotification).not.toHaveBeenCalled();
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let index = 0; index < 8 && finishSchedule === undefined; index++) {
+      await Promise.resolve();
+    }
     finishSchedule?.();
     await Promise.all([schedule, cancel]);
 

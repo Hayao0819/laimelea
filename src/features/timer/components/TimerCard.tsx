@@ -13,6 +13,7 @@ interface Props {
   onResume: (id: string) => void;
   onReset: (id: string) => void;
   onDelete: (id: string) => void;
+  disabled?: boolean;
 }
 
 function formatTime(ms: number): string {
@@ -29,6 +30,7 @@ export function TimerCard({
   onResume,
   onReset,
   onDelete,
+  disabled = false,
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -72,6 +74,7 @@ export function TimerCard({
           <IconButton
             icon="pause"
             onPress={() => onPause(timer.id)}
+            disabled={disabled}
             testID={`timer-pause-${timer.id}`}
             accessibilityLabel="pause timer"
           />
@@ -79,6 +82,7 @@ export function TimerCard({
           <IconButton
             icon="play"
             onPress={() => onResume(timer.id)}
+            disabled={disabled}
             testID={`timer-resume-${timer.id}`}
             accessibilityLabel="resume timer"
           />
@@ -86,12 +90,14 @@ export function TimerCard({
         <IconButton
           icon="restart"
           onPress={() => onReset(timer.id)}
+          disabled={disabled}
           testID={`timer-reset-${timer.id}`}
           accessibilityLabel="reset timer"
         />
         <IconButton
           icon="delete"
           onPress={() => onDelete(timer.id)}
+          disabled={disabled}
           testID={`timer-delete-${timer.id}`}
           accessibilityLabel="delete timer"
         />

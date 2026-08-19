@@ -15,8 +15,15 @@ function isTimerTriggerLimitError(error: unknown): boolean {
 
 export function CountdownTimer() {
   const { t } = useTranslation();
-  const { timers, addTimer, deleteTimer, pauseTimer, resumeTimer, resetTimer } =
-    useTimers();
+  const {
+    timers,
+    isHydrated = true,
+    addTimer,
+    deleteTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+  } = useTimers();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const prevTimersRef = useRef<TimerState[]>([]);
 
@@ -96,9 +103,10 @@ export function CountdownTimer() {
         onResume={handleResume}
         onReset={handleReset}
         onDelete={handleDelete}
+        disabled={!isHydrated}
       />
     ),
-    [handlePause, handleResume, handleReset, handleDelete],
+    [handlePause, handleResume, handleReset, handleDelete, isHydrated],
   );
 
   const keyExtractor = useCallback((item: TimerState) => item.id, []);
@@ -121,7 +129,7 @@ export function CountdownTimer() {
           </Text>
         </View>
       )}
-      <NumpadInput onStart={handleStart} />
+      <NumpadInput onStart={handleStart} disabled={!isHydrated} />
       <Snackbar
         visible={snackbarMessage !== null}
         onDismiss={() => setSnackbarMessage(null)}

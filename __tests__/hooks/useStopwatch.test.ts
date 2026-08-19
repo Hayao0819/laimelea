@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, renderHook } from "@testing-library/react-native";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import React from "react";
-import { AppState } from "react-native";
+import { AppState, NativeModules, Platform } from "react-native";
 
 import { stopwatchAtom } from "../../src/atoms/timerAtoms";
 import { useStopwatch } from "../../src/hooks/useStopwatch";
@@ -22,6 +22,7 @@ const DEFAULT_STOPWATCH = {
   startedAt: null,
   laps: [] as number[],
 };
+const originalPlatformOS = Platform.OS;
 
 function createWrapper(store?: ReturnType<typeof createStore>) {
   const s = store ?? createStore();
@@ -42,11 +43,17 @@ describe("useStopwatch", () => {
     jest
       .spyOn(AppState, "addEventListener")
       .mockReturnValue({ remove: jest.fn() } as never);
+    delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
   });
 
   afterEach(() => {
     jest.useRealTimers();
     jest.restoreAllMocks();
+    delete (NativeModules as { RingtoneModule?: unknown }).RingtoneModule;
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: originalPlatformOS,
+    });
   });
 
   it("should start with initial state", async () => {
@@ -76,6 +83,22 @@ describe("useStopwatch", () => {
     });
 
     expect(result.current.elapsedMs).toBe(3000);
+  });
+
+  it("uses monotonic time while the app is running", async () => {
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+    await act(async () => {});
+
+    act(() => {
+      result.current.start();
+    });
+    (Date.now as jest.Mock).mockReturnValue(86_400_000);
+    act(() => {
+      jest.advanceTimersByTime(1_000);
+    });
+
+    expect(result.current.elapsedMs).toBe(1_000);
   });
 
   it("should pause and elapsedMs should not change", async () => {
@@ -385,6 +408,249 @@ describe("useStopwatch", () => {
       expect(result.current.elapsedMs).toBe(7000);
     });
 
+    it("restores a running Android stopwatch from elapsed time after process recreation", async () => {
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+      (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+        getElapsedRealtimeSnapshot: jest.fn().mockResolvedValue({
+          elapsedRealtimeMs: 100_000,
+          bootCount: 12,
+        }),
+      };
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 1_000,
+        isRunning: true,
+        startedAt: 1_000,
+        startedAtElapsedMs: 92_000,
+        bootCount: 12,
+        laps: [],
+      });
+      (Date.now as jest.Mock).mockReturnValue(86_400_000);
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+
+      await act(async () => {});
+
+      expect(result.current).toMatchObject({
+        elapsedMs: 8_000,
+        isRunning: true,
+      });
+    });
+
+    it("counts time across an Android reboot", async () => {
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+      (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+        getElapsedRealtimeSnapshot: jest.fn().mockResolvedValue({
+          elapsedRealtimeMs: 2_000,
+          bootCount: 13,
+        }),
+      };
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 1_000,
+        isRunning: true,
+        startedAt: 1_000,
+        startedAtElapsedMs: 92_000,
+        bootCount: 12,
+        laps: [],
+      });
+      (Date.now as jest.Mock).mockReturnValue(11_000);
+
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+
+      await act(async () => {});
+
+      expect(result.current).toMatchObject({
+        elapsedMs: 10_000,
+        isRunning: true,
+      });
+    });
+
+    it("resyncs against the native clock on foreground resume after deep sleep", async () => {
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+      const getElapsedRealtimeSnapshot = jest
+        .fn()
+        .mockResolvedValueOnce({ elapsedRealtimeMs: 100_000, bootCount: 12 })
+        .mockResolvedValueOnce({ elapsedRealtimeMs: 130_000, bootCount: 12 });
+      (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+        getElapsedRealtimeSnapshot,
+      };
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 1_000,
+        isRunning: true,
+        startedAt: 1_000,
+        startedAtElapsedMs: 99_000,
+        bootCount: 12,
+        laps: [],
+      });
+      (Date.now as jest.Mock).mockReturnValue(2_000);
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+
+      await act(async () => {});
+
+      expect(result.current.elapsedMs).toBe(1_000);
+
+      const appStateListener = (
+        AppState.addEventListener as jest.Mock
+      ).mock.calls.at(-1)?.[1];
+
+      await act(async () => {
+        appStateListener("active");
+        for (let index = 0; index < 20; index++) {
+          await Promise.resolve();
+        }
+      });
+
+      expect(getElapsedRealtimeSnapshot).toHaveBeenCalledTimes(2);
+      expect(result.current.elapsedMs).toBe(31_000);
+    });
+
+    it("falls back to a plain tick on foreground resume without a native clock", async () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+      await act(async () => {});
+
+      act(() => {
+        result.current.start();
+      });
+
+      const appStateListener = (
+        AppState.addEventListener as jest.Mock
+      ).mock.calls.at(-1)?.[1];
+      (Date.now as jest.Mock).mockReturnValue(4_000);
+      await act(async () => {
+        appStateListener("active");
+        for (let index = 0; index < 20; index++) {
+          await Promise.resolve();
+        }
+      });
+
+      expect(result.current.elapsedMs).toBe(4_000);
+    });
+
+    it.each([
+      ["negative elapsedRealtimeMs", { elapsedRealtimeMs: -1, bootCount: 1 }],
+      ["non-integer bootCount", { elapsedRealtimeMs: 1_000, bootCount: 1.5 }],
+      ["missing bootCount", { elapsedRealtimeMs: 1_000 }],
+      ["missing elapsedRealtimeMs", { bootCount: 1 }],
+      ["null snapshot", null],
+      ["non-object snapshot", "not-a-snapshot"],
+    ])(
+      "falls back gracefully when the native snapshot is malformed (%s)",
+      async (_label, snapshot) => {
+        Object.defineProperty(Platform, "OS", {
+          configurable: true,
+          value: "android",
+        });
+        (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+          getElapsedRealtimeSnapshot: jest.fn().mockResolvedValue(snapshot),
+        };
+        const { Wrapper } = createWrapper();
+        const { result } = renderHook(() => useStopwatch(), {
+          wrapper: Wrapper,
+        });
+        await act(async () => {});
+
+        expect(result.current.isHydrated).toBe(true);
+        act(() => {
+          result.current.start();
+        });
+        expect(result.current.isRunning).toBe(true);
+      },
+    );
+
+    it("falls back gracefully when the native elapsed-realtime module throws", async () => {
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+      (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+        getElapsedRealtimeSnapshot: jest
+          .fn()
+          .mockRejectedValue(new Error("native failure")),
+      };
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+      await act(async () => {});
+
+      expect(result.current.isHydrated).toBe(true);
+      act(() => {
+        result.current.start();
+      });
+      expect(result.current.isRunning).toBe(true);
+    });
+
+    it("rolls back a stopwatch action when storage rejects it", async () => {
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+      await act(async () => {});
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("storage unavailable"),
+      );
+
+      await act(async () => {
+        result.current.start();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(result.current).toMatchObject({
+        elapsedMs: 0,
+        isRunning: false,
+        laps: [],
+      });
+    });
+
+    it.each(["pause", "reset", "lap"] as const)(
+      "keeps ticking when %s persistence fails",
+      async (action) => {
+        const { Wrapper } = createWrapper();
+        const { result } = renderHook(() => useStopwatch(), {
+          wrapper: Wrapper,
+        });
+        await act(async () => {});
+        await act(async () => {
+          result.current.start();
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+        (Date.now as jest.Mock).mockReturnValue(1_000);
+        act(() => {
+          jest.advanceTimersByTime(1_000);
+        });
+        (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+          new Error("storage unavailable"),
+        );
+
+        await act(async () => {
+          result.current[action]();
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+
+        expect(result.current.isRunning).toBe(true);
+        const elapsedBeforeAdvance = result.current.elapsedMs;
+        (Date.now as jest.Mock).mockReturnValue(2_000);
+        act(() => {
+          jest.advanceTimersByTime(1_000);
+        });
+        expect(result.current.elapsedMs).toBeGreaterThan(elapsedBeforeAdvance);
+      },
+    );
+
     it("does not persist display ticks", async () => {
       const { Wrapper } = createWrapper();
       const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
@@ -472,6 +738,130 @@ describe("useStopwatch", () => {
 
       expect(result.current.elapsedMs).toBe(0);
       expect(result.current.isRunning).toBe(false);
+    });
+
+    it("uses the newer snapshot when overlapping foreground resyncs resolve out of order", async () => {
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+      let resolveFirst: ((value: unknown) => void) | undefined;
+      let resolveSecond: ((value: unknown) => void) | undefined;
+      const getElapsedRealtimeSnapshot = jest
+        .fn()
+        .mockResolvedValueOnce({ elapsedRealtimeMs: 90_000, bootCount: 12 })
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveFirst = resolve;
+            }),
+        )
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveSecond = resolve;
+            }),
+        );
+      (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+        getElapsedRealtimeSnapshot,
+      };
+      const store = createStore();
+      store.set(stopwatchAtom, {
+        elapsedMs: 1_000,
+        isRunning: true,
+        startedAt: 1_000,
+        startedAtElapsedMs: 89_000,
+        bootCount: 12,
+        laps: [],
+      });
+      (Date.now as jest.Mock).mockReturnValue(2_000);
+      const { Wrapper } = createWrapper(store);
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+      await act(async () => {});
+
+      const appStateListener = (
+        AppState.addEventListener as jest.Mock
+      ).mock.calls.at(-1)?.[1];
+
+      act(() => {
+        appStateListener("active");
+      });
+      act(() => {
+        appStateListener("active");
+      });
+
+      // Resolve out of order: the newer (second) request settles first
+      // with the true latest elapsed time; the stale first request
+      // settles afterward and must not be allowed to win.
+      await act(async () => {
+        resolveSecond?.({ elapsedRealtimeMs: 130_000, bootCount: 12 });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        resolveFirst?.({ elapsedRealtimeMs: 91_000, bootCount: 12 });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(getElapsedRealtimeSnapshot).toHaveBeenCalledTimes(3);
+      // 130_000 - 89_000 = 41_000. If the stale first response had won,
+      // this would instead read 91_000 - 89_000 = 2_000.
+      expect(result.current.elapsedMs).toBe(41_000);
+    });
+
+    it("ignores a foreground resync that resolves after the stopwatch was paused", async () => {
+      Object.defineProperty(Platform, "OS", {
+        configurable: true,
+        value: "android",
+      });
+      let resolveSnapshot: ((value: unknown) => void) | undefined;
+      const getElapsedRealtimeSnapshot = jest
+        .fn()
+        .mockResolvedValueOnce({ elapsedRealtimeMs: 90_000, bootCount: 12 })
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolveSnapshot = resolve;
+            }),
+        );
+      (NativeModules as { RingtoneModule?: unknown }).RingtoneModule = {
+        getElapsedRealtimeSnapshot,
+      };
+      const { Wrapper } = createWrapper();
+      const { result } = renderHook(() => useStopwatch(), { wrapper: Wrapper });
+      await act(async () => {});
+
+      act(() => {
+        result.current.start();
+      });
+      (Date.now as jest.Mock).mockReturnValue(3_000);
+      act(() => {
+        jest.advanceTimersByTime(3_000);
+      });
+      expect(result.current.elapsedMs).toBe(3_000);
+
+      const appStateListener = (
+        AppState.addEventListener as jest.Mock
+      ).mock.calls.at(-1)?.[1];
+      act(() => {
+        appStateListener("active");
+      });
+
+      act(() => {
+        result.current.pause();
+      });
+      const pausedElapsed = result.current.elapsedMs;
+      expect(result.current.isRunning).toBe(false);
+
+      await act(async () => {
+        resolveSnapshot?.({ elapsedRealtimeMs: 999_000, bootCount: 12 });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(result.current.isRunning).toBe(false);
+      expect(result.current.elapsedMs).toBe(pausedElapsed);
     });
   });
 });

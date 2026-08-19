@@ -3,11 +3,15 @@ import notifee, {
   TriggerType,
 } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
+import { getDefaultStore } from "jotai";
+import { NativeModules, Platform } from "react-native";
 
-import { TIMER_CHANNEL_ID } from "../../../core/notifications/notifeeSetup";
+import { timersAtom } from "../../../atoms/timerAtoms";
+import {
+  getAlarmDeliveryStatus,
+  TIMER_CHANNEL_ID,
+} from "../../../core/notifications/notifeeSetup";
 import { STORAGE_KEYS } from "../../../core/storage/keys";
-import type { TimerState } from "../../../models/Timer";
 import { completeTimers } from "./timerState";
 
 let timerStateQueue: Promise<void> = Promise.resolve();
@@ -15,12 +19,79 @@ let timerNotificationQueue: Promise<void> = Promise.resolve();
 
 export const ANDROID_TIMER_TRIGGER_LIMIT = 50;
 
+interface NativeTimerModule {
+  scheduleTimer(
+    timerId: string,
+    label: string,
+    remainingMs: number,
+  ): Promise<void>;
+  cancelTimer(timerId: string): Promise<void>;
+  consumeCompletedTimers(): Promise<unknown>;
+  getTimerRemainingMs(timerId: string): Promise<unknown>;
+  getScheduledTimerIds(): Promise<unknown>;
+}
+
+export async function readNativeScheduledTimerIds(): Promise<string[] | null> {
+  const module = nativeTimerModule();
+  if (typeof module?.getScheduledTimerIds !== "function") return null;
+
+  try {
+    const timerIds = await module.getScheduledTimerIds();
+    return Array.isArray(timerIds)
+      ? timerIds.filter((id): id is string => typeof id === "string")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function readNativeTimerRemainingMs(
+  timerId: string,
+): Promise<number | null> {
+  const module = nativeTimerModule();
+  if (typeof module?.getTimerRemainingMs !== "function") return null;
+
+  try {
+    const remainingMs = await module.getTimerRemainingMs(timerId);
+    return typeof remainingMs === "number" &&
+      Number.isFinite(remainingMs) &&
+      remainingMs >= 0
+      ? remainingMs
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function nativeTimerModule(): Partial<NativeTimerModule> | undefined {
+  if (Platform.OS !== "android") return undefined;
+  return (NativeModules as { RingtoneModule?: Partial<NativeTimerModule> })
+    .RingtoneModule;
+}
+
+function nativeTimerDeliveryAvailable(
+  module: Partial<NativeTimerModule> | undefined,
+): module is NativeTimerModule {
+  return (
+    typeof module?.scheduleTimer === "function" &&
+    typeof module.cancelTimer === "function" &&
+    typeof module.consumeCompletedTimers === "function"
+  );
+}
+
 export class TimerTriggerLimitError extends Error {
   constructor() {
     super(
       "The maximum number of Android timer notifications is already scheduled.",
     );
     this.name = "TimerTriggerLimitError";
+  }
+}
+
+export class TimerNotificationsDisabledError extends Error {
+  constructor() {
+    super("Timer notifications are disabled.");
+    this.name = "TimerNotificationsDisabledError";
   }
 }
 
@@ -42,18 +113,6 @@ function enqueueTimerNotificationOperation<T>(
     () => undefined,
   );
   return result;
-}
-
-async function readPersistedTimers(): Promise<TimerState[] | null> {
-  const storedTimers = await AsyncStorage.getItem(STORAGE_KEYS.TIMER_STATE);
-  if (storedTimers == null) return null;
-
-  try {
-    const timers: unknown = JSON.parse(storedTimers);
-    return Array.isArray(timers) ? (timers as TimerState[]) : null;
-  } catch {
-    return null;
-  }
 }
 
 async function recordCompletedTimer(timerId: string): Promise<void> {
@@ -78,20 +137,27 @@ async function recordCompletedTimer(timerId: string): Promise<void> {
 
 export async function consumeCompletedTimerIds(): Promise<string[]> {
   return enqueueTimerStateUpdate(async () => {
+    const module = nativeTimerModule();
+    const nativeCompleted = nativeTimerDeliveryAvailable(module)
+      ? await module.consumeCompletedTimers()
+      : [];
+    const nativeTimerIds = Array.isArray(nativeCompleted)
+      ? nativeCompleted.filter((id): id is string => typeof id === "string")
+      : [];
     try {
       const storedCompletions = await AsyncStorage.getItem(
         STORAGE_KEYS.TIMER_COMPLETIONS,
       );
-      if (storedCompletions == null) return [];
+      if (storedCompletions == null) return nativeTimerIds;
 
       const completions: unknown = JSON.parse(storedCompletions);
       const timerIds = Array.isArray(completions)
         ? completions.filter((id): id is string => typeof id === "string")
         : [];
       await AsyncStorage.removeItem(STORAGE_KEYS.TIMER_COMPLETIONS);
-      return timerIds;
+      return [...new Set([...nativeTimerIds, ...timerIds])];
     } catch {
-      return [];
+      return nativeTimerIds;
     }
   });
 }
@@ -101,15 +167,15 @@ export async function completeTimerFromNotification(
 ): Promise<void> {
   if (typeof timerId !== "string") return;
   return enqueueTimerStateUpdate(async () => {
-    const timers = await readPersistedTimers();
-    if (timers == null) return;
-    const completedTimers = completeTimers(timers, [timerId]);
-
-    if (completedTimers.some((timer, index) => timer !== timers[index])) {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.TIMER_STATE,
-        JSON.stringify(completedTimers),
+    let didComplete = false;
+    await getDefaultStore().set(timersAtom, (timers) => {
+      const completedTimers = completeTimers(timers, [timerId]);
+      didComplete = completedTimers.some(
+        (timer, index) => timer !== timers[index],
       );
+      return didComplete ? completedTimers : timers;
+    });
+    if (didComplete) {
       await recordCompletedTimer(timerId);
     }
   });
@@ -152,6 +218,16 @@ export async function scheduleTimerTrigger(timer: {
   pausedElapsedMs: number;
 }): Promise<void> {
   return enqueueTimerNotificationOperation(async () => {
+    const remainingMs = timer.durationMs - timer.pausedElapsedMs;
+    if (!Number.isFinite(remainingMs) || remainingMs <= 0) return;
+    const module = nativeTimerModule();
+    if (nativeTimerDeliveryAvailable(module)) {
+      await module.scheduleTimer(timer.id, timer.label, remainingMs);
+      return;
+    }
+    if (!(await getAlarmDeliveryStatus()).notificationsEnabled) {
+      throw new TimerNotificationsDisabledError();
+    }
     const completionTime =
       timer.startedAt + timer.durationMs - timer.pausedElapsedMs;
     if (completionTime <= Date.now()) return;
@@ -208,6 +284,20 @@ export async function scheduleTimerTrigger(timer: {
 
 export async function cancelTimerTrigger(timerId: string): Promise<void> {
   return enqueueTimerNotificationOperation(async () => {
+    const module = nativeTimerModule();
+    if (nativeTimerDeliveryAvailable(module)) {
+      await module.cancelTimer(timerId);
+      await Promise.allSettled([
+        notifee.cancelTriggerNotification(`timer-${timerId}`),
+        typeof notifee.cancelNotification === "function"
+          ? notifee.cancelNotification(`timer-${timerId}`)
+          : Promise.resolve(),
+      ]);
+      return;
+    }
     await notifee.cancelTriggerNotification(`timer-${timerId}`);
+    if (typeof notifee.cancelNotification === "function") {
+      await notifee.cancelNotification(`timer-${timerId}`);
+    }
   });
 }

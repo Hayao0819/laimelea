@@ -18,8 +18,17 @@ function formatStopwatchTime(ms: number): string {
 export function Stopwatch() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const { elapsedMs, isRunning, laps, start, pause, resume, reset, lap } =
-    useStopwatch();
+  const {
+    elapsedMs,
+    isRunning,
+    laps,
+    isHydrated = true,
+    start,
+    pause,
+    resume,
+    reset,
+    lap,
+  } = useStopwatch();
 
   const hasStarted = elapsedMs > 0 || isRunning;
 
@@ -39,6 +48,7 @@ export function Stopwatch() {
           <Button
             mode="contained"
             onPress={start}
+            disabled={!isHydrated}
             style={styles.button}
             testID="stopwatch-start"
           >
@@ -49,6 +59,7 @@ export function Stopwatch() {
             <Button
               mode="contained"
               onPress={pause}
+              disabled={!isHydrated}
               style={styles.button}
               testID="stopwatch-pause"
             >
@@ -57,6 +68,7 @@ export function Stopwatch() {
             <Button
               mode="outlined"
               onPress={lap}
+              disabled={!isHydrated}
               style={styles.button}
               testID="stopwatch-lap"
             >
@@ -68,6 +80,7 @@ export function Stopwatch() {
             <Button
               mode="contained"
               onPress={resume}
+              disabled={!isHydrated}
               style={styles.button}
               testID="stopwatch-resume"
             >
@@ -76,6 +89,7 @@ export function Stopwatch() {
             <Button
               mode="outlined"
               onPress={reset}
+              disabled={!isHydrated}
               style={styles.button}
               testID="stopwatch-reset"
             >
