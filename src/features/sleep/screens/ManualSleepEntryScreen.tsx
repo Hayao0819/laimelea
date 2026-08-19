@@ -1,7 +1,6 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { format } from "date-fns";
-import { useAtom } from "jotai";
 import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -15,8 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "../../../app/spacing";
-import { sleepSessionsAtom } from "../../../atoms/sleepAtoms";
-import type { SleepSession } from "../../../models/SleepSession";
+import { useSleepSync } from "../../../hooks/useSleepSync";
 import type { RootStackParamList } from "../../../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManualSleepEntry">;
@@ -24,10 +22,6 @@ type Props = NativeStackScreenProps<RootStackParamList, "ManualSleepEntry">;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
 const MAX_DURATION_MS = 24 * 60 * 60 * 1000;
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
 
 export function parseLocalDateTime(
   dateStr: string,
@@ -74,7 +68,7 @@ export function ManualSleepEntryScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const [sessions, setSessions] = useAtom(sleepSessionsAtom);
+  const { sessions, addManualEntry, updateManualEntry } = useSleepSync();
 
   const sessionId = route.params?.sessionId;
   const existingSession = useMemo(
@@ -147,37 +141,19 @@ export function ManualSleepEntryScreen() {
         return;
       }
 
-      const timestamp = Date.now();
-
       if (existingSession) {
-        const updated: SleepSession = {
-          ...existingSession,
+        updateManualEntry(existingSession.id, {
           startTimestampMs: startMs,
           endTimestampMs: endMs,
           durationMs,
-          updatedAt: timestamp,
-        };
-        setSessions((current) => {
-          const entries = Array.isArray(current) ? current : [];
-          return entries.map((session) =>
-            session.id === sessionId ? updated : session,
-          );
         });
       } else {
-        const newSession: SleepSession = {
-          id: generateId(),
-          source: "manual",
+        addManualEntry({
           startTimestampMs: startMs,
           endTimestampMs: endMs,
           stages: [],
           durationMs,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        };
-        setSessions((current) => [
-          ...(Array.isArray(current) ? current : []),
-          newSession,
-        ]);
+        });
       }
 
       navigation.goBack();
@@ -190,8 +166,8 @@ export function ManualSleepEntryScreen() {
     endDate,
     endTime,
     existingSession,
-    sessionId,
-    setSessions,
+    addManualEntry,
+    updateManualEntry,
     navigation,
     t,
   ]);

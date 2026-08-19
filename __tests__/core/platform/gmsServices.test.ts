@@ -240,6 +240,42 @@ describe("GMS SleepService", () => {
     );
   });
 
+  it("preserves Health Connect IDs and modification times for concurrent records", async () => {
+    const startTime = "2025-01-15T23:00:00.000Z";
+    const endTime = "2025-01-16T07:00:00.000Z";
+    mockReadRecords.mockResolvedValue({
+      records: [
+        {
+          startTime,
+          endTime,
+          metadata: {
+            id: "health-connect-a",
+            lastModifiedTime: "2025-01-17T08:00:00.000Z",
+          },
+        },
+        {
+          startTime,
+          endTime,
+          metadata: {
+            id: "health-connect-b",
+            lastModifiedTime: "2025-01-18T09:00:00.000Z",
+          },
+        },
+      ],
+    });
+
+    const result = await sleep.fetchSleepSessions(0, Date.now());
+
+    expect(result.map((session) => session.id)).toEqual([
+      "health-connect-a",
+      "health-connect-b",
+    ]);
+    expect(result.map((session) => session.updatedAt)).toEqual([
+      new Date("2025-01-17T08:00:00.000Z").getTime(),
+      new Date("2025-01-18T09:00:00.000Z").getTime(),
+    ]);
+  });
+
   it("fetchSleepSessions should throw on error", async () => {
     mockReadRecords.mockRejectedValue(new Error("permission denied"));
     await expect(sleep.fetchSleepSessions(0, 1000)).rejects.toThrow(

@@ -80,9 +80,12 @@ export function createGmsSleepService(): PlatformSleepService {
       return result.records.map((record) => {
         const startTimestampMs = new Date(record.startTime).getTime();
         const endTimestampMs = new Date(record.endTime).getTime();
+        const lastModifiedTimeMs = new Date(
+          record.metadata?.lastModifiedTime ?? record.startTime,
+        ).getTime();
 
         return {
-          id: `hc-${startTimestampMs}-${endTimestampMs}`,
+          id: record.metadata?.id ?? `hc-${startTimestampMs}-${endTimestampMs}`,
           source: "health_connect" as const,
           startTimestampMs,
           endTimestampMs,
@@ -93,7 +96,9 @@ export function createGmsSleepService(): PlatformSleepService {
           })),
           durationMs: endTimestampMs - startTimestampMs,
           createdAt: startTimestampMs,
-          updatedAt: startTimestampMs,
+          updatedAt: Number.isFinite(lastModifiedTimeMs)
+            ? lastModifiedTimeMs
+            : startTimestampMs,
         };
       });
     },

@@ -5,7 +5,10 @@ import { StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { sleepSessionsAtom } from "../../../src/atoms/sleepAtoms";
+import {
+  cycleEstimationAtom,
+  sleepSessionsAtom,
+} from "../../../src/atoms/sleepAtoms";
 import {
   ManualSleepEntryScreen,
   parseLocalDateTime,
@@ -25,6 +28,31 @@ jest.mock("../../../src/atoms/sleepAtoms", () => {
     SLEEP_CACHE_TTL_MS: 600000,
   };
 });
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve()),
+    removeItem: jest.fn(() => Promise.resolve()),
+  },
+}));
+
+jest.mock("@react-native-google-signin/google-signin", () => ({
+  GoogleSignin: {
+    hasPlayServices: jest.fn(),
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getTokens: jest.fn(),
+    configure: jest.fn(),
+  },
+}));
+
+jest.mock("react-native-app-auth", () => ({
+  authorize: jest.fn(),
+  refresh: jest.fn(),
+  revoke: jest.fn(),
+}));
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -159,6 +187,62 @@ describe("ManualSleepEntryScreen", () => {
     expect(sessions[0].source).toBe("manual");
     expect(sessions[0].stages).toEqual([]);
     expect(sessions[0].durationMs).toBe(7 * 60 * 60 * 1000);
+  });
+
+  it("recalculates the cycle estimate after a manual addition", async () => {
+    const initialSessions = Array.from({ length: 6 }, (_, index) => {
+      const start = new Date(2026, 1, 19 + index, 23, 0, 0, 0).getTime();
+      return makeSession({
+        id: `existing-${index}`,
+        startTimestampMs: start,
+        endTimestampMs: start + 7 * 60 * 60 * 1000,
+      });
+    });
+    const store = createStore();
+    const { getByTestId } = await renderWithProviders(store, initialSessions);
+
+    await fireEvent.changeText(getByTestId("start-date-input"), "2026-02-25");
+    await fireEvent.changeText(getByTestId("start-time-input"), "23:00");
+    await fireEvent.changeText(getByTestId("end-date-input"), "2026-02-26");
+    await fireEvent.changeText(getByTestId("end-time-input"), "06:00");
+    await fireEvent.press(getByTestId("save-button"));
+
+    await waitFor(() => {
+      expect(store.get(cycleEstimationAtom)).toMatchObject({
+        dataPointsUsed: 7,
+      });
+    });
+  });
+
+  it("recalculates the cycle estimate after a manual edit", async () => {
+    const existingSession = makeSession({
+      id: "editable",
+      startTimestampMs: new Date(2026, 1, 25, 22, 30, 0, 0).getTime(),
+      endTimestampMs: new Date(2026, 1, 26, 6, 0, 0, 0).getTime(),
+    });
+    const earlierSessions = Array.from({ length: 6 }, (_, index) => {
+      const start = new Date(2026, 1, 19 + index, 22, 30, 0, 0).getTime();
+      return makeSession({
+        id: `earlier-${index}`,
+        startTimestampMs: start,
+        endTimestampMs: start + 7 * 60 * 60 * 1000,
+      });
+    });
+    mockRouteParams.sessionId = existingSession.id;
+    const store = createStore();
+    const { getByTestId } = await renderWithProviders(store, [
+      ...earlierSessions,
+      existingSession,
+    ]);
+
+    await fireEvent.changeText(getByTestId("start-time-input"), "23:00");
+    await fireEvent.press(getByTestId("save-button"));
+
+    await waitFor(() => {
+      expect(store.get(cycleEstimationAtom)).toMatchObject({
+        dataPointsUsed: 7,
+      });
+    });
   });
 
   it("should show error when end time is before start time", async () => {

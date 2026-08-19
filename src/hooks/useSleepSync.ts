@@ -24,6 +24,13 @@ export interface SleepSyncResult {
   addManualEntry: (
     session: Omit<SleepSession, "id" | "source" | "createdAt" | "updatedAt">,
   ) => void;
+  updateManualEntry: (
+    id: string,
+    updates: Pick<
+      SleepSession,
+      "startTimestampMs" | "endTimestampMs" | "durationMs"
+    >,
+  ) => void;
   deleteEntry: (id: string) => void;
 }
 
@@ -39,9 +46,16 @@ function mergeSessions(
   currentSessions: SleepSession[],
   fetchedSessions: SleepSession[],
   manualSessionKeysAtStart: ReadonlySet<string>,
+  fetchWindowStartMs: number,
 ): SleepSession[] {
   const sessionsByKey = new Map<string, SleepSession>();
 
+  for (const session of currentSessions) {
+    if (session.source === "manual") continue;
+    if (session.endTimestampMs < fetchWindowStartMs) {
+      sessionsByKey.set(sessionKey(session), session);
+    }
+  }
   for (const session of fetchedSessions) {
     if (
       session.source === "manual" &&
@@ -122,6 +136,7 @@ export function useSleepSync(): SleepSyncResult {
             Array.isArray(current) ? current : [],
             fetched,
             manualSessionKeysAtStart,
+            thirtyDaysAgo,
           );
           return merged;
         });
@@ -165,20 +180,51 @@ export function useSleepSync(): SleepSyncResult {
         createdAt: now,
         updatedAt: now,
       };
-      setSessions((prev) =>
-        Array.isArray(prev) ? [...prev, session] : [session],
-      );
+      setSessions((previous) => {
+        const next = Array.isArray(previous)
+          ? [...previous, session]
+          : [session];
+        setEstimation(estimateCycle(next));
+        return next;
+      });
     },
-    [setSessions],
+    [setEstimation, setSessions],
+  );
+
+  const updateManualEntry = useCallback(
+    (
+      id: string,
+      updates: Pick<
+        SleepSession,
+        "startTimestampMs" | "endTimestampMs" | "durationMs"
+      >,
+    ) => {
+      const now = Date.now();
+      setSessions((previous) => {
+        const entries = Array.isArray(previous) ? previous : [];
+        const next = entries.map((session) =>
+          session.id === id
+            ? { ...session, ...updates, updatedAt: now }
+            : session,
+        );
+        setEstimation(estimateCycle(next));
+        return next;
+      });
+    },
+    [setEstimation, setSessions],
   );
 
   const deleteEntry = useCallback(
     (id: string) => {
-      setSessions((prev) =>
-        Array.isArray(prev) ? prev.filter((s) => s.id !== id) : prev,
-      );
+      setSessions((previous) => {
+        const next = Array.isArray(previous)
+          ? previous.filter((session) => session.id !== id)
+          : [];
+        setEstimation(estimateCycle(next));
+        return next;
+      });
     },
-    [setSessions],
+    [setEstimation, setSessions],
   );
 
   return {
@@ -189,6 +235,7 @@ export function useSleepSync(): SleepSyncResult {
     sync,
     recalculate,
     addManualEntry,
+    updateManualEntry,
     deleteEntry,
   };
 }

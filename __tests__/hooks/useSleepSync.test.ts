@@ -233,13 +233,19 @@ describe("useSleepSync", () => {
     expect(store.get(mockSleepSessionsAtom)).toEqual([manualSession]);
   });
 
-  it("removes cached Health Connect sessions that are no longer fetched", async () => {
+  it("removes a Health Connect session inside the fetch window that is no longer fetched", async () => {
+    const recentSession: SleepSession = {
+      ...sampleSession,
+      id: "hc-recent",
+      startTimestampMs: Date.now() - 5 * 24 * 60 * 60 * 1000,
+      endTimestampMs: Date.now() - 5 * 24 * 60 * 60 * 1000 + 28800000,
+    };
     const mockSleep = createMockSleep();
     mockSleep.fetchSleepSessions.mockResolvedValue([]);
     mockServices = createMockServices(mockSleep);
     mockCreatePlatformServices.mockReturnValue(mockServices);
     const store = createStore();
-    store.set(mockSleepSessionsAtom, [sampleSession]);
+    store.set(mockSleepSessionsAtom, [recentSession]);
     const { Wrapper } = createWrapper(store);
     const { result } = renderHook(() => useSleepSync(), { wrapper: Wrapper });
 
@@ -248,6 +254,29 @@ describe("useSleepSync", () => {
     });
 
     expect(store.get(mockSleepSessionsAtom)).toEqual([]);
+  });
+
+  it("preserves a Health Connect session outside the fetch window instead of dropping it", async () => {
+    const oldSession: SleepSession = {
+      ...sampleSession,
+      id: "hc-old",
+      startTimestampMs: Date.now() - 40 * 24 * 60 * 60 * 1000,
+      endTimestampMs: Date.now() - 40 * 24 * 60 * 60 * 1000 + 28800000,
+    };
+    const mockSleep = createMockSleep();
+    mockSleep.fetchSleepSessions.mockResolvedValue([]);
+    mockServices = createMockServices(mockSleep);
+    mockCreatePlatformServices.mockReturnValue(mockServices);
+    const store = createStore();
+    store.set(mockSleepSessionsAtom, [oldSession]);
+    const { Wrapper } = createWrapper(store);
+    const { result } = renderHook(() => useSleepSync(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await result.current.sync(true);
+    });
+
+    expect(store.get(mockSleepSessionsAtom)).toEqual([oldSession]);
   });
 
   it("keeps a manual edit made while a fetch is pending", async () => {
@@ -464,6 +493,43 @@ describe("useSleepSync", () => {
     expect(sessions[0].createdAt).toBeGreaterThan(0);
     expect(sessions[0].updatedAt).toBeGreaterThan(0);
     expect(sessions[0].createdAt).toBe(sessions[0].updatedAt);
+    expect(mockEstimateCycle).toHaveBeenCalledWith(sessions);
+  });
+
+  it("should update a manual entry's times and recalculate the estimation", async () => {
+    const manualSession: SleepSession = {
+      ...sampleSession,
+      id: "manual-1",
+      source: "manual",
+      updatedAt: 10,
+    };
+    const store = createStore();
+    store.set(mockSleepSessionsAtom, [manualSession]);
+    const { Wrapper } = createWrapper(store);
+
+    const { result } = renderHook(() => useSleepSync(), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      result.current.updateManualEntry("manual-1", {
+        startTimestampMs: 2000000,
+        endTimestampMs: 2028800000,
+        durationMs: 28800000,
+      });
+    });
+
+    const sessions = store.get(mockSleepSessionsAtom);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      id: "manual-1",
+      source: "manual",
+      startTimestampMs: 2000000,
+      endTimestampMs: 2028800000,
+      durationMs: 28800000,
+    });
+    expect(sessions[0].updatedAt).toBeGreaterThan(manualSession.updatedAt);
+    expect(mockEstimateCycle).toHaveBeenCalledWith(sessions);
   });
 
   it("should delete a session by id", async () => {
@@ -492,5 +558,6 @@ describe("useSleepSync", () => {
     const sessions = store.get(mockSleepSessionsAtom);
     expect(sessions).toHaveLength(1);
     expect(sessions[0].id).toBe("sleep-2");
+    expect(mockEstimateCycle).toHaveBeenLastCalledWith(sessions);
   });
 });

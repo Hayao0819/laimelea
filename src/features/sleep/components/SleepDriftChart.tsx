@@ -1,6 +1,6 @@
 import { differenceInCalendarDays } from "date-fns";
 import React, { useMemo } from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
@@ -31,7 +31,7 @@ interface SleepDriftChartProps {
 export function SleepDriftChart({ sessions }: SleepDriftChartProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const screenWidth = Dimensions.get("window").width;
+  const { width: screenWidth } = useWindowDimensions();
   const chartWidth = screenWidth - insets.left - insets.right - 32;
   const plotWidth = chartWidth - PADDING_LEFT - PADDING_RIGHT;
   const plotHeight = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;

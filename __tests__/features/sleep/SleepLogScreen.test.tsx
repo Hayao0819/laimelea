@@ -34,6 +34,7 @@ const mockSync = jest.fn().mockResolvedValue(undefined);
 const mockDeleteEntry = jest.fn();
 const mockRecalculate = jest.fn();
 const mockAddManualEntry = jest.fn();
+const mockUpdateManualEntry = jest.fn();
 
 const defaultSyncResult: SleepSyncResult = {
   sessions: [],
@@ -43,6 +44,7 @@ const defaultSyncResult: SleepSyncResult = {
   sync: mockSync,
   recalculate: mockRecalculate,
   addManualEntry: mockAddManualEntry,
+  updateManualEntry: mockUpdateManualEntry,
   deleteEntry: mockDeleteEntry,
 };
 
